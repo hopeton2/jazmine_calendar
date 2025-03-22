@@ -41,7 +41,7 @@ class MonthView extends StatelessWidget {
     final calendarWidget = JazmineCalendar.of(context);
     final controller = calendarWidget.controller!;
     final configuration = calendarWidget.monthConfiguration;
-    
+
     return ValueListenableBuilder<DateTime>(
       valueListenable: controller.displayDateNotifier,
       builder: (context, displayDate, _) {

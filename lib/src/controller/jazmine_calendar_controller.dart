@@ -165,6 +165,9 @@ class JazmineCalendarController extends ChangeNotifier {
         final nextMonth = DateTime(displayDateNotifier.value.year, displayDateNotifier.value.month + 1, 1);
         displayDateNotifier.value = nextMonth;
         break;
+      case CalendarView.timeline:
+        displayDateNotifier.value = displayDateNotifier.value.add(const Duration(days: 1));
+        break;
       default:
         break;
     }
@@ -186,6 +189,9 @@ class JazmineCalendarController extends ChangeNotifier {
         // Fix: Properly handle month navigation
         final prevMonth = DateTime(displayDateNotifier.value.year, displayDateNotifier.value.month - 1, 1);
         displayDateNotifier.value = prevMonth;
+        break;
+      case CalendarView.timeline:
+        displayDateNotifier.value = displayDateNotifier.value.subtract(const Duration(days: 1));
         break;
       default:
         break;

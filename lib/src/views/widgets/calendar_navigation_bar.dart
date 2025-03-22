@@ -50,6 +50,8 @@ class CalendarNavigationBar extends StatelessWidget {
         controller.navigateToDate(date.subtract(const Duration(days: 7)));
       case CalendarView.month:
         controller.navigateToDate(DateTime(date.year, date.month - 1));
+      case CalendarView.timeline:
+        controller.navigateToDate(date.subtract(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.subtract(const Duration(days: 1)));
     }
@@ -65,6 +67,8 @@ class CalendarNavigationBar extends StatelessWidget {
         controller.navigateToDate(date.add(const Duration(days: 7)));
       case CalendarView.month:
         controller.navigateToDate(DateTime(date.year, date.month + 1));
+      case CalendarView.timeline:
+        controller.navigateToDate(date.add(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.add(const Duration(days: 1)));
     }

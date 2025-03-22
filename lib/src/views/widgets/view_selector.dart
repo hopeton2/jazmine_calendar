@@ -9,7 +9,7 @@ class ViewSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = JazmineCalendar.of(context).controller!;
-    
+
     return ValueListenableBuilder<CalendarView>(
       valueListenable: controller.currentViewNotifier,
       builder: (context, currentView, child) {
@@ -30,6 +30,10 @@ class ViewSelector extends StatelessWidget {
             ButtonSegment(
               value: CalendarView.month,
               label: Text(CalendarStrings.monthViewLabel),
+            ),
+            ButtonSegment(
+              value: CalendarView.timeline,
+              label: Text(CalendarStrings.timelineViewLabel),
             ),
             ButtonSegment(
               value: CalendarView.agenda,
