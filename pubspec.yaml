@@ -1,0 +1,22 @@
+name: jazmine_calendar
+description: "A flexible, cross-platform calendar widget for Flutter, inspired by Google Calendar. Supports multiple views, timezone handling, and customizable persistence."
+version: 0.0.1
+homepage: https://github.com/yourusername/jazmine_calendar
+
+environment:
+  sdk: ^3.5.3
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  intl: ^0.19.0
+  timezone: ^0.9.2
+  shared_preferences: ^2.2.2
+  uuid: ^4.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
