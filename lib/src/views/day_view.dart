@@ -16,14 +16,20 @@ class DayView extends BaseCalendarView {
   Widget build(BuildContext context) {
     final controller = JazmineCalendar.of(context).controller!;
     final configuration = JazmineCalendar.of(context).dayConfiguration;
-    final displayDate = date ?? controller.displayDate;
     
-    return BaseDayView(
-      configuration: configuration,
-      days: [displayDate],
-      interval: configuration.interval,
-      hourHeight: configuration.hourHeight,
-      showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
+    return ValueListenableBuilder<DateTime>(
+      valueListenable: controller.displayDateNotifier,
+      builder: (context, displayDate, _) {
+        final effectiveDate = date ?? displayDate;
+        
+        return BaseDayView(
+          configuration: configuration,
+          days: [effectiveDate],
+          interval: configuration.interval,
+          hourHeight: configuration.hourHeight,
+          showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
+        );
+      },
     );
   }
 }

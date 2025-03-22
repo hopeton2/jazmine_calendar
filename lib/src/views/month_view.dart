@@ -1,22 +1,21 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../jazmine_calendar.dart';
-import '../extensions/date_extensions.dart';
-import 'base_calendar_view.dart';
-import 'widgets/calendar_time_slot.dart';
 import 'package:intl/intl.dart';
 
-class MonthView extends BaseCalendarView {
-  final MonthViewConfiguration configuration;
+import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
+import 'package:jazmine_calendar/src/models/event.dart';
+import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/views/configurations.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 
-  const MonthView({
-    super.key,
-    this.configuration = const MonthViewConfiguration(),
-  });
 
-  Widget _buildWeekdayHeader() {
+class MonthView extends StatelessWidget {
+  const MonthView({super.key});
+
+  Widget _buildWeekdayHeader(BuildContext context, MonthViewConfiguration configuration) {
     final weekdayFormat = DateFormat(configuration.weekdayFormat);
     final now = DateTime.now();
     return Row(
@@ -39,31 +38,32 @@ class MonthView extends BaseCalendarView {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
-        return ValueListenableBuilder<List<Event>>(
-          valueListenable: controller.eventsNotifier,
-          builder: (context, events, child) {
-            if (controller.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final displayDate = controller.displayDate;
-
-            return Column(
-              children: [
-                _buildWeekdayHeader(),
-                Expanded(
-                  child: _buildMonthGrid(
+    final calendarWidget = JazmineCalendar.of(context);
+    final controller = calendarWidget.controller!;
+    final configuration = calendarWidget.monthConfiguration;
+    
+    return ValueListenableBuilder<DateTime>(
+      valueListenable: controller.displayDateNotifier,
+      builder: (context, displayDate, _) {
+        return Column(
+          children: [
+            _buildWeekdayHeader(context, configuration),
+            Expanded(
+              child: FutureBuilder<List<Event>>(
+                future: controller.getAllEvents(),
+                builder: (context, snapshot) {
+                  final events = snapshot.data ?? [];
+                  return _buildMonthGrid(
                     displayDate,
-                    events,
+                    events,  // Pass events list as second parameter
                     controller,
                     context,
-                  ),
-                ),
-              ],
-            );
-          },
+                    configuration,
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
@@ -74,6 +74,7 @@ class MonthView extends BaseCalendarView {
     List<Event> events,
     JazmineCalendarController controller,
     BuildContext context,
+    MonthViewConfiguration configuration,
   ) {
     final firstDay = selectedDate.firstDayOfMonth;
     final daysInMonth = selectedDate.getDaysInMonth();
@@ -148,6 +149,7 @@ class MonthView extends BaseCalendarView {
                   date,
                   context,
                   controller,
+                  configuration,
                   isFirstTrailingDay: isFirstTrailingDay,
                 );
               }
@@ -169,6 +171,7 @@ class MonthView extends BaseCalendarView {
                 dayAllDayEvents,
                 controller,
                 context,
+                configuration,
                 isFirstDayOfMonth: dayNumber == 1,
                 isLastColumn: col == configuration.daysPerWeek - 1,
                 isLastRow: row == weeksCount - 1,
@@ -185,7 +188,8 @@ class MonthView extends BaseCalendarView {
     List<Event> events,
     List<Event> allDayEvents,
     JazmineCalendarController controller,
-    BuildContext context, {
+    BuildContext context,
+    MonthViewConfiguration configuration, {
     bool isFirstDayOfMonth = false,
     bool isLastColumn = false,
     bool isLastRow = false,
@@ -228,7 +232,8 @@ class MonthView extends BaseCalendarView {
   Widget _buildTrailingDayCell(
     DateTime date,
     BuildContext context,
-    JazmineCalendarController controller, {
+    JazmineCalendarController controller,
+    MonthViewConfiguration configuration, {
     bool isFirstTrailingDay = false,
   }) {
     final theme = Theme.of(context);
@@ -264,39 +269,4 @@ class MonthView extends BaseCalendarView {
       datePadding: const EdgeInsets.only(top: 4),
     );
   }
-}
-
-/// Configuration class for non-theme related customization
-class MonthViewConfiguration extends BaseViewConfiguration {
-  final int daysPerWeek;
-  final String weekdayFormat;
-  final TextStyle weekdayHeaderStyle;
-  final EdgeInsets weekdayHeaderPadding;
-  final Alignment weekdayHeaderAlignment;
-  final bool showDateInCell;
-  final bool showTrailingDays;
-  final double minCellHeight;
-  final String firstTrailingDaysFormat;
-  final String monthDaysFormat;
-  final String firstDayOfMonthFormat;
-  final Alignment dateAlignment;
-
-  const MonthViewConfiguration({
-    super.gridLineColor,
-    super.gridLineColorDark,
-    super.selectedDayColor,
-    super.selectedDayColorDark,
-    this.daysPerWeek = 7,
-    this.weekdayFormat = 'E',
-    this.weekdayHeaderStyle = const TextStyle(fontWeight: FontWeight.w500),
-    this.weekdayHeaderPadding = const EdgeInsets.symmetric(vertical: 8),
-    this.weekdayHeaderAlignment = Alignment.center,
-    this.showDateInCell = true,
-    this.showTrailingDays = true,
-    this.minCellHeight = 100.0,
-    this.firstTrailingDaysFormat = 'MMM d',
-    this.monthDaysFormat = 'd',
-    this.firstDayOfMonthFormat = 'MMM d',
-    this.dateAlignment = Alignment.center,
-  });
 }

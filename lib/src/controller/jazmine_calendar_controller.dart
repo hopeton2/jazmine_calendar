@@ -17,9 +17,9 @@ typedef EventTimeCallback = Future<void> Function(Event event, DateTime newStart
 
 class JazmineCalendarController extends ChangeNotifier {
   CalendarPersistence _persistence;
-  CalendarView _currentView;
-  DateTime _selectedDate;
-  DateTime _displayDate;
+  late final ValueNotifier<CalendarView> _currentViewNotifier;
+  final ValueNotifier<DateTime> selectedDateNotifier;
+  final ValueNotifier<DateTime> displayDateNotifier;
   final List<String> _visibleTimeZones;
   bool _showFloatingActionButton;
   EventCallback? _onEventCreated;
@@ -31,8 +31,8 @@ class JazmineCalendarController extends ChangeNotifier {
   bool _batchNotifications = false;
 
   final ValueNotifier<List<Event>> _eventsNotifier = ValueNotifier<List<Event>>([]);
-  ValueNotifier<List<Event>> get eventsNotifier => _eventsNotifier;
-
+  ValueNotifier<CalendarView> get currentViewNotifier => _currentViewNotifier;
+  
   static Future<JazmineCalendarController> create({
     CalendarPersistence? persistence,
     CalendarView initialView = CalendarView.week,
@@ -68,19 +68,21 @@ class JazmineCalendarController extends ChangeNotifier {
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
   })  : _persistence = persistence,
-        _currentView = initialView,
-        _selectedDate = initialDate,
-        _displayDate = displayDate,
+        _currentViewNotifier = ValueNotifier<CalendarView>(initialView),
+        selectedDateNotifier = ValueNotifier<DateTime>(initialDate),
+        displayDateNotifier = ValueNotifier<DateTime>(displayDate),
         _visibleTimeZones = List.from(visibleTimeZones),
         _showFloatingActionButton = showFloatingActionButton,
         _onEventCreated = onEventCreated,
         _onEventRescheduled = onEventRescheduled,
-        _onEventResized = onEventResized;
+        _onEventResized = onEventResized {
+    // Initialize the notifier with the initial view
+  }
 
   // Getters
-  CalendarView get currentView => _currentView;
-  DateTime get selectedDate => _selectedDate;
-  DateTime get displayDate => _displayDate;
+  CalendarView get currentView => _currentViewNotifier.value;
+  DateTime get selectedDate => selectedDateNotifier.value;
+  DateTime get displayDate => displayDateNotifier.value;
   List<String> get visibleTimeZones => List.unmodifiable(_visibleTimeZones);
   bool get showFloatingActionButton => _showFloatingActionButton;
   EventCallback? get onEventCreated => _onEventCreated;
@@ -131,39 +133,37 @@ class JazmineCalendarController extends ChangeNotifier {
   }
 
   void changeView(CalendarView view) {
-    if (_currentView == view) return;
-    _currentView = view;
-    _notifyIfNeeded();
+    _currentViewNotifier.value = view;
   }
 
   void selectDate(DateTime date) {
-    _selectedDate = date;
-    if (_currentView != CalendarView.day) {
-      _currentView = CalendarView.day;
+    selectedDateNotifier.value = date;
+    if (currentView != CalendarView.day) {
+      changeView(CalendarView.day);
     }
     notifyListeners();
   }
 
   void navigateToDate(DateTime date) {
-    _displayDate = date;
+    displayDateNotifier.value = date;
     notifyListeners();
   }
 
   void navigateToNextPage() {
-    switch (_currentView) {
+    switch (currentView) {
       case CalendarView.day:
-        _displayDate = _displayDate.add(const Duration(days: 1));
+        displayDateNotifier.value = displayDateNotifier.value.add(const Duration(days: 1));
         break;
       case CalendarView.workWeek:
-        _displayDate = _displayDate.add(const Duration(days: 5));
+        displayDateNotifier.value = displayDateNotifier.value.add(const Duration(days: 5));
         break;
       case CalendarView.week:
-        _displayDate = _displayDate.add(const Duration(days: 7));
+        displayDateNotifier.value = displayDateNotifier.value.add(const Duration(days: 7));
         break;
       case CalendarView.month:
         // Fix: Properly handle month navigation
-        final nextMonth = DateTime(_displayDate.year, _displayDate.month + 1, 1);
-        _displayDate = nextMonth;
+        final nextMonth = DateTime(displayDateNotifier.value.year, displayDateNotifier.value.month + 1, 1);
+        displayDateNotifier.value = nextMonth;
         break;
       default:
         break;
@@ -172,20 +172,20 @@ class JazmineCalendarController extends ChangeNotifier {
   }
 
   void navigateToPreviousPage() {
-    switch (_currentView) {
+    switch (currentView) {
       case CalendarView.day:
-        _displayDate = _displayDate.subtract(const Duration(days: 1));
+        displayDateNotifier.value = displayDateNotifier.value.subtract(const Duration(days: 1));
         break;
       case CalendarView.workWeek:
-        _displayDate = _displayDate.subtract(const Duration(days: 5));
+        displayDateNotifier.value = displayDateNotifier.value.subtract(const Duration(days: 5));
         break;
       case CalendarView.week:
-        _displayDate = _displayDate.subtract(const Duration(days: 7));
+        displayDateNotifier.value = displayDateNotifier.value.subtract(const Duration(days: 7));
         break;
       case CalendarView.month:
         // Fix: Properly handle month navigation
-        final prevMonth = DateTime(_displayDate.year, _displayDate.month - 1, 1);
-        _displayDate = prevMonth;
+        final prevMonth = DateTime(displayDateNotifier.value.year, displayDateNotifier.value.month - 1, 1);
+        displayDateNotifier.value = prevMonth;
         break;
       default:
         break;

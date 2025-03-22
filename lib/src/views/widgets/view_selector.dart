@@ -1,38 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/constants/strings.dart';
+import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class ViewSelector extends StatelessWidget {
   const ViewSelector({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
+    final controller = JazmineCalendar.of(context).controller!;
+    
+    return ValueListenableBuilder<CalendarView>(
+      valueListenable: controller.currentViewNotifier,
+      builder: (context, currentView, child) {
         return SegmentedButton<CalendarView>(
           segments: const [
             ButtonSegment(
               value: CalendarView.day,
-              label: Text('Day'),
+              label: Text(CalendarStrings.dayViewLabel),
             ),
             ButtonSegment(
               value: CalendarView.workWeek,
-              label: Text('Work Week'),
+              label: Text(CalendarStrings.workWeekViewLabel),
             ),
             ButtonSegment(
               value: CalendarView.week,
-              label: Text('Week'),
+              label: Text(CalendarStrings.weekViewLabel),
             ),
             ButtonSegment(
               value: CalendarView.month,
-              label: Text('Month'),
+              label: Text(CalendarStrings.monthViewLabel),
             ),
             ButtonSegment(
               value: CalendarView.agenda,
-              label: Text('Agenda'),
+              label: Text(CalendarStrings.agendaViewLabel),
             ),
           ],
-          selected: {controller.currentView},
+          selected: {currentView},
           onSelectionChanged: (Set<CalendarView> selected) {
             controller.changeView(selected.first);
           },

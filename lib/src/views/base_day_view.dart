@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../controller/jazmine_calendar_controller.dart';
 import '../models/event.dart';
 import '../theme/jazmine_calendar_theme.dart';
 import 'package:intl/intl.dart';
 import 'configurations.dart';
+import 'widgets/jazmine_calendar.dart';
 
 class BaseDayView extends StatelessWidget {
   final List<DateTime> days;
@@ -24,42 +24,40 @@ class BaseDayView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
-        return ValueListenableBuilder<List<Event>>(
-          valueListenable: controller.eventsNotifier,
-          builder: (context, events, child) {
-            return Column(
-              children: [
-                _buildHeader(days),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _buildTimeColumn(),
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: days.map((date) {
-                            final dayEvents = _getEventsForDate(events, date);
-                            final allDayEvents = _getAllDayEventsForDate(events, date);
-                            return Expanded(
-                              child: _buildDayColumn(
-                                context,
-                                date,
-                                dayEvents,
-                                allDayEvents,
-                                controller,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
+    final controller = JazmineCalendar.of(context).controller!;
+
+    return ValueListenableBuilder<List<Event>>(
+      valueListenable: ValueNotifier<List<Event>>([]),  // Initialize with empty list
+      builder: (context, events, child) {
+        return Column(
+          children: [
+            _buildHeader(days),
+            Expanded(
+              child: Row(
+                children: [
+                  _buildTimeColumn(),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: days.map((date) {
+                        final dayEvents = _getEventsForDate(events, date);
+                        final allDayEvents = _getAllDayEventsForDate(events, date);
+                        return Expanded(
+                          child: _buildDayColumn(
+                            context,
+                            date,
+                            dayEvents,
+                            allDayEvents,
+                            controller,
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

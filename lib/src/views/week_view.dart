@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'base_day_view.dart';
 import '../extensions/date_extensions.dart';
 import 'configurations.dart';
+import '../../jazmine_calendar.dart';
 
 class WeekView extends StatelessWidget {
   final DateTime startDate;
@@ -15,19 +16,27 @@ class WeekView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weekStartDate = startDate.getWeekStartDate(false); // false for full week view
-    return BaseDayView(
-      configuration: const WeekViewConfiguration(
-        interval: Duration(minutes: 30),
-        showWeekends: true,
-        weekdayFormat: 'EEE',
-        showCurrentTimeIndicator: true,
-        hourHeight: 60,
-      ),
-      days: List.generate(7, (index) => 
-        weekStartDate.add(Duration(days: index))
-      ),
-      interval: interval,
+    final controller = JazmineCalendar.of(context).controller!;
+    
+    return ValueListenableBuilder<DateTime>(
+      valueListenable: controller.displayDateNotifier,
+      builder: (context, displayDate, _) {
+        final weekStartDate = displayDate.getWeekStartDate(false); // false for full week view
+        
+        return BaseDayView(
+          configuration: const WeekViewConfiguration(
+            interval: Duration(minutes: 30),
+            showWeekends: true,
+            weekdayFormat: 'EEE',
+            showCurrentTimeIndicator: true,
+            hourHeight: 60,
+          ),
+          days: List.generate(7, (index) => 
+            weekStartDate.add(Duration(days: index))
+          ),
+          interval: interval,
+        );
+      },
     );
   }
 }

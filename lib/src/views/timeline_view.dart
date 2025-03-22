@@ -1,41 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../jazmine_calendar.dart';
-import 'base_calendar_view.dart';
+import 'package:jazmine_calendar/src/models/event.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
+import 'package:jazmine_calendar/src/views/widgets/event_tile_builder.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
+
 
 class TimelineView extends BaseCalendarView {
-  final TimelineViewConfiguration configuration;
-
-  const TimelineView({
-    super.key,
-    this.configuration = const TimelineViewConfiguration(),
-  });
+  const TimelineView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
-        return ValueListenableBuilder<List<Event>>(
-          valueListenable: controller.eventsNotifier,
-          builder: (context, events, child) {
-            if (controller.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    final controller = JazmineCalendar.of(context).controller!;
+    
+    return ValueListenableBuilder<List<Event>>(
+      valueListenable: ValueNotifier<List<Event>>([]),
+      // Initialize with empty list, will be updated in builder
+      builder: (context, events, child) {
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-            final timeZones = controller.visibleTimeZones;
-            
-            return Column(
-              children: [
-                _buildTimeZoneHeader(timeZones),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: _buildTimeline(context, events, timeZones),
-                  ),
-                ),
-              ],
-            );
-          },
+        final timeZones = controller.visibleTimeZones;
+        
+        return Column(
+          children: [
+            _buildTimeZoneHeader(timeZones),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: _buildTimeline(context, events, timeZones),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -111,7 +107,7 @@ class TimelineView extends BaseCalendarView {
                 left: 40,
                 right: 0,
                 top: (event.start.minute * 60) / 60,
-                child: buildEventTile(context, event),
+                child: EventTileBuilder().buildEventTile(context, event),
               )),
             ],
           ),

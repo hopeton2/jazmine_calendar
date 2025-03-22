@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../jazmine_calendar.dart';
 import 'package:intl/intl.dart';
 
@@ -15,33 +14,30 @@ class AgendaView extends BaseCalendarView {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
-        // Don't call getAllEvents() directly in build
-        return ValueListenableBuilder<List<Event>>(
-          valueListenable: _createEventsNotifier(controller),
-          builder: (context, events, child) {
-            if (events.isEmpty) {
-              return const Center(child: Text('No events'));
-            }
+    final controller = JazmineCalendar.of(context).controller!;
+    
+    return ValueListenableBuilder<List<Event>>(
+      valueListenable: _createEventsNotifier(controller),
+      builder: (context, events, child) {
+        if (events.isEmpty) {
+          return const Center(child: Text('No events'));
+        }
 
-            events.sort((a, b) => a.start.compareTo(b.start));
-            
-            return ListView.builder(
-              itemCount: events.length,
-              itemBuilder: (context, index) {
-                final event = events[index];
-                final isFirstOfDay = index == 0 ||
-                    !_isSameDay(events[index - 1].start, event.start);
+        events.sort((a, b) => a.start.compareTo(b.start));
+        
+        return ListView.builder(
+          itemCount: events.length,
+          itemBuilder: (context, index) {
+            final event = events[index];
+            final isFirstOfDay = index == 0 ||
+                !_isSameDay(events[index - 1].start, event.start);
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isFirstOfDay) _buildDateHeader(event.start),
-                    _buildAgendaItem(context, event),
-                  ],
-                );
-              },
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isFirstOfDay) _buildDateHeader(event.start),
+                _buildAgendaItem(context, event),
+              ],
             );
           },
         );
@@ -52,7 +48,6 @@ class AgendaView extends BaseCalendarView {
   ValueNotifier<List<Event>> _createEventsNotifier(JazmineCalendarController controller) {
     final notifier = ValueNotifier<List<Event>>([]);
     
-    // Load events after build
     Future.microtask(() async {
       final events = await controller.getAllEvents();
       notifier.value = events;
