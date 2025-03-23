@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
-import '../../../jazmine_calendar.dart';
-import 'event_tile_builder.dart';
+
 import 'package:intl/intl.dart';
 
 class CalendarTimeSlot extends StatelessWidget {
   final DateTime date;
-  final List<Event> events;
-  final List<Event> allDayEvents;
   final JazmineCalendarController controller;
   final bool showDate;
-  final bool Function(Event) isFirstDayOfEvent;
-  final bool Function(Event) isLastDayOfEvent;
   final DateFormat formatDate;
   final String? formatDatePrefix;
   final BoxDecoration? decoration;
@@ -22,16 +18,14 @@ class CalendarTimeSlot extends StatelessWidget {
   final Alignment dateAlignment;
   final double todayCircleSize;
   final EdgeInsets datePadding;
+  final bool isAllDay;
+  final GlobalKey _key = GlobalKey();
 
-  const CalendarTimeSlot({
+  CalendarTimeSlot({
     super.key,
     required this.date,
-    required this.events,
-    required this.allDayEvents,
     required this.controller,
     required this.showDate,
-    required this.isFirstDayOfEvent,
-    required this.isLastDayOfEvent,
     required this.formatDate,
     this.formatDatePrefix,
     this.decoration,
@@ -40,9 +34,24 @@ class CalendarTimeSlot extends StatelessWidget {
     this.textStyle,
     this.padding = EdgeInsets.zero,
     this.dateAlignment = Alignment.center,
-    this.todayCircleSize = 50,  // Increased from 40 to 50
+    this.todayCircleSize = 50,
     this.datePadding = const EdgeInsets.only(top: 8),
+    this.isAllDay = false,
   });
+
+  /// Returns the render box offset of this time slot relative to the global position
+  Offset? getOffset() {
+    final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return null;
+    return renderBox.localToGlobal(Offset.zero);
+  }
+
+  /// Returns the size of the time slot
+  Size? getSize() {
+    final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return null;
+    return renderBox.size;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +61,7 @@ class CalendarTimeSlot extends StatelessWidget {
     final isToday = date.isSameDay(DateTime.now());
 
     return Material(
+      key: _key,
       color: Colors.transparent,
       child: InkWell(
         onTap: () => controller.selectDate(date),
@@ -68,24 +78,38 @@ class CalendarTimeSlot extends StatelessWidget {
                     child: Container(
                       width: isToday || isSelected ? todayCircleSize : null,
                       height: isToday || isSelected ? todayCircleSize : null,
-                      decoration: isSelected 
+                      decoration: isSelected
                           ? BoxDecoration(
-                              color: calendarTheme?.getSelectedDayColor(context) ?? theme.colorScheme.primary,
-                              shape: formatDatePrefix != null ? BoxShape.rectangle : BoxShape.circle,
-                              borderRadius: formatDatePrefix != null ? BorderRadius.circular(25) : null,
+                              color:
+                                  calendarTheme?.getSelectedDayColor(context) ??
+                                      theme.colorScheme.primary,
+                              shape: formatDatePrefix != null
+                                  ? BoxShape.rectangle
+                                  : BoxShape.circle,
+                              borderRadius: formatDatePrefix != null
+                                  ? BorderRadius.circular(25)
+                                  : null,
                             )
                           : isToday
                               ? BoxDecoration(
                                   border: Border.all(
-                                    color: calendarTheme?.getTodayIndicatorColor(context) ?? theme.colorScheme.primary,
+                                    color: calendarTheme
+                                            ?.getTodayIndicatorColor(context) ??
+                                        theme.colorScheme.primary,
                                     width: 1,
                                   ),
-                                  shape: formatDatePrefix != null ? BoxShape.rectangle : BoxShape.circle,
-                                  borderRadius: formatDatePrefix != null ? BorderRadius.circular(25) : null,
+                                  shape: formatDatePrefix != null
+                                      ? BoxShape.rectangle
+                                      : BoxShape.circle,
+                                  borderRadius: formatDatePrefix != null
+                                      ? BorderRadius.circular(25)
+                                      : null,
                                 )
                               : null,
                       child: Container(
-                        padding: formatDatePrefix != null ? const EdgeInsets.symmetric(horizontal: 8) : null,
+                        padding: formatDatePrefix != null
+                            ? const EdgeInsets.symmetric(horizontal: 8)
+                            : null,
                         child: Center(
                           child: Text(
                             '${formatDatePrefix ?? ''}${formatDate.format(date)}',
@@ -97,7 +121,10 @@ class CalendarTimeSlot extends StatelessWidget {
                                   )
                                 : isToday
                                     ? TextStyle(
-                                        color: calendarTheme?.getTodayIndicatorColor(context) ?? theme.colorScheme.primary,
+                                        color: calendarTheme
+                                                ?.getTodayIndicatorColor(
+                                                    context) ??
+                                            theme.colorScheme.primary,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500,
                                       )
@@ -109,15 +136,6 @@ class CalendarTimeSlot extends StatelessWidget {
                   ),
                 ),
               ],
-              Expanded(
-                child: ListView.builder(
-                  padding: padding,
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    return EventTileBuilder().buildEventTile(context, events[index]);
-                  },
-                ),
-              ),
             ],
           ),
         ),

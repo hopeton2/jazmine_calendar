@@ -18,17 +18,17 @@ abstract class BaseViewConfiguration {
 }
 
 class DayViewConfiguration extends BaseViewConfiguration {
-  final Duration interval;
   final bool showCurrentTimeIndicator;
   final double hourHeight;
+  final double timebarWidth;
 
   const DayViewConfiguration({
     super.gridLineColor,
     super.selectedDayColor,
     super.dateAlignment,
-    this.interval = const Duration(minutes: 30),
     this.showCurrentTimeIndicator = true,
     this.hourHeight = 60,
+    this.timebarWidth = 60,
   });
 }
 
@@ -39,7 +39,6 @@ class WeekViewConfiguration extends DayViewConfiguration {
   const WeekViewConfiguration({
     super.gridLineColor,
     super.selectedDayColor,
-    super.interval,
     super.showCurrentTimeIndicator,
     super.hourHeight,
     this.showWeekends = true,
@@ -47,14 +46,17 @@ class WeekViewConfiguration extends DayViewConfiguration {
   });
 }
 
-class TimelineViewConfiguration extends BaseViewConfiguration {
+class TimelineConfiguration extends BaseViewConfiguration {
   final Duration interval;
   final double timeAxisWidth;
   final bool showCurrentTimeIndicator;
 
-  const TimelineViewConfiguration({
+  const TimelineConfiguration({
     super.gridLineColor,
+    super.gridLineColorDark,
     super.selectedDayColor,
+    super.selectedDayColorDark,
+    super.dateAlignment,
     this.interval = const Duration(minutes: 30),
     this.timeAxisWidth = 60.0,
     this.showCurrentTimeIndicator = true,

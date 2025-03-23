@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class ViewSelector extends StatelessWidget {

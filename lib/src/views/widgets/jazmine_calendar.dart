@@ -18,7 +18,7 @@ class JazmineCalendar extends StatelessWidget {
   final WeekViewConfiguration weekConfiguration;
   final MonthViewConfiguration monthConfiguration;
   final AgendaViewConfiguration agendaConfiguration;
-  final TimelineViewConfiguration timelineConfiguration;
+  final TimelineConfiguration timelineConfiguration;
 
   const JazmineCalendar({
     super.key,
@@ -31,7 +31,7 @@ class JazmineCalendar extends StatelessWidget {
     this.weekConfiguration = const WeekViewConfiguration(),
     this.monthConfiguration = const MonthViewConfiguration(),
     this.agendaConfiguration = const AgendaViewConfiguration(),
-    this.timelineConfiguration = const TimelineViewConfiguration(),
+    this.timelineConfiguration = const TimelineConfiguration(),
   });
 
   static JazmineCalendar of(BuildContext context) {

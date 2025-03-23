@@ -202,12 +202,8 @@ class MonthView extends StatelessWidget {
 
     return CalendarTimeSlot(
       date: date, 
-      events: events, 
-      allDayEvents: allDayEvents, 
       controller: controller, 
       showDate: configuration.showDateInCell,
-      isFirstDayOfEvent: (event) => event.start.isSameDay(date), 
-      isLastDayOfEvent: (event) => event.end.isSameDay(date),
       formatDate: DateFormat(isFirstDayOfMonth ? configuration.firstDayOfMonthFormat : configuration.monthDaysFormat),
       decoration: BoxDecoration(
         border: Border(
@@ -245,12 +241,8 @@ class MonthView extends StatelessWidget {
 
     return CalendarTimeSlot(
       date: date, 
-      events: const [], 
-      allDayEvents: const [], 
       controller: controller, 
       showDate: configuration.showDateInCell,
-      isFirstDayOfEvent: (event) => event.start.isSameDay(date), 
-      isLastDayOfEvent: (event) => event.end.isSameDay(date),
       formatDate: DateFormat(isFirstTrailingDay ? configuration.firstTrailingDaysFormat : configuration.monthDaysFormat),
       decoration: BoxDecoration(
         border: Border(

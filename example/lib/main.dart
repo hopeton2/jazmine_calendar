@@ -39,7 +39,7 @@ class _MyHomePageState extends State<MyHomePage> {
   JazmineCalendarController? _controller;
   bool _isLoading = true;
   String _lastAction = '';
-  CalendarView _currentView = CalendarView.month;
+  final CalendarView _currentView = CalendarView.month;
 
   @override
   void initState() {
