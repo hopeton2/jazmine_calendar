@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 import 'package:jazmine_calendar/src/views/widgets/current_time_indicator.dart';
+import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class CalendarGrid extends StatefulWidget {
   final DateTime startDate;
@@ -17,30 +19,18 @@ class CalendarGrid extends StatefulWidget {
   final int startOfWeek;
   final DateFormat headerDateFormat;
   final JazmineCalendarController controller;
-  
-  // Add header builder callback
   final Widget Function(BuildContext, DateTime, bool, double, double)? headerBuilder;
-  
-  // Appearance customization
-  final Color? slotColor;
-  final Color? slotBorderColor;
-  final double slotBorderWidth;
-  final TextStyle? headerTextStyle;
-  final Color? headerBackgroundColor;
-
-  // Header sizes
   final double headerWidth;
   final double headerHeight;
-
   final bool showCurrentTimeIndicator;
-  final Color? currentTimeIndicatorColor;
-  
+  final double gridLineWidth;
+
   const CalendarGrid({
     super.key,
     required this.startDate,
     required this.endDate,
     required this.controller,
-    required this.headerDateFormat,  
+    required this.headerDateFormat,
     this.slotDuration = const Duration(days: 1),
     this.intervalDuration = const Duration(minutes: 30),
     this.orientation = Axis.vertical,
@@ -48,15 +38,10 @@ class CalendarGrid extends StatefulWidget {
     required this.numberOfRows,
     this.startOfWeek = DateTime.monday,
     this.headerBuilder,
-    this.slotColor,
-    this.slotBorderColor,
-    this.slotBorderWidth = 1.0,
-    this.headerTextStyle,
-    this.headerBackgroundColor,
     this.headerWidth = 60.0,
     this.headerHeight = 40.0,
     this.showCurrentTimeIndicator = true,
-    this.currentTimeIndicatorColor,
+    this.gridLineWidth = 1.0,
   });
 
   /// Scrolls the grid to show the specified time
@@ -70,17 +55,13 @@ class CalendarGrid extends StatefulWidget {
 
 class _CalendarGridState extends State<CalendarGrid> {
   late final ScrollController _scrollController;
-  bool _initialScrollDone = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController(
-      // Set initial scroll position directly in controller creation
       initialScrollOffset: _calculateInitialOffset(),
     );
-    
-    // Add scroll position listener
     _scrollController.addListener(_onScroll);
   }
 
@@ -102,7 +83,6 @@ class _CalendarGridState extends State<CalendarGrid> {
         (isVertical ? interval.inMinutes.toDouble() : widget.headerWidth);
 
     // Add padding to center the time in the viewport
-    // Note: Since we don't have viewport dimensions yet, use an estimated value
     final estimatedViewportDimension = isVertical ? 300.0 : 200.0;
     final viewportPadding = isVertical 
         ? estimatedViewportDimension / 2
@@ -112,7 +92,6 @@ class _CalendarGridState extends State<CalendarGrid> {
   }
 
   void _onScroll() {
-    // Store current scroll position when user scrolls
     widget.controller.setScrollPosition(
       widget.controller.currentView,
       _scrollController.offset
@@ -129,14 +108,12 @@ class _CalendarGridState extends State<CalendarGrid> {
     final position = (totalMinutesSinceStart / interval.inMinutes) * 
         (isVertical ? interval.inMinutes.toDouble() : widget.headerWidth);
 
-    // Add padding to center the time in the viewport
     final viewportDimension = isVertical 
         ? _scrollController.position.viewportDimension / 2
         : _scrollController.position.viewportDimension / 3;
     
     final offset = max(0, position - viewportDimension);
     
-    // Replace animateTo with jumpTo for immediate scrolling
     _scrollController.jumpTo(offset.toDouble());
   }
 
@@ -192,10 +169,8 @@ class _CalendarGridState extends State<CalendarGrid> {
                 startDate: widget.startDate,
                 endDate: widget.endDate,
                 controller: widget.controller,
-                color: widget.currentTimeIndicatorColor,
                 autoScroll: true,
-                intervalPixels: isVertical ? slotHeight : slotWidth
-                    
+                intervalPixels: isVertical ? slotHeight : slotWidth,
               ),
           ],
         );
@@ -216,37 +191,47 @@ class _CalendarGridState extends State<CalendarGrid> {
       );
     }
 
-    // Default implementation if no headerBuilder provided
+    final theme = Theme.of(context);
+    final calendarTheme = theme.extension<JazmineCalendarTheme>();
+    final gridLineWidth = widget.gridLineWidth;
+    
     return Container(
       width: isVertical ? widget.headerWidth : slotWidth,
       height: isVertical ? slotHeight : widget.headerHeight,
-      color: widget.headerBackgroundColor,
       alignment: Alignment.center,
       decoration: BoxDecoration(
+        color: calendarTheme?.getSlotBackgroundColor(context),
         border: Border(
           bottom: BorderSide(
-            color: widget.slotBorderColor ?? Colors.grey.withOpacity(0.2),
-            width: .5,
+            color: calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2),
+            width: gridLineWidth,
           ),
           right: BorderSide(
-            color: widget.slotBorderColor ?? Colors.grey.withOpacity(0.2),
-            width: .5,
+            color: calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2),
+            width: gridLineWidth,
           ),
         ),
       ),
       child: Text(
         widget.headerDateFormat.format(headerTime),
-        style: widget.headerTextStyle,
+        style: calendarTheme?.getTimeTextStyle(context),
       ),
     );
   }
 
   List<Widget> _buildSlots(int index, bool isVertical) {
+    final theme = Theme.of(context);
+    final calendarTheme = theme.extension<JazmineCalendarTheme>();
+    final gridLineWidth = widget.gridLineWidth;
+        
+    final gridLineColor = calendarTheme?.getGridLineColor(context) ?? 
+        (theme.brightness == Brightness.light 
+            ? Colors.grey.withOpacity(0.2) 
+            : Colors.grey.withOpacity(0.3));
     final slotCount = isVertical ? widget.numberOfColumns : widget.numberOfRows;
     
     return List.generate(slotCount, (slotIndex) {
-      final slotTime = widget
-          .startDate
+      final slotTime = widget.startDate
           .add(widget.slotDuration * index)
           .add(widget.slotDuration * slotIndex);
           
@@ -257,18 +242,18 @@ class _CalendarGridState extends State<CalendarGrid> {
           date: slotTime,
           formatDate: widget.headerDateFormat,
           decoration: BoxDecoration(
-            color: widget.slotColor,
+            color: calendarTheme?.getSlotBackgroundColor(context),
             border: Border(
               bottom: BorderSide(
-                color: widget.slotBorderColor ?? Colors.grey.withOpacity(0.2),
-                width: .5, //slotBorderWidth,
+                color: gridLineColor,
+                width: gridLineWidth,
               ),
               right: BorderSide(
-                color: widget.slotBorderColor ?? Colors.grey.withOpacity(0.2),
-                width: .5, //slotBorderWidth,
+                color: gridLineColor,
+                width: gridLineWidth,
               ),
             ),
-          ), 
+          ),
         ),
       );
     });

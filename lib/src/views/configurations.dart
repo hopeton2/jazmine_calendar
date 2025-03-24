@@ -2,18 +2,12 @@
 import 'package:flutter/widgets.dart';
 
 abstract class BaseViewConfiguration {
-  final Color? gridLineColor;
-  final Color? gridLineColorDark;
-  final Color? selectedDayColor;
-  final Color? selectedDayColorDark;
   final Alignment dateAlignment;
+  final double gridLineWidth;
 
   const BaseViewConfiguration({
-    this.gridLineColor,
-    this.gridLineColorDark,
-    this.selectedDayColor,
-    this.selectedDayColorDark,
     this.dateAlignment = Alignment.center,
+    this.gridLineWidth = 0.5,
   });
 }
 
@@ -23,8 +17,6 @@ class DayViewConfiguration extends BaseViewConfiguration {
   final double timebarWidth;
 
   const DayViewConfiguration({
-    super.gridLineColor,
-    super.selectedDayColor,
     super.dateAlignment,
     this.showCurrentTimeIndicator = true,
     this.hourHeight = 60,
@@ -37,8 +29,7 @@ class WeekViewConfiguration extends DayViewConfiguration {
   final String weekdayFormat;
 
   const WeekViewConfiguration({
-    super.gridLineColor,
-    super.selectedDayColor,
+    super.dateAlignment,
     super.showCurrentTimeIndicator,
     super.hourHeight,
     this.showWeekends = true,
@@ -52,10 +43,6 @@ class TimelineConfiguration extends BaseViewConfiguration {
   final bool showCurrentTimeIndicator;
 
   const TimelineConfiguration({
-    super.gridLineColor,
-    super.gridLineColorDark,
-    super.selectedDayColor,
-    super.selectedDayColorDark,
     super.dateAlignment,
     this.interval = const Duration(minutes: 30),
     this.timeAxisWidth = 60.0,
@@ -69,8 +56,6 @@ class AgendaViewConfiguration extends BaseViewConfiguration {
   final EdgeInsets dateDividerPadding;
 
   const AgendaViewConfiguration({
-    super.gridLineColor,
-    super.selectedDayColor,
     super.dateAlignment,
     this.dateFormat = 'EEEE, MMMM d',
     this.groupByDate = true,
@@ -92,10 +77,6 @@ class MonthViewConfiguration extends BaseViewConfiguration {
   final String firstDayOfMonthFormat;
 
   const MonthViewConfiguration({
-    super.gridLineColor,
-    super.gridLineColorDark,
-    super.selectedDayColor,
-    super.selectedDayColorDark,
     super.dateAlignment,
     this.daysPerWeek = 7,
     this.weekdayFormat = 'E',

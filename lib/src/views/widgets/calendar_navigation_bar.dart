@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:provider/provider.dart';
-import '../../controller/jazmine_calendar_controller.dart';
 import 'package:intl/intl.dart';
 
 class CalendarNavigationBar extends StatelessWidget {

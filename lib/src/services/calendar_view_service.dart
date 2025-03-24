@@ -16,6 +16,8 @@ class CalendarViewService {
            view == CalendarView.workWeek;
   }
 
+  
+  
   String getScrollStorageKey(CalendarView view) {
     if (isDayView(view)) {
       return 'day_view_scroll';

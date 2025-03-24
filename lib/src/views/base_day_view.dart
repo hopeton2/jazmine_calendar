@@ -4,6 +4,7 @@ import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/views/widgets/all_day_grid.dart';
 
 class BaseDayView extends StatelessWidget {
   final List<DateTime> days;
@@ -30,10 +31,8 @@ class BaseDayView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = JazmineCalendar.of(context).controller!;
-    final startTime =
-        DateTime(days.first.year, days.first.month, days.first.day);
-    final endTime =
-        DateTime(days.first.year, days.first.month, days.first.day + 1);
+    final startTime = DateTime(days.first.year, days.first.month, days.first.day);
+    final endTime = DateTime(days.first.year, days.first.month, days.first.day + 1);
 
     return ValueListenableBuilder<Duration>(
       valueListenable: controller.intervalNotifier,
@@ -41,9 +40,16 @@ class BaseDayView extends StatelessWidget {
         return Column(
           children: [
             _buildHeader(context, days),
+            AllDayGrid(
+              startDate: startTime,
+              days: days,
+              controller: controller,
+              headerWidth: configuration.timebarWidth,
+              borderColor: Colors.grey.withOpacity(0.2),
+            ),
             Expanded(
               child: CalendarGrid(
-                key: ValueKey('day_${days.first.toIso8601String()}'),
+                key: PageStorageKey('day_view_scroll'),
                 startDate: startTime,
                 endDate: endTime,
                 controller: controller,
@@ -53,10 +59,9 @@ class BaseDayView extends StatelessWidget {
                 slotDuration: const Duration(days: 1),
                 intervalDuration: interval,
                 orientation: Axis.vertical,
-                slotBorderWidth: 0.5,
-                slotBorderColor: Colors.grey.withOpacity(0.2),
                 headerWidth: configuration.timebarWidth,
                 headerBuilder: _buildTimebarHeader,
+
               ),
             ),
           ],

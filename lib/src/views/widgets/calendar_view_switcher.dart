@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
-import 'package:jazmine_calendar/src/views/day_view.dart';
-import 'package:jazmine_calendar/src/views/week_view.dart';
-import 'package:jazmine_calendar/src/views/work_week_view.dart';
-import 'package:jazmine_calendar/src/views/agenda_view.dart';
-import 'package:jazmine_calendar/src/views/month_view.dart';
-import 'package:jazmine_calendar/src/views/timeline_view.dart';
-
+import 'package:jazmine_calendar/src/views/calendar_views.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class CalendarViewSwitcher extends StatelessWidget {
@@ -28,7 +22,9 @@ class CalendarViewSwitcher extends StatelessWidget {
           CalendarView.week => const WeekView(),
           CalendarView.month => const MonthView(),
           CalendarView.agenda => const AgendaView(),
-          CalendarView.timeline => const TimelineView(),
+          CalendarView.timeline => TimelineView(
+            configuration: JazmineCalendar.of(context).timelineConfiguration,
+          ),
         };
       },
     );

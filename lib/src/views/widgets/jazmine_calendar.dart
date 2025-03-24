@@ -44,19 +44,40 @@ class JazmineCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Don't create a new controller during build if one wasn't provided
+    // If no controller is provided, create a default one
     if (controller == null) {
-      return const Center(child: CircularProgressIndicator());
+      return FutureBuilder<JazmineCalendarController>(
+        future: JazmineCalendarController.create(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          return ChangeNotifierProvider.value(
+            value: snapshot.data!,
+            child: Builder(
+              builder: (context) => _buildCalendarContent(context, snapshot.data!),
+            ),
+          );
+        },
+      );
     }
 
+    return _buildCalendarContent(context, controller!);
+  }
+
+  Widget _buildCalendarContent(BuildContext context, JazmineCalendarController controller) {
     return ChangeNotifierProvider.value(
-      value: controller!,
+      value: controller,
       child: Builder(
         builder: (context) {
           return Theme(
             data: Theme.of(context).copyWith(
               extensions: [
-                if (theme != null) theme!,
+                ...Theme.of(context).extensions.values.where(
+                  (extension) => extension is! JazmineCalendarTheme,
+                ),
+                theme ?? const JazmineCalendarTheme(),
               ],
             ),
             child: Scaffold(
@@ -67,9 +88,9 @@ class JazmineCalendar extends StatelessWidget {
                   const Expanded(child: CalendarViewSwitcher()),
                 ],
               ),
-              floatingActionButton: controller!.showFloatingActionButton
+              floatingActionButton: controller.showFloatingActionButton
                   ? FloatingActionButton(
-                      onPressed: () => _showAddEventDialog(context, controller!),
+                      onPressed: () => _showAddEventDialog(context, controller),
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       child: const Icon(Icons.add),
@@ -79,8 +100,7 @@ class JazmineCalendar extends StatelessWidget {
           );
         },
       ),
-    );
-  }
+    );  }
 
   Future<void> _showAddEventDialog(
     BuildContext context,

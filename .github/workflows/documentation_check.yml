@@ -1,0 +1,31 @@
+name: Documentation Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dart-lang/setup-dart@v1
+      
+      - name: Install dependencies
+        run: dart pub get
+        
+      - name: Run documentation analysis
+        run: dart analyze --fatal-infos
+        
+      - name: Generate documentation
+        run: dart doc .
+        
+      - name: Check documentation coverage
+        run: |
+          UNDOCUMENTED=$(dart doc . 2>&1 | grep -c "warning: No documentation comment")
+          if [ $UNDOCUMENTED -gt 0 ]; then
+            echo "Found $UNDOCUMENTED undocumented public APIs"
+            exit 1
+          fi

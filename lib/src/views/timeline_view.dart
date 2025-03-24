@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
+import 'package:jazmine_calendar/src/utils/typedefs.dart';
+import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
-class TimelineView extends BaseCalendarView {
-  const TimelineView({super.key});
+class TimelineView extends StatefulWidget {
+  final CalendarHeaderBuilder? headerBuilder;
+  final TimelineConfiguration configuration;
 
+  const TimelineView({
+    super.key,
+    this.headerBuilder,
+    required this.configuration,
+  });
+
+  @override
+  State<TimelineView> createState() => _TimelineViewState();
+}
+
+class _TimelineViewState extends State<TimelineView> {
   @override
   Widget build(BuildContext context) {
     final calendarWidget = JazmineCalendar.of(context);
@@ -40,11 +53,8 @@ class TimelineView extends BaseCalendarView {
                     slotDuration: interval,
                     intervalDuration: interval,
                     orientation: Axis.horizontal,
-                    slotBorderWidth: 0.5,
-                    slotBorderColor: Colors.grey.withOpacity(0.2),
                     headerWidth: configuration.timeAxisWidth,
                     headerBuilder: _buildTimeHeader,
- 
                   ),
                 ),
               ],

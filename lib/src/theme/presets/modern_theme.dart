@@ -4,7 +4,6 @@ import '../jazmine_calendar_theme.dart';
 class ModernTheme extends JazmineCalendarTheme {
   const ModernTheme()
       : super(
-          // Seed color - Material 3 primary color
           seedColor: const Color(0xFF2196F3),    // Blue primary
           
           gridLineColor: const Color(0x26808080),

@@ -50,7 +50,7 @@ class MinimalTheme extends JazmineCalendarTheme {
           monthViewTheme: const MonthViewTheme(
             trailingDaysColor: Color(0x61000000),         // black with 38% opacity
             trailingDaysColorDark: Color(0x61FFFFFF),     // white with 38% opacity
-            trailingDaysTextStyle: TextStyle(
+            trailingDatesStyle: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w300,
             ),

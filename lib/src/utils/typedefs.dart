@@ -1,0 +1,35 @@
+import 'package:flutter/widgets.dart';
+import 'package:jazmine_calendar/src/models/event.dart';
+
+/// Builder for calendar headers that provides context, date, orientation, width, and height
+typedef CalendarHeaderBuilder = Widget Function(
+  BuildContext context,
+  DateTime date,
+  bool isVertical,
+  double width,
+  double height,
+);
+
+/// Builder for date headers that provides context and date
+typedef DateHeaderBuilder = Widget Function(
+  BuildContext context,
+  DateTime date,
+);
+
+/// Builder for calendar slots that provides context, date, row, and column
+typedef CalendarSlotBuilder = Widget Function(
+  BuildContext context,
+  DateTime date,
+  int row,
+  int column,
+);
+
+/// Callback for event creation
+typedef EventCallback = Future<void> Function(Event event);
+
+/// Callback for event time-related operations (resize/reschedule)
+typedef EventTimeCallback = Future<void> Function(
+  Event event,
+  DateTime newStart,
+  DateTime newEnd,
+);

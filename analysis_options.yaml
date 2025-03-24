@@ -1,4 +1,18 @@
 include: package:flutter_lints/flutter.yaml
 
+linter:
+  rules:
+    # existing rules
+    prefer_relative_imports: false
+    always_use_package_imports: true
+    prefer_const_declarations: true
+    avoid_hardcoded_strings: true
+
+    # Add documentation rules
+    package_api_docs: false  # Requires all public APIs to be documented
+    public_member_api_docs: false  # Requires documentation for all public members
+    slash_for_doc_comments: true  # Enforces /// instead of /** */
+    comment_references: true  # Validates references in documentation
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

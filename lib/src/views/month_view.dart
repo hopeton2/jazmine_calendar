@@ -91,12 +91,8 @@ class MonthView extends StatelessWidget {
         final theme = Theme.of(context);
         final calendarTheme = theme.extension<JazmineCalendarTheme>();
         final borderColor = theme.brightness == Brightness.light
-            ? configuration.gridLineColor ??
-                calendarTheme?.getGridLineColor(context) ??
-                Colors.grey.withOpacity(0.2)
-            : configuration.gridLineColorDark ??
-                calendarTheme?.getGridLineColor(context) ??
-                Colors.grey.withOpacity(0.3);
+            ? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2)
+            : calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.3);
 
         final availableHeight = constraints.maxHeight;
         final calculatedCellHeight = availableHeight / weeksCount;
@@ -111,8 +107,8 @@ class MonthView extends StatelessWidget {
           height: constraints.maxHeight,
           decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: borderColor, width: 0.5),
-              left: BorderSide(color: borderColor, width: 0.5),
+              top: BorderSide(color: borderColor, width: configuration.gridLineWidth),
+              left: BorderSide(color: borderColor, width: configuration.gridLineWidth),
             ),
           ),
           child: GridView.builder(
@@ -197,8 +193,8 @@ class MonthView extends StatelessWidget {
     final theme = Theme.of(context);
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
     final gridLineColor = theme.brightness == Brightness.light
-        ? configuration.gridLineColor ?? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2)
-        : configuration.gridLineColorDark ?? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.3);
+        ? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2)
+        : calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.3);
 
     return CalendarTimeSlot(
       date: date, 
@@ -207,8 +203,8 @@ class MonthView extends StatelessWidget {
       formatDate: DateFormat(isFirstDayOfMonth ? configuration.firstDayOfMonthFormat : configuration.monthDaysFormat),
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: gridLineColor, width: 0.5),
-          bottom: BorderSide(color: gridLineColor, width: 0.5),
+          right: BorderSide(color: gridLineColor, width: configuration.gridLineWidth),
+          bottom: BorderSide(color: gridLineColor, width: configuration.gridLineWidth),
         ),
       ),
       selectedDecoration: BoxDecoration(
@@ -236,8 +232,8 @@ class MonthView extends StatelessWidget {
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
     final monthTheme = theme.extension<MonthViewTheme>();
     final gridLineColor = theme.brightness == Brightness.light
-        ? configuration.gridLineColor ?? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2)
-        : configuration.gridLineColorDark ?? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.3);
+        ? calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.2)
+        : calendarTheme?.getGridLineColor(context) ?? Colors.grey.withOpacity(0.3);
 
     return CalendarTimeSlot(
       date: date, 
@@ -246,8 +242,8 @@ class MonthView extends StatelessWidget {
       formatDate: DateFormat(isFirstTrailingDay ? configuration.firstTrailingDaysFormat : configuration.monthDaysFormat),
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: gridLineColor, width: 0.5),
-          bottom: BorderSide(color: gridLineColor, width: 0.5),
+          right: BorderSide(color: gridLineColor, width: configuration.gridLineWidth),
+          bottom: BorderSide(color: gridLineColor, width: configuration.gridLineWidth),
         ),
         color: monthTheme?.getTrailingDaysBackgroundColor(context),
       ),

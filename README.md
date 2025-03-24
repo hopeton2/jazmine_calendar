@@ -1,18 +1,7 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Jazmine Calendar
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+A flexible, cross-platform calendar widget for Flutter, inspired by Google Calendar. 
+Developed and maintained by Jazmine Technologies, Inc.
 
 ## Features
 
@@ -28,12 +17,12 @@ start using the package.
 TODO: Include short and useful examples for package users. Add longer examples
 to `/example` folder.
 
-```dart
-const like = 'sample';
-```
-
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+For more information, visit [jazmine.tech](https://jazmine.tech) or contact us at support@jazmine.tech.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2024 Jazmine Technologies, Inc.

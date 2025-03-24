@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Main calendar theme for common elements
+// Base calendar theme for colors
 class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
   final Color? seedColor;
   final Color? gridLineColor;
@@ -29,6 +29,9 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
   final TextStyle? timeTextStyle;
   
   final MonthViewTheme monthViewTheme;
+  final DayViewTheme dayViewTheme;
+  final WeekViewTheme weekViewTheme;
+  final AgendaViewTheme agendaViewTheme;
 
   final Color? hoverColor;
   final Color? hoverColorLight;
@@ -37,6 +40,13 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
   final Color? todayIndicatorTextColor;
   final Color? todayIndicatorTextColorLight;
   final Color? todayIndicatorTextColorDark;
+
+  final Color? allDayBackgroundColor;
+  final Color? allDayBackgroundColorLight;
+  final Color? allDayBackgroundColorDark;
+
+  final TextStyle? eventTitleStyle;
+  final TextStyle? eventTimeStyle;
 
   const JazmineCalendarTheme({
     this.seedColor,
@@ -59,12 +69,20 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     this.dateTextStyle,
     this.timeTextStyle,
     this.monthViewTheme = const MonthViewTheme(),
+    this.dayViewTheme = const DayViewTheme(),
+    this.weekViewTheme = const WeekViewTheme(),
+    this.agendaViewTheme = const AgendaViewTheme(),
     this.hoverColor,
     this.hoverColorLight,
     this.hoverColorDark,
     this.todayIndicatorTextColor,
     this.todayIndicatorTextColorLight,
     this.todayIndicatorTextColorDark,
+    this.allDayBackgroundColor,
+    this.allDayBackgroundColorLight,
+    this.allDayBackgroundColorDark,
+    this.eventTitleStyle,
+    this.eventTimeStyle,
   });
 
   Color getGridLineColor(BuildContext context) {
@@ -81,8 +99,8 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     }
     
     return brightness == Brightness.light
-        ? Colors.grey.withOpacity(0.2)
-        : Colors.grey.withOpacity(0.3);
+        ? Colors.grey.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.2);
   }
 
   Color getSelectedDayColor(BuildContext context) {
@@ -177,6 +195,48 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     return Theme.of(context).colorScheme.surface;
   }
 
+  Color getSlotBackgroundColor(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return colorScheme.surface;  // default, can be overridden
+  }
+
+  Color getAllDayBackgroundColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    
+    if (brightness == Brightness.light && allDayBackgroundColorLight != null) {
+      return allDayBackgroundColorLight!;
+    }
+    if (brightness == Brightness.dark && allDayBackgroundColorDark != null) {
+      return allDayBackgroundColorDark!;
+    }
+    if (allDayBackgroundColor != null) {
+      return allDayBackgroundColor!;
+    }
+    
+    final baseColor = getSlotBackgroundColor(context);
+    final HSLColor hslColor = HSLColor.fromColor(baseColor);
+    return hslColor
+        .withLightness((hslColor.lightness * 0.85).clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  TextStyle getEventTitleStyle(BuildContext context) {
+    return eventTitleStyle ?? TextStyle(
+      color: getEventTextColor(context),
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+    );
+  }
+
+  TextStyle getEventTimeStyle(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return eventTimeStyle ?? TextStyle(
+      color: getEventTextColor(context),
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+    );
+  }
+
   @override
   JazmineCalendarTheme copyWith({
     Color? seedColor,
@@ -199,6 +259,11 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     Color? todayIndicatorTextColor,
     Color? todayIndicatorTextColorLight,
     Color? todayIndicatorTextColorDark,
+    Color? allDayBackgroundColor,
+    Color? allDayBackgroundColorLight,
+    Color? allDayBackgroundColorDark,
+    TextStyle? eventTitleStyle,
+    TextStyle? eventTimeStyle,
   }) {
     return JazmineCalendarTheme(
       seedColor: seedColor ?? this.seedColor,
@@ -221,6 +286,11 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       todayIndicatorTextColor: todayIndicatorTextColor ?? this.todayIndicatorTextColor,
       todayIndicatorTextColorLight: todayIndicatorTextColorLight ?? this.todayIndicatorTextColorLight,
       todayIndicatorTextColorDark: todayIndicatorTextColorDark ?? this.todayIndicatorTextColorDark,
+      allDayBackgroundColor: allDayBackgroundColor ?? this.allDayBackgroundColor,
+      allDayBackgroundColorLight: allDayBackgroundColorLight ?? this.allDayBackgroundColorLight,
+      allDayBackgroundColorDark: allDayBackgroundColorDark ?? this.allDayBackgroundColorDark,
+      eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
+      eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
     );
   }
 
@@ -254,48 +324,37 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       todayIndicatorTextColor: Color.lerp(todayIndicatorTextColor, other.todayIndicatorTextColor, t),
       todayIndicatorTextColorLight: Color.lerp(todayIndicatorTextColorLight, other.todayIndicatorTextColorLight, t),
       todayIndicatorTextColorDark: Color.lerp(todayIndicatorTextColorDark, other.todayIndicatorTextColorDark, t),
+      allDayBackgroundColor: Color.lerp(allDayBackgroundColor, other.allDayBackgroundColor, t),
+      allDayBackgroundColorLight: Color.lerp(allDayBackgroundColorLight, other.allDayBackgroundColorLight, t),
+      allDayBackgroundColorDark: Color.lerp(allDayBackgroundColorDark, other.allDayBackgroundColorDark, t),
+      eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
+      eventTimeStyle: TextStyle.lerp(eventTimeStyle, other.eventTimeStyle, t),
     );
   }
 }
 
-// Example of view-specific theme
-class MonthViewTheme {
-  final TextStyle? trailingDaysTextStyle;
+class MonthViewTheme extends ThemeExtension<MonthViewTheme> {
+  final TextStyle? weekdayHeaderStyle;
+  final TextStyle? cellDateStyle;
+  final TextStyle? trailingDatesStyle;
+  final TextStyle? eventTitleStyle;
+  final TextStyle? moreEventsStyle;
   final Color? trailingDaysColor;
-  final Color? trailingDaysColorLight;
   final Color? trailingDaysColorDark;
-  final Color? trailingDaysBackgroundColor;
-  final Color? trailingDaysBackgroundColorLight;
-  final Color? trailingDaysBackgroundColorDark;
 
   const MonthViewTheme({
-    this.trailingDaysTextStyle,
+    this.weekdayHeaderStyle,
+    this.cellDateStyle,
+    this.trailingDatesStyle,
+    this.eventTitleStyle,
+    this.moreEventsStyle,
     this.trailingDaysColor,
-    this.trailingDaysColorLight,
     this.trailingDaysColorDark,
-    this.trailingDaysBackgroundColor,
-    this.trailingDaysBackgroundColorLight,
-    this.trailingDaysBackgroundColorDark,
   });
 
-  Color? getTrailingDaysBackgroundColor(BuildContext context) {
+  Color getTrailingDaysBackgroundColor(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     
-    if (brightness == Brightness.light && trailingDaysBackgroundColorLight != null) {
-      return trailingDaysBackgroundColorLight;
-    }
-    if (brightness == Brightness.dark && trailingDaysBackgroundColorDark != null) {
-      return trailingDaysBackgroundColorDark;
-    }
-    return trailingDaysBackgroundColor;
-  }
-
-  Color getTrailingDaysColor(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    
-    if (brightness == Brightness.light && trailingDaysColorLight != null) {
-      return trailingDaysColorLight!;
-    }
     if (brightness == Brightness.dark && trailingDaysColorDark != null) {
       return trailingDaysColorDark!;
     }
@@ -304,38 +363,172 @@ class MonthViewTheme {
     }
     
     return brightness == Brightness.light
-        ? Colors.grey.withOpacity(0.5)
-        : Colors.grey.withOpacity(0.6);
+        ? Colors.grey.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.15);
   }
 
-  TextStyle getTrailingDaysTextStyle(BuildContext context) {
-    return trailingDaysTextStyle ?? 
-           Theme.of(context).textTheme.bodyMedium!.copyWith(
-             color: getTrailingDaysColor(context),
-           );
+  @override
+  MonthViewTheme copyWith({
+    TextStyle? weekdayHeaderStyle,
+    TextStyle? cellDateStyle,
+    TextStyle? trailingDatesStyle,
+    TextStyle? eventTitleStyle,
+    TextStyle? moreEventsStyle,
+    Color? trailingDaysColor,
+    Color? trailingDaysColorDark,
+  }) {
+    return MonthViewTheme(
+      weekdayHeaderStyle: weekdayHeaderStyle ?? this.weekdayHeaderStyle,
+      cellDateStyle: cellDateStyle ?? this.cellDateStyle,
+      trailingDatesStyle: trailingDatesStyle ?? this.trailingDatesStyle,
+      eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
+      moreEventsStyle: moreEventsStyle ?? this.moreEventsStyle,
+      trailingDaysColor: trailingDaysColor ?? this.trailingDaysColor,
+      trailingDaysColorDark: trailingDaysColorDark ?? this.trailingDaysColorDark,
+    );
+  }
+
+  @override
+  MonthViewTheme lerp(ThemeExtension<MonthViewTheme>? other, double t) {
+    if (other is! MonthViewTheme) return this;
+    return MonthViewTheme(
+      weekdayHeaderStyle: TextStyle.lerp(weekdayHeaderStyle, other.weekdayHeaderStyle, t),
+      cellDateStyle: TextStyle.lerp(cellDateStyle, other.cellDateStyle, t),
+      trailingDatesStyle: TextStyle.lerp(trailingDatesStyle, other.trailingDatesStyle, t),
+      eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
+      moreEventsStyle: TextStyle.lerp(moreEventsStyle, other.moreEventsStyle, t),
+      trailingDaysColor: Color.lerp(trailingDaysColor, other.trailingDaysColor, t),
+      trailingDaysColorDark: Color.lerp(trailingDaysColorDark, other.trailingDaysColorDark, t),
+    );
   }
 }
 
-class TimelineViewTheme {
-  final Color timeAxisBackgroundColor;
-  final Color timeAxisBackgroundColorDark;
-  final double timeAxisWidth;
+class DayViewTheme extends ThemeExtension<DayViewTheme> {
+  final TextStyle? dateHeaderStyle;
+  final TextStyle? timebarLabelStyle;
+  final TextStyle? eventTitleStyle;
+  final TextStyle? eventTimeStyle;
+  final TextStyle? allDayEventStyle;
 
-  const TimelineViewTheme({
-    this.timeAxisBackgroundColor = const Color(0xFFF5F5F5),
-    this.timeAxisBackgroundColorDark = const Color(0xFF424242),
-    this.timeAxisWidth = 60.0,
+  const DayViewTheme({
+    this.dateHeaderStyle,
+    this.timebarLabelStyle,
+    this.eventTitleStyle,
+    this.eventTimeStyle,
+    this.allDayEventStyle,
   });
+
+  @override
+  DayViewTheme copyWith({
+    TextStyle? dateHeaderStyle,
+    TextStyle? timebarLabelStyle,
+    TextStyle? eventTitleStyle,
+    TextStyle? eventTimeStyle,
+    TextStyle? allDayEventStyle,
+  }) {
+    return DayViewTheme(
+      dateHeaderStyle: dateHeaderStyle ?? this.dateHeaderStyle,
+      timebarLabelStyle: timebarLabelStyle ?? this.timebarLabelStyle,
+      eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
+      eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
+      allDayEventStyle: allDayEventStyle ?? this.allDayEventStyle,
+    );
+  }
+
+  @override
+  DayViewTheme lerp(ThemeExtension<DayViewTheme>? other, double t) {
+    if (other is! DayViewTheme) return this;
+    return DayViewTheme(
+      dateHeaderStyle: TextStyle.lerp(dateHeaderStyle, other.dateHeaderStyle, t),
+      timebarLabelStyle: TextStyle.lerp(timebarLabelStyle, other.timebarLabelStyle, t),
+      eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
+      eventTimeStyle: TextStyle.lerp(eventTimeStyle, other.eventTimeStyle, t),
+      allDayEventStyle: TextStyle.lerp(allDayEventStyle, other.allDayEventStyle, t),
+    );
+  }
 }
 
-class AgendaViewTheme {
-  final Color dateDividerColor;
-  final Color dateDividerColorDark;
-  final TextStyle dateHeaderStyle;
+class WeekViewTheme extends ThemeExtension<WeekViewTheme> {
+  final TextStyle? weekdayHeaderStyle;
+  final TextStyle? dateStyle;
+  final TextStyle? timebarLabelStyle;
+  final TextStyle? eventTitleStyle;
+  final TextStyle? eventTimeStyle;
+
+  const WeekViewTheme({
+    this.weekdayHeaderStyle,
+    this.dateStyle,
+    this.timebarLabelStyle,
+    this.eventTitleStyle,
+    this.eventTimeStyle,
+  });
+
+  @override
+  WeekViewTheme copyWith({
+    TextStyle? weekdayHeaderStyle,
+    TextStyle? dateStyle,
+    TextStyle? timebarLabelStyle,
+    TextStyle? eventTitleStyle,
+    TextStyle? eventTimeStyle,
+  }) {
+    return WeekViewTheme(
+      weekdayHeaderStyle: weekdayHeaderStyle ?? this.weekdayHeaderStyle,
+      dateStyle: dateStyle ?? this.dateStyle,
+      timebarLabelStyle: timebarLabelStyle ?? this.timebarLabelStyle,
+      eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
+      eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
+    );
+  }
+
+  @override
+  WeekViewTheme lerp(ThemeExtension<WeekViewTheme>? other, double t) {
+    if (other is! WeekViewTheme) return this;
+    return WeekViewTheme(
+      weekdayHeaderStyle: TextStyle.lerp(weekdayHeaderStyle, other.weekdayHeaderStyle, t),
+      dateStyle: TextStyle.lerp(dateStyle, other.dateStyle, t),
+      timebarLabelStyle: TextStyle.lerp(timebarLabelStyle, other.timebarLabelStyle, t),
+      eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
+      eventTimeStyle: TextStyle.lerp(eventTimeStyle, other.eventTimeStyle, t),
+    );
+  }
+}
+
+class AgendaViewTheme extends ThemeExtension<AgendaViewTheme> {
+  final TextStyle? dateHeaderStyle;
+  final TextStyle? eventTitleStyle;
+  final TextStyle? eventTimeStyle;
+  final TextStyle? sectionHeaderStyle;
 
   const AgendaViewTheme({
-    this.dateDividerColor = const Color(0x1A000000),
-    this.dateDividerColorDark = const Color(0x1AFFFFFF),
-    this.dateHeaderStyle = const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    this.dateHeaderStyle,
+    this.eventTitleStyle,
+    this.eventTimeStyle,
+    this.sectionHeaderStyle,
   });
+
+  @override
+  AgendaViewTheme copyWith({
+    TextStyle? dateHeaderStyle,
+    TextStyle? eventTitleStyle,
+    TextStyle? eventTimeStyle,
+    TextStyle? sectionHeaderStyle,
+  }) {
+    return AgendaViewTheme(
+      dateHeaderStyle: dateHeaderStyle ?? this.dateHeaderStyle,
+      eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
+      eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
+      sectionHeaderStyle: sectionHeaderStyle ?? this.sectionHeaderStyle,
+    );
+  }
+
+  @override
+  AgendaViewTheme lerp(ThemeExtension<AgendaViewTheme>? other, double t) {
+    if (other is! AgendaViewTheme) return this;
+    return AgendaViewTheme(
+      dateHeaderStyle: TextStyle.lerp(dateHeaderStyle, other.dateHeaderStyle, t),
+      eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
+      eventTimeStyle: TextStyle.lerp(eventTimeStyle, other.eventTimeStyle, t),
+      sectionHeaderStyle: TextStyle.lerp(sectionHeaderStyle, other.sectionHeaderStyle, t),
+    );
+  }
 }
