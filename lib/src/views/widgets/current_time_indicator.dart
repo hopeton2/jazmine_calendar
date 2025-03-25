@@ -109,13 +109,6 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
         final indicatorColor = widget.color ?? theme.colorScheme.primary;
         final interval = widget.controller.intervalNotifier.value;
 
-        // Calculate position based on hours and minutes since start of day
-        final startOfDay = DateTime(
-          widget.startDate.year,
-          widget.startDate.month,
-          widget.startDate.day,
-        );
-        
         // Calculate total minutes since start of day
         final totalMinutesSinceStart = (currentTime.hour * 60 + currentTime.minute);
         

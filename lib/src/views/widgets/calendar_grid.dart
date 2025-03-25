@@ -55,6 +55,7 @@ class CalendarGrid extends StatefulWidget {
 
 class _CalendarGridState extends State<CalendarGrid> {
   late final ScrollController _scrollController;
+  static bool _isFirstLoad = true;  // Static to track first load across all instances
 
   @override
   void initState() {
@@ -63,32 +64,42 @@ class _CalendarGridState extends State<CalendarGrid> {
       initialScrollOffset: _calculateInitialOffset(),
     );
     _scrollController.addListener(_onScroll);
+
+    // Schedule initial scroll after build only on first load
+    if (_isFirstLoad && widget.showCurrentTimeIndicator) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollBasedOnTime();
+        _isFirstLoad = false;
+      });
+    }
+  }
+
+  void _scrollBasedOnTime() {
+    if (!mounted) return;
+    
+    final now = DateTime.now();
+    final isBeforeNoon = now.hour < 12;
+    final isVertical = widget.orientation == Axis.vertical;
+    
+    // Calculate max scroll extent based on orientation
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    
+    _scrollController.animateTo(
+      isBeforeNoon ? 0 : maxScroll,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   double _calculateInitialOffset() {
-    // Check for stored scroll position
-    final storedPosition = widget.controller.getScrollPosition(widget.controller.currentView);
-    
-    if (storedPosition != null) {
-      return storedPosition;
+    // If it's not the first load, use stored position
+    if (!_isFirstLoad) {
+      final storedPosition = widget.controller.getScrollPosition(widget.controller.currentView);
+      if (storedPosition != null) {
+        return storedPosition;
+      }
     }
-
-    // Fall back to current time position
-    final time = DateTime.now();
-    final isVertical = widget.orientation == Axis.vertical;
-    final totalMinutesSinceStart = (time.hour * 60 + time.minute);
-    final interval = widget.intervalDuration;
-    
-    final position = (totalMinutesSinceStart / interval.inMinutes) * 
-        (isVertical ? interval.inMinutes.toDouble() : widget.headerWidth);
-
-    // Add padding to center the time in the viewport
-    final estimatedViewportDimension = isVertical ? 300.0 : 200.0;
-    final viewportPadding = isVertical 
-        ? estimatedViewportDimension / 2
-        : estimatedViewportDimension / 3;
-    
-    return max(0, position - viewportPadding);
+    return 0.0;
   }
 
   void _onScroll() {
