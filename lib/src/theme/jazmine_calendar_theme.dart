@@ -48,6 +48,10 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
   final TextStyle? eventTitleStyle;
   final TextStyle? eventTimeStyle;
 
+  final Color? currentTimeIndicatorColor;
+  final Color? currentTimeIndicatorColorLight;
+  final Color? currentTimeIndicatorColorDark;
+
   const JazmineCalendarTheme({
     this.seedColor,
     this.gridLineColor,
@@ -83,6 +87,9 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     this.allDayBackgroundColorDark,
     this.eventTitleStyle,
     this.eventTimeStyle,
+    this.currentTimeIndicatorColor,
+    this.currentTimeIndicatorColorLight,
+    this.currentTimeIndicatorColorDark = Colors.red,
   });
 
   Color getGridLineColor(BuildContext context) {
@@ -213,10 +220,10 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       return allDayBackgroundColor!;
     }
     
+    // Get the base slot color and make it darker
     final baseColor = getSlotBackgroundColor(context);
-    final HSLColor hslColor = HSLColor.fromColor(baseColor);
-    return hslColor
-        .withLightness((hslColor.lightness * 0.85).clamp(0.0, 1.0))
+    return HSLColor.fromColor(baseColor)
+        .withLightness((HSLColor.fromColor(baseColor).lightness * 0.70).clamp(0.0, 1.0))
         .toColor();
   }
 
@@ -235,6 +242,22 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       fontSize: 12,
       fontWeight: FontWeight.w400,
     );
+  }
+
+  Color getCurrentTimeIndicatorColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    
+    if (brightness == Brightness.light && currentTimeIndicatorColorLight != null) {
+      return currentTimeIndicatorColorLight!;
+    }
+    if (brightness == Brightness.dark && currentTimeIndicatorColorDark != null) {
+      return currentTimeIndicatorColorDark!;
+    }
+    if (currentTimeIndicatorColor != null) {
+      return currentTimeIndicatorColor!;
+    }
+    
+    return Theme.of(context).colorScheme.primary;
   }
 
   @override
@@ -264,6 +287,9 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
     Color? allDayBackgroundColorDark,
     TextStyle? eventTitleStyle,
     TextStyle? eventTimeStyle,
+    Color? currentTimeIndicatorColor,
+    Color? currentTimeIndicatorColorLight,
+    Color? currentTimeIndicatorColorDark,
   }) {
     return JazmineCalendarTheme(
       seedColor: seedColor ?? this.seedColor,
@@ -291,6 +317,9 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       allDayBackgroundColorDark: allDayBackgroundColorDark ?? this.allDayBackgroundColorDark,
       eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
       eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
+      currentTimeIndicatorColor: currentTimeIndicatorColor ?? this.currentTimeIndicatorColor,
+      currentTimeIndicatorColorLight: currentTimeIndicatorColorLight ?? this.currentTimeIndicatorColorLight,
+      currentTimeIndicatorColorDark: currentTimeIndicatorColorDark ?? this.currentTimeIndicatorColorDark,
     );
   }
 
@@ -329,6 +358,9 @@ class JazmineCalendarTheme extends ThemeExtension<JazmineCalendarTheme> {
       allDayBackgroundColorDark: Color.lerp(allDayBackgroundColorDark, other.allDayBackgroundColorDark, t),
       eventTitleStyle: TextStyle.lerp(eventTitleStyle, other.eventTitleStyle, t),
       eventTimeStyle: TextStyle.lerp(eventTimeStyle, other.eventTimeStyle, t),
+      currentTimeIndicatorColor: Color.lerp(currentTimeIndicatorColor, other.currentTimeIndicatorColor, t),
+      currentTimeIndicatorColorLight: Color.lerp(currentTimeIndicatorColorLight, other.currentTimeIndicatorColorLight, t),
+      currentTimeIndicatorColorDark: Color.lerp(currentTimeIndicatorColorDark, other.currentTimeIndicatorColorDark, t),
     );
   }
 }

@@ -67,7 +67,9 @@ class CalendarTimeSlot extends StatelessWidget {
     // Get the appropriate background color based on whether it's an all-day slot
     Color? backgroundColor;
     if (isAllDay) {
-      //backgroundColor = calendarTheme?.getAllDayBackgroundColor(context);
+      backgroundColor = calendarTheme?.getAllDayBackgroundColor(context);
+    } else {
+      backgroundColor = calendarTheme?.getSlotBackgroundColor(context);
     }
 
     return Container(

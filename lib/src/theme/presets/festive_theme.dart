@@ -161,6 +161,9 @@ class FestiveTheme extends JazmineCalendarTheme {
     Color? allDayBackgroundColorDark,
     TextStyle? eventTitleStyle,
     TextStyle? eventTimeStyle,
+    Color? currentTimeIndicatorColor,
+    Color? currentTimeIndicatorColorLight,
+    Color? currentTimeIndicatorColorDark,
   }) {
     return JazmineCalendarTheme(
       seedColor: seedColor ?? this.seedColor,
@@ -188,6 +191,9 @@ class FestiveTheme extends JazmineCalendarTheme {
       allDayBackgroundColorDark: allDayBackgroundColorDark ?? this.allDayBackgroundColorDark,
       eventTitleStyle: eventTitleStyle ?? this.eventTitleStyle,
       eventTimeStyle: eventTimeStyle ?? this.eventTimeStyle,
+      currentTimeIndicatorColor: currentTimeIndicatorColor ?? this.currentTimeIndicatorColor,
+      currentTimeIndicatorColorLight: currentTimeIndicatorColorLight ?? this.currentTimeIndicatorColorLight,
+      currentTimeIndicatorColorDark: currentTimeIndicatorColorDark ?? this.currentTimeIndicatorColorDark,
     );
   }
 

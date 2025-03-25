@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 
 class CurrentTimeIndicator extends StatefulWidget {
   final Axis orientation;
@@ -12,7 +13,7 @@ class CurrentTimeIndicator extends StatefulWidget {
   final JazmineCalendarController controller;
   final bool autoScroll;
   final ScrollController scrollController;
-  final double intervalPixels;  // New property
+  final double intervalPixels; // New property
 
   const CurrentTimeIndicator({
     super.key,
@@ -23,7 +24,7 @@ class CurrentTimeIndicator extends StatefulWidget {
     required this.endDate,
     required this.controller,
     required this.scrollController,
-    required this.intervalPixels,  // Add to constructor
+    required this.intervalPixels, // Add to constructor
     this.color,
     this.width = 2.0,
     this.autoScroll = true,
@@ -33,7 +34,8 @@ class CurrentTimeIndicator extends StatefulWidget {
   State<CurrentTimeIndicator> createState() => _CurrentTimeIndicatorState();
 }
 
-class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with SingleTickerProviderStateMixin {
+class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _positionAnimation;
   late double _currentPosition;
@@ -45,19 +47,16 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    
+
     // Initialize position correctly
     final currentTime = widget.controller.currentTimeNotifier.value;
-    final startOfDay = DateTime(
-      widget.startDate.year,
-      widget.startDate.month,
-      widget.startDate.day,
-    );
-    
+
     final totalMinutesSinceStart = (currentTime.hour * 60 + currentTime.minute);
     final interval = widget.controller.intervalNotifier.value;
-    final position = (totalMinutesSinceStart / interval.inMinutes) * widget.intervalPixels - 6;
-    
+    final position =
+        (totalMinutesSinceStart / interval.inMinutes) * widget.intervalPixels -
+            6;
+
     _currentPosition = position - widget.scrollController.offset;
     _positionAnimation = Tween<double>(
       begin: _currentPosition,
@@ -66,7 +65,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     // Add scroll listener
     widget.scrollController.addListener(_handleScroll);
   }
@@ -91,7 +90,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _currentPosition = newPosition;
     _animationController.forward(from: 0.0);
   }
@@ -105,15 +104,22 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
           return const SizedBox.shrink();
         }
 
-        final theme = Theme.of(context);
-        final indicatorColor = widget.color ?? theme.colorScheme.primary;
+        final calendarTheme =
+            Theme.of(context).extension<JazmineCalendarTheme>();
+        final indicatorColor = widget.color ??
+            calendarTheme?.getCurrentTimeIndicatorColor(context);
         final interval = widget.controller.intervalNotifier.value;
 
+        // Calculate position based on hours and minutes since start of day
+
         // Calculate total minutes since start of day
-        final totalMinutesSinceStart = (currentTime.hour * 60 + currentTime.minute);
-        
+        final totalMinutesSinceStart =
+            (currentTime.hour * 60 + currentTime.minute);
+
         // Calculate position using interval pixels (pixels per interval)
-        final position = (totalMinutesSinceStart / interval.inMinutes) * widget.intervalPixels - 6; // Subtract 6 pixels to align with time slots
+        final position = (totalMinutesSinceStart / interval.inMinutes) *
+                widget.intervalPixels -
+            6; // Subtract 6 pixels to align with time slots
 
         // Adjust position based on scroll offset
         final adjustedPosition = position - widget.scrollController.offset;
@@ -125,15 +131,21 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
           builder: (context, child) {
             final animatedPosition = _positionAnimation.value;
             return Positioned(
-              left: widget.orientation == Axis.vertical ? widget.headerOffset : animatedPosition,
+              left: widget.orientation == Axis.vertical
+                  ? widget.headerOffset
+                  : animatedPosition,
               right: widget.orientation == Axis.vertical ? 0 : null,
-              top: widget.orientation == Axis.vertical ? animatedPosition : widget.headerOffset,
+              top: widget.orientation == Axis.vertical
+                  ? animatedPosition
+                  : widget.headerOffset,
               bottom: widget.orientation == Axis.horizontal ? 0 : null,
               child: child!,
             );
           },
           child: Flex(
-            direction: widget.orientation == Axis.vertical ? Axis.horizontal : Axis.vertical,
+            direction: widget.orientation == Axis.vertical
+                ? Axis.horizontal
+                : Axis.vertical,
             children: [
               Container(
                 width: 12,
@@ -145,8 +157,11 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator> with Single
               ),
               Expanded(
                 child: Container(
-                  width: widget.orientation == Axis.horizontal ? widget.width : null,
-                  height: widget.orientation == Axis.vertical ? widget.width : null,
+                  width: widget.orientation == Axis.horizontal
+                      ? widget.width
+                      : null,
+                  height:
+                      widget.orientation == Axis.vertical ? widget.width : null,
                   color: indicatorColor,
                 ),
               ),

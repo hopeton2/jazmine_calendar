@@ -24,6 +24,7 @@ class CalendarGrid extends StatefulWidget {
   final double headerHeight;
   final bool showCurrentTimeIndicator;
   final double gridLineWidth;
+  final bool isAllDay;  // New property
 
   const CalendarGrid({
     super.key,
@@ -42,6 +43,7 @@ class CalendarGrid extends StatefulWidget {
     this.headerHeight = 40.0,
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
+    this.isAllDay = false,  // Default value
   });
 
   /// Scrolls the grid to show the specified time
@@ -252,6 +254,7 @@ class _CalendarGridState extends State<CalendarGrid> {
           showDate: false,
           date: slotTime,
           formatDate: widget.headerDateFormat,
+          isAllDay: widget.isAllDay,  // Pass through the isAllDay property
           decoration: BoxDecoration(
             color: calendarTheme?.getSlotBackgroundColor(context),
             border: Border(

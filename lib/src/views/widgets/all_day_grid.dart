@@ -42,7 +42,7 @@ class AllDayGrid extends StatelessWidget {
         headerHeight: allDayRegionHeight,
         headerBuilder: headerBuilder ?? _buildAllDayHeader,
         showCurrentTimeIndicator: false,
-        //isAllDay: true,
+        isAllDay: true,
         //physics: const NeverScrollableScrollPhysics(),
         //slotColor: Theme.of(context).extension<JazmineCalendarTheme>()?.getAllDayBackgroundColor(context),
       ),
