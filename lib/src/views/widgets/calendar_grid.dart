@@ -107,7 +107,6 @@ class CalendarGrid extends StatefulWidget {
 class CalendarGridState extends State<CalendarGrid> {
   late ScrollController _scrollController;
   final _viewService = CalendarViewService();
-  bool _hasAppliedInitialScroll = false;
 
   @override
   void initState() {
@@ -130,7 +129,6 @@ class CalendarGridState extends State<CalendarGrid> {
           );
           _scrollToTime(scrollTime, animate: widget.controller.animateTimeScroll);
         }
-        _hasAppliedInitialScroll = true;
       }
     });
   }

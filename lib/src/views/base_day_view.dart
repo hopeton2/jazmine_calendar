@@ -32,7 +32,7 @@ class BaseDayView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = JazmineCalendar.of(context).controller!;
     final startTime = DateTime(days.first.year, days.first.month, days.first.day);
-    final endTime = DateTime(days.first.year, days.first.month, days.first.day + 1);
+    final endTime = DateTime(days.last.year, days.last.month, days.last.day);
 
     return ValueListenableBuilder<Duration>(
       valueListenable: controller.intervalNotifier,

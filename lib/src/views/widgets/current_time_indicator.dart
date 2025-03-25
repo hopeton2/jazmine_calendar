@@ -100,7 +100,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     return ValueListenableBuilder<DateTime>(
       valueListenable: widget.controller.currentTimeNotifier,
       builder: (context, currentTime, _) {
-        if (!_isInRange(currentTime)) {
+        if (!_isInRange()) {
           return const SizedBox.shrink();
         }
 
@@ -172,7 +172,13 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     );
   }
 
-  bool _isInRange(DateTime date) {
-    return date.isAfter(widget.startDate) && date.isBefore(widget.endDate);
+  bool _isInRange() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = widget.startDate;
+    final end = widget.endDate;
+    
+    return today.isAfter(start.subtract(const Duration(days: 1))) && 
+           today.isBefore(end.add(const Duration(days: 1)));
   }
 }

@@ -1,14 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
+import 'package:jazmine_calendar/src/models/event.dart';
+import 'package:jazmine_calendar/src/persistence/calendar_persistence.dart';
+import 'package:jazmine_calendar/src/persistence/in_memory_persistence.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/services/navigation_service.dart';
 import 'package:jazmine_calendar/src/services/time_service.dart';
-import '../models/event.dart';
-import '../persistence/calendar_persistence.dart';
-import '../persistence/shared_preferences_persistence.dart';
+
 
 typedef EventCallback = Future<void> Function(Event event);
 typedef EventTimeCallback = Future<void> Function(Event event, DateTime newStart, DateTime newEnd);
@@ -17,26 +16,24 @@ class JazmineCalendarController extends ChangeNotifier {
   final NavigationService _navigationService;
   final TimeService _timeService;
   Timer? _timer;
-  bool _hasInitialScroll = false;  // Add this flag
   
   final List<String> _visibleTimeZones;
-  bool _showFloatingActionButton;
-  bool _scrollToCurrentTimeOnLoad = false;  // Added default value
-  bool _animateTimeScroll;
-  EventCallback? _onEventCreated;
-  EventTimeCallback? _onEventRescheduled;
-  EventTimeCallback? _onEventResized;
+  bool _showFloatingActionButton;  // Changed to non-final to allow modification
+  final bool _scrollToCurrentTimeOnLoad;
+  bool _animateTimeScroll;  // Changed to non-final to allow modification
+  EventCallback? _onEventCreated;  // Changed to non-final to allow modification
+  EventTimeCallback? _onEventRescheduled;  // Changed to non-final to allow modification
+  EventTimeCallback? _onEventResized;  // Changed to non-final to allow modification
   int? _targetHour;
-  final Map<CalendarView, double> _scrollPositions = {};  // Changed from String to CalendarView
+  final Map<CalendarView, double> _scrollPositions = {};
+  bool _hasInitialScroll = false;  // Add missing field
   
-  // Add missing fields
-  late CalendarPersistence _persistence;
+  late final CalendarPersistence _persistence;
   List<Event>? _cachedEvents;
   bool _isLoading = false;
   bool _batchNotifications = false;
   final ValueNotifier<List<Event>> _eventsNotifier = ValueNotifier<List<Event>>([]);
 
-  // Fix currentViewNotifier reference
   ValueNotifier<CalendarView> get _currentViewNotifier => _navigationService.currentViewNotifier;
 
   // Expose necessary notifiers
@@ -46,25 +43,23 @@ class JazmineCalendarController extends ChangeNotifier {
   ValueNotifier<DateTime> get currentTimeNotifier => _timeService.currentTimeNotifier;
   ValueNotifier<Duration> get intervalNotifier => _timeService.intervalNotifier;
 
+  // Factory constructor to replace the removed create method
   static Future<JazmineCalendarController> create({
-    CalendarPersistence? persistence,
     CalendarView initialView = CalendarView.week,
     DateTime? initialDate,
     List<String> visibleTimeZones = const ['UTC'],
     bool showFloatingActionButton = true,
-    bool scrollToCurrentTimeOnLoad = true,     // Changed default to false
+    bool scrollToCurrentTimeOnLoad = true,
     bool animateTimeScroll = true,
     EventCallback? onEventCreated,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
+    CalendarPersistence? persistence,
   }) async {
-    final date = initialDate ?? DateTime.now();
-    return JazmineCalendarController._(
-      persistence: persistence ?? await SharedPreferencesPersistence.create(),
+    return JazmineCalendarController(
       initialView: initialView,
-      initialDate: date,
-      displayDate: date,
+      initialDate: initialDate,
       visibleTimeZones: visibleTimeZones,
       showFloatingActionButton: showFloatingActionButton,
       scrollToCurrentTimeOnLoad: scrollToCurrentTimeOnLoad,
@@ -73,26 +68,23 @@ class JazmineCalendarController extends ChangeNotifier {
       onEventRescheduled: onEventRescheduled,
       onEventResized: onEventResized,
       interval: interval,
+      persistence: persistence,
     );
   }
 
-  JazmineCalendarController._({
-    required CalendarPersistence persistence,
+  JazmineCalendarController({
     required CalendarView initialView,
-    required DateTime initialDate,
-    required DateTime displayDate,
+    DateTime? initialDate,
     List<String> visibleTimeZones = const ['UTC'],
     bool showFloatingActionButton = true,
-    bool scrollToCurrentTimeOnLoad = true,    // Changed default to false
+    bool scrollToCurrentTimeOnLoad = true,
     bool animateTimeScroll = true,
     EventCallback? onEventCreated,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
-  }) : _navigationService = NavigationService(
-         initialDate: initialDate,
-         initialView: initialView,
-       ),
+    CalendarPersistence? persistence,
+  }) : _navigationService = NavigationService(initialDate: initialDate, initialView: initialView),
        _timeService = TimeService(interval: interval),
        _visibleTimeZones = List.from(visibleTimeZones),
        _showFloatingActionButton = showFloatingActionButton,
@@ -100,8 +92,8 @@ class JazmineCalendarController extends ChangeNotifier {
        _animateTimeScroll = animateTimeScroll,
        _onEventCreated = onEventCreated,
        _onEventRescheduled = onEventRescheduled,
-       _onEventResized = onEventResized {
-    _persistence = persistence;
+       _onEventResized = onEventResized,
+       _persistence = persistence ?? InMemoryPersistence() {
     _startTimer();
   }
 

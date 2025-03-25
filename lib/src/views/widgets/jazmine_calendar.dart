@@ -1,38 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
-import 'calendar_navigation_bar.dart';
-import 'calendar_view_switcher.dart';
-import 'view_selector.dart';
-import 'event_editor.dart';
+import 'package:jazmine_calendar/src/views/widgets/calendar_navigation_bar.dart';
+import 'package:jazmine_calendar/src/views/widgets/calendar_view_switcher.dart';
+import 'package:jazmine_calendar/src/views/widgets/event_editor.dart';
+import 'package:jazmine_calendar/src/views/widgets/view_selector.dart';
+
 import 'package:provider/provider.dart';
 
 class JazmineCalendar extends StatelessWidget {
-  final JazmineCalendarController? controller;
+  final JazmineCalendarController controller;  // Not nullable anymore
   final Widget Function(BuildContext, Event)? eventBuilder;
   final bool showNavigationBar;
   final bool showViewSelector;
-  final JazmineCalendarTheme? theme;  // Add theme property
+  final JazmineCalendarTheme? theme;
   
-  // Add configurations
   final DayViewConfiguration dayConfiguration;
   final WeekViewConfiguration weekConfiguration;
   final MonthViewConfiguration monthConfiguration;
   final AgendaViewConfiguration agendaConfiguration;
   final TimelineConfiguration timelineConfiguration;
 
-  const JazmineCalendar({
+  JazmineCalendar({  // Remove const since we're creating controller
     super.key,
-    this.controller,
+    JazmineCalendarController? controller,  // Accept nullable controller
     this.eventBuilder,
     this.showNavigationBar = true,
     this.showViewSelector = true,
-    this.theme,  // Add theme to constructor
+    this.theme,
     this.dayConfiguration = const DayViewConfiguration(),
     this.weekConfiguration = const WeekViewConfiguration(),
     this.monthConfiguration = const MonthViewConfiguration(),
     this.agendaConfiguration = const AgendaViewConfiguration(),
     this.timelineConfiguration = const TimelineConfiguration(),
-  });
+  }) : controller = controller ?? JazmineCalendarController(
+         initialView: CalendarView.week,
+         initialDate: DateTime.now(),
+       );  // Create if null
 
   static JazmineCalendar of(BuildContext context) {
     final widget = context.findAncestorWidgetOfExactType<JazmineCalendar>();
@@ -44,26 +47,7 @@ class JazmineCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If no controller is provided, create a default one
-    if (controller == null) {
-      return FutureBuilder<JazmineCalendarController>(
-        future: JazmineCalendarController.create(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          return ChangeNotifierProvider.value(
-            value: snapshot.data!,
-            child: Builder(
-              builder: (context) => _buildCalendarContent(context, snapshot.data!),
-            ),
-          );
-        },
-      );
-    }
-
-    return _buildCalendarContent(context, controller!);
+    return _buildCalendarContent(context, controller);
   }
 
   Widget _buildCalendarContent(BuildContext context, JazmineCalendarController controller) {
