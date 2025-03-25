@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/services/navigation_service.dart';
@@ -16,9 +17,12 @@ class JazmineCalendarController extends ChangeNotifier {
   final NavigationService _navigationService;
   final TimeService _timeService;
   Timer? _timer;
+  bool _hasInitialScroll = false;  // Add this flag
   
   final List<String> _visibleTimeZones;
   bool _showFloatingActionButton;
+  bool _scrollToCurrentTimeOnLoad = false;  // Added default value
+  bool _animateTimeScroll;
   EventCallback? _onEventCreated;
   EventTimeCallback? _onEventRescheduled;
   EventTimeCallback? _onEventResized;
@@ -48,6 +52,8 @@ class JazmineCalendarController extends ChangeNotifier {
     DateTime? initialDate,
     List<String> visibleTimeZones = const ['UTC'],
     bool showFloatingActionButton = true,
+    bool scrollToCurrentTimeOnLoad = true,     // Changed default to false
+    bool animateTimeScroll = true,
     EventCallback? onEventCreated,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
@@ -61,6 +67,8 @@ class JazmineCalendarController extends ChangeNotifier {
       displayDate: date,
       visibleTimeZones: visibleTimeZones,
       showFloatingActionButton: showFloatingActionButton,
+      scrollToCurrentTimeOnLoad: scrollToCurrentTimeOnLoad,
+      animateTimeScroll: animateTimeScroll,
       onEventCreated: onEventCreated,
       onEventRescheduled: onEventRescheduled,
       onEventResized: onEventResized,
@@ -75,6 +83,8 @@ class JazmineCalendarController extends ChangeNotifier {
     required DateTime displayDate,
     List<String> visibleTimeZones = const ['UTC'],
     bool showFloatingActionButton = true,
+    bool scrollToCurrentTimeOnLoad = true,    // Changed default to false
+    bool animateTimeScroll = true,
     EventCallback? onEventCreated,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
@@ -86,6 +96,8 @@ class JazmineCalendarController extends ChangeNotifier {
        _timeService = TimeService(interval: interval),
        _visibleTimeZones = List.from(visibleTimeZones),
        _showFloatingActionButton = showFloatingActionButton,
+       _scrollToCurrentTimeOnLoad = scrollToCurrentTimeOnLoad,
+       _animateTimeScroll = animateTimeScroll,
        _onEventCreated = onEventCreated,
        _onEventRescheduled = onEventRescheduled,
        _onEventResized = onEventResized {
@@ -124,6 +136,10 @@ class JazmineCalendarController extends ChangeNotifier {
   EventTimeCallback? get onEventResized => _onEventResized;
   int? get targetHour => _targetHour;
   bool get isLoading => _isLoading;
+  bool get hasInitialScroll => _hasInitialScroll;
+  void setInitialScrollComplete() {
+    _hasInitialScroll = true;
+  }
 
   void _notifyIfNeeded() {
     if (!_batchNotifications) {
@@ -321,6 +337,32 @@ class JazmineCalendarController extends ChangeNotifier {
 
   // Add missing getter
   ValueNotifier<List<Event>> get eventsNotifier => _eventsNotifier;
+
+  bool get scrollToCurrentTimeOnLoad => _scrollToCurrentTimeOnLoad;
+
+  bool get animateTimeScroll => _animateTimeScroll;
+
+  void setAnimateTimeScroll(bool value) {
+    if (_animateTimeScroll != value) {
+      _animateTimeScroll = value;
+      notifyListeners();
+    }
+  }
+
+  // Define default start times for each day of the week
+  final List<TimeOfDay> _startTimes = List.generate(
+    7,
+    (_) => const TimeOfDay(hour: 8, minute: 0), // Default to 8:00 AM for all days
+  );
+
+  // Expose unmodifiable start times list
+  List<TimeOfDay> get defaultStartTimes => List.unmodifiable(_startTimes);
+  
+  // Get start time for a specific day
+  TimeOfDay getStartTimeForDay(DateTime date) {
+    final dayIndex = date.weekday - 1; // Convert 1-7 to 0-6
+    return _startTimes[dayIndex];
+  }
 
   @override
   void dispose() {

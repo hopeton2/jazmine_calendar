@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 import 'package:jazmine_calendar/src/views/widgets/current_time_indicator.dart';
@@ -71,7 +72,7 @@ class CalendarGrid extends StatefulWidget {
   final double headerHeight;
   final bool showCurrentTimeIndicator;
   final double gridLineWidth;
-  final bool isAllDay; // New property
+  final bool isAllDay;
 
   const CalendarGrid({
     super.key,
@@ -90,133 +91,80 @@ class CalendarGrid extends StatefulWidget {
     this.headerHeight = 40.0,
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
-    this.isAllDay = false, // Default value
+    this.isAllDay = false,
   });
 
   /// Scrolls the grid to show the specified time
   static void scrollToTime(BuildContext context, DateTime time) {
-    context.findAncestorStateOfType<_CalendarGridState>()?.scrollToTime(time);
+    final state = context.findAncestorStateOfType<CalendarGridState>();
+    state?._scrollToTime(time);
   }
 
   @override
-  State<CalendarGrid> createState() => _CalendarGridState();
+  State<CalendarGrid> createState() => CalendarGridState();
 }
 
-class _CalendarGridState extends State<CalendarGrid> {
-  late final ScrollController _scrollController;
-  static bool _isFirstLoad = true;  // Keep this for CurrentTimeIndicator
+class CalendarGridState extends State<CalendarGrid> {
+  late ScrollController _scrollController;
+  final _viewService = CalendarViewService();
+  bool _hasAppliedInitialScroll = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController(
-      initialScrollOffset: _calculateInitialOffset(),
-    );
-    _scrollController.addListener(_onScroll);
-
-    if (_isFirstLoad && widget.showCurrentTimeIndicator) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollBasedOnTime();
-        _isFirstLoad = false;
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(CalendarGrid oldWidget) {
-    super.didUpdateWidget(oldWidget);
+    _scrollController = ScrollController();
     
-    // Commenting out old scroll position restoration logic
-    /*
-    if (_scrollController.hasClients) {
-      _previousMaxScroll = _scrollController.position.maxScrollExtent;
-      _previousScrollPosition = _scrollController.offset;
-    }
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-
-      if (_previousMaxScroll != null && _previousScrollPosition != null) {
-        final currentMaxScroll = _scrollController.position.maxScrollExtent;
-        if (_previousMaxScroll! > 0 && currentMaxScroll > 0) {
-          final scrollRatio = _previousScrollPosition! / _previousMaxScroll!;
-          final newOffset = currentMaxScroll * scrollRatio;
-          
-          _scrollController.jumpTo(newOffset.clamp(
-            0.0,
-            _scrollController.position.maxScrollExtent,
-          ));
+      // Only apply initial scroll if it hasn't been done for day-based views
+      if (!_viewService.hasInitialScrollBeenApplied(widget.controller.currentView)) {
+        if (widget.controller.scrollToCurrentTimeOnLoad) {
+          _scrollToTime(DateTime.now(), animate: widget.controller.animateTimeScroll);
+        } else {
+          final defaultTime = widget.controller.getStartTimeForDay(widget.startDate);
+          final scrollTime = DateTime(
+            widget.startDate.year,
+            widget.startDate.month,
+            widget.startDate.day,
+            defaultTime.hour,
+            defaultTime.minute,
+          );
+          _scrollToTime(scrollTime, animate: widget.controller.animateTimeScroll);
         }
-        
-        _previousMaxScroll = null;
-        _previousScrollPosition = null;
+        _hasAppliedInitialScroll = true;
       }
     });
-    */
-  }
-
-  void _scrollBasedOnTime() {
-    if (!mounted) return;
-
-    final now = DateTime.now();
-    final isBeforeNoon = now.hour < 12;
-    final isVertical = widget.orientation == Axis.vertical;
-
-    // Calculate max scroll extent based on orientation
-    final maxScroll = _scrollController.position.maxScrollExtent;
-
-    _scrollController.animateTo(
-      isBeforeNoon ? 0 : maxScroll,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  double _calculateInitialOffset() {
-    if (!_isFirstLoad) {
-      final storedPosition = widget.controller.getScrollPosition(widget.controller.currentView);
-      if (storedPosition != null) {
-        return storedPosition.clamp(
-          0.0,
-          double.infinity,
-        );
-      }
-    }
-    return 0.0;
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    widget.controller.setScrollPosition(
-      widget.controller.currentView,
-      _scrollController.offset,
-    );
-  }
-
-  void scrollToTime(DateTime time) {
-    if (!mounted) return;
-
-    final isVertical = widget.orientation == Axis.vertical;
-    final totalMinutesSinceStart = (time.hour * 60 + time.minute);
-    final interval = widget.intervalDuration;
-
-    final position = (totalMinutesSinceStart / interval.inMinutes) *
-        (isVertical ? interval.inMinutes.toDouble() : widget.headerWidth);
-
-    final viewportDimension = isVertical
-        ? _scrollController.position.viewportDimension / 2
-        : _scrollController.position.viewportDimension / 3;
-
-    final offset = max(0, position - viewportDimension);
-
-    _scrollController.jumpTo(offset.toDouble());
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
+    _viewService.markInitialScrollApplied(widget.controller.currentView);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToTime(DateTime time, {bool? animate}) {
+    if (!mounted || !_scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToTime(time, animate: animate);
+      });
+      return;
+    }
+
+    final shouldAnimate = animate ?? widget.controller.animateTimeScroll;
+
+    final totalMinutesSinceStart = (time.hour * 60 + time.minute);
+    final maxScrollExtent = _scrollController.position.maxScrollExtent;
+    final scrollOffset = (totalMinutesSinceStart / (24 * 60)) * maxScrollExtent;
+
+    if (shouldAnimate) {
+      _scrollController.animateTo(
+        scrollOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _scrollController.jumpTo(scrollOffset);
+    }
   }
 
   @override
@@ -248,7 +196,9 @@ class _CalendarGridState extends State<CalendarGrid> {
         return Stack(
           children: [
             CustomScrollView(
-              key: PageStorageKey(CalendarViewService().getScrollStorageKey(widget.controller.currentView)),
+              key: PageStorageKey(
+                CalendarViewService().getScrollStorageKey(widget.controller.currentView)
+              ),
               controller: _scrollController,
               scrollDirection: widget.orientation,
               slivers: [
@@ -352,9 +302,9 @@ class _CalendarGridState extends State<CalendarGrid> {
     final slotCount = isVertical ? widget.numberOfColumns : widget.numberOfRows;
 
     return List.generate(slotCount, (slotIndex) {
-      final slotTime = widget.startDate
-          .add(widget.slotDuration * index)
-          .add(widget.slotDuration * slotIndex);
+      final DateTime slotTime = widget.startDate
+          .add(widget.slotDuration * slotIndex)
+          .add(widget.intervalDuration * index);
 
       return Expanded(
         child: CalendarTimeSlot(
@@ -362,7 +312,7 @@ class _CalendarGridState extends State<CalendarGrid> {
           showDate: false,
           date: slotTime,
           formatDate: widget.headerDateFormat,
-          isAllDay: widget.isAllDay, // Pass through the isAllDay property
+          isAllDay: widget.isAllDay,
           decoration: BoxDecoration(
             color: calendarTheme?.getSlotBackgroundColor(context),
             border: Border(

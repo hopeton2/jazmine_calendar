@@ -16,13 +16,11 @@ class WorkWeekView extends StatelessWidget {
     return ValueListenableBuilder<DateTime>(
       valueListenable: controller.displayDateNotifier,
       builder: (context, displayDate, _) {
-        final weekStartDate =
-            displayDate.getWeekStartDate(true); // true for work week
+        final weekStartDate = displayDate.getWeekStartDate(configuration.firstDayOfWeek);
 
         return BaseDayView(
           configuration: configuration,
-          days: List.generate(
-              5, (index) => weekStartDate.add(Duration(days: index))),
+          days: List.generate(5, (index) => weekStartDate.add(Duration(days: index))),
         );
       },
     );

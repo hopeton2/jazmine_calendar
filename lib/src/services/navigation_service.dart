@@ -38,16 +38,20 @@ class NavigationService {
 
   void selectDate(DateTime date) {
     selectedDateNotifier.value = date;
+    displayDateNotifier.value = date;  // Also update display date when selecting a date
     if (currentViewNotifier.value != CalendarView.day) {
       changeView(CalendarView.day);
     }
   }
 
   void navigateToDate(DateTime date) {
+    if (currentViewNotifier.value == CalendarView.day) {
+      selectedDateNotifier.value = date;  // Update selected date for day view
+    }
     displayDateNotifier.value = date;
   }
 
- 
+
   void navigateToNextPage() {
     _navigatePage(forward: true);
   }
@@ -57,8 +61,11 @@ class NavigationService {
   }
 
   void _navigatePage({required bool forward}) {
-    final date = displayDateNotifier.value;
-    displayDateNotifier.value = switch (currentViewNotifier.value) {
+    final date = currentViewNotifier.value == CalendarView.day 
+        ? selectedDateNotifier.value 
+        : displayDateNotifier.value;
+        
+    final newDate = switch (currentViewNotifier.value) {
       CalendarView.day => date.add(Duration(days: forward ? 1 : -1)),
       CalendarView.workWeek => date.add(Duration(days: forward ? 5 : -5)),
       CalendarView.week => date.add(Duration(days: forward ? 7 : -7)),
@@ -66,5 +73,10 @@ class NavigationService {
       CalendarView.timeline => date.add(Duration(days: forward ? 1 : -1)),
       CalendarView.agenda => date.add(Duration(days: forward ? 1 : -1)),
     };
+
+    if (currentViewNotifier.value == CalendarView.day) {
+      selectedDateNotifier.value = newDate;
+    }
+    displayDateNotifier.value = newDate;
   }
 }

@@ -16,13 +16,11 @@ class DayView extends BaseCalendarView {
     final configuration = JazmineCalendar.of(context).dayConfiguration;
     
     return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.displayDateNotifier,
-      builder: (context, displayDate, _) {
-        final effectiveDate = displayDate;
-        
+      valueListenable: controller.selectedDateNotifier,
+      builder: (context, selectedDate, _) {
         return BaseDayView(
           configuration: configuration,
-          days: [effectiveDate],
+          days: [selectedDate],
           hourHeight: configuration.hourHeight,
           showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
         );

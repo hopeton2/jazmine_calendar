@@ -10,20 +10,20 @@ void main() {
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.indigo,  // This could be any color - the theme will adapt
+        seedColor: Colors.blue,
         brightness: Brightness.light,
       ),
       useMaterial3: true,
     ),
     darkTheme: ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,  // This could be any color - the theme will adapt
+        seedColor: Colors.deepPurpleAccent,
         brightness: Brightness.dark,
       ),
       useMaterial3: true,
     ),
-    themeMode: ThemeMode.dark,
     home: const MyHomePage(),
+    themeMode: ThemeMode.dark,
   ));
 }
 
@@ -55,7 +55,8 @@ class _MyHomePageState extends State<MyHomePage> {
         onEventCreated: _handleEventCreated,
         onEventRescheduled: _handleEventRescheduled,
         onEventResized: _handleEventResized,
-        interval: const Duration(minutes: 5),  // Set 10-minute interval
+        interval: const Duration(minutes: 15),
+
       );
 
       // Clear any existing events

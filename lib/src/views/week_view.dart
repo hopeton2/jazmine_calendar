@@ -17,7 +17,7 @@ class WeekView extends StatelessWidget {
     return ValueListenableBuilder<DateTime>(
       valueListenable: controller.displayDateNotifier,
       builder: (context, displayDate, _) {
-        final weekStartDate = displayDate.getWeekStartDate(false);
+        final weekStartDate = displayDate.getWeekStartDate(DateTime.sunday);
 
         return BaseDayView(
           configuration: configuration,

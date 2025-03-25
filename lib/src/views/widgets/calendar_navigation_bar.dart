@@ -42,10 +42,13 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   void _navigatePrevious(JazmineCalendarController controller) {
-    final date = controller.displayDate;
+    final date = controller.currentView == CalendarView.day 
+        ? controller.selectedDate
+        : controller.displayDate;
+        
     switch (controller.currentView) {
       case CalendarView.day:
-        controller.navigateToDate(date.subtract(const Duration(days: 1)));
+        controller.selectDate(date.subtract(const Duration(days: 1)));
       case CalendarView.workWeek:
       case CalendarView.week:
         controller.navigateToDate(date.subtract(const Duration(days: 7)));
@@ -59,10 +62,13 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   void _navigateNext(JazmineCalendarController controller) {
-    final date = controller.displayDate;
+    final date = controller.currentView == CalendarView.day 
+        ? controller.selectedDate
+        : controller.displayDate;
+        
     switch (controller.currentView) {
       case CalendarView.day:
-        controller.navigateToDate(date.add(const Duration(days: 1)));
+        controller.selectDate(date.add(const Duration(days: 1)));
       case CalendarView.workWeek:
       case CalendarView.week:
         controller.navigateToDate(date.add(const Duration(days: 7)));
