@@ -55,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onEventCreated: _handleEventCreated,
         onEventRescheduled: _handleEventRescheduled,
         onEventResized: _handleEventResized,
+        interval: const Duration(minutes: 5),  // Set 10-minute interval
       );
 
       // Clear any existing events
