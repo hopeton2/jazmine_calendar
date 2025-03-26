@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 
 class CurrentTimeIndicator extends StatefulWidget {
@@ -14,6 +15,7 @@ class CurrentTimeIndicator extends StatefulWidget {
   final bool autoScroll;
   final ScrollController scrollController;
   final double intervalPixels; // New property
+  final double slotWidth; // New property
 
   const CurrentTimeIndicator({
     super.key,
@@ -24,7 +26,8 @@ class CurrentTimeIndicator extends StatefulWidget {
     required this.endDate,
     required this.controller,
     required this.scrollController,
-    required this.intervalPixels, // Add to constructor
+    required this.intervalPixels,
+    required this.slotWidth, // Add to constructor
     this.color,
     this.width = 2.0,
     this.autoScroll = true,
@@ -37,8 +40,8 @@ class CurrentTimeIndicator extends StatefulWidget {
 class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _positionAnimation;
   late double _currentPosition;
+  final double ballSize = 12.00;
 
   @override
   void initState() {
@@ -55,16 +58,9 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     final interval = widget.controller.intervalNotifier.value;
     final position =
         (totalMinutesSinceStart / interval.inMinutes) * widget.intervalPixels -
-            6;
+            ballSize / 2;
 
     _currentPosition = position - widget.scrollController.offset;
-    _positionAnimation = Tween<double>(
-      begin: _currentPosition,
-      end: _currentPosition,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
 
     // Add scroll listener
     widget.scrollController.addListener(_handleScroll);
@@ -83,90 +79,82 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
   }
 
   void _updatePosition(double newPosition) {
-    _positionAnimation = Tween<double>(
-      begin: _currentPosition,
-      end: newPosition,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
     _currentPosition = newPosition;
     _animationController.forward(from: 0.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<DateTime>(
-      valueListenable: widget.controller.currentTimeNotifier,
-      builder: (context, currentTime, _) {
-        if (!_isInRange()) {
-          return const SizedBox.shrink();
-        }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ValueListenableBuilder<DateTime>(
+          valueListenable: widget.controller.currentTimeNotifier,
+          builder: (context, currentTime, _) {
+            if (!_isInRange()) {
+              return const SizedBox.shrink();
+            }
 
-        final calendarTheme =
-            Theme.of(context).extension<JazmineCalendarTheme>();
-        final indicatorColor = widget.color ??
-            calendarTheme?.getCurrentTimeIndicatorColor(context);
-        final interval = widget.controller.intervalNotifier.value;
+            final calendarTheme =
+                Theme.of(context).extension<JazmineCalendarTheme>();
+            final indicatorColor = widget.color ??
+                calendarTheme?.getCurrentTimeIndicatorColor(context);
+            final interval = widget.controller.intervalNotifier.value;
 
-        // Calculate position based on hours and minutes since start of day
+            final columnWidth =
+                widget.availableSpace / widget.controller.visibleTimeZones.length;
 
-        // Calculate total minutes since start of day
-        final totalMinutesSinceStart =
-            (currentTime.hour * 60 + currentTime.minute);
+            final columnPosition = widget.orientation == Axis.horizontal
+                ? widget.headerOffset +
+                    (columnWidth *
+                        widget.controller.visibleTimeZones
+                            .indexOf('UTC'))
+                : widget.headerOffset;
 
-        // Calculate position using interval pixels (pixels per interval)
-        final position = (totalMinutesSinceStart / interval.inMinutes) *
-                widget.intervalPixels -
-            6; // Subtract 6 pixels to align with time slots
+            final totalMinutesSinceStart =
+                (currentTime.hour * 60 + currentTime.minute);
+            final position = (totalMinutesSinceStart / interval.inMinutes) *
+                    widget.intervalPixels -
+                6;
+            final adjustedPosition = position - widget.scrollController.offset;
 
-        // Adjust position based on scroll offset
-        final adjustedPosition = position - widget.scrollController.offset;
+            _updatePosition(adjustedPosition);
 
-        _updatePosition(adjustedPosition);
-
-        return AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            final animatedPosition = _positionAnimation.value;
-            return Positioned(
-              left: widget.orientation == Axis.vertical
-                  ? widget.headerOffset
-                  : animatedPosition,
-              right: widget.orientation == Axis.vertical ? 0 : null,
-              top: widget.orientation == Axis.vertical
-                  ? animatedPosition
-                  : widget.headerOffset,
-              bottom: widget.orientation == Axis.horizontal ? 0 : null,
-              child: child!,
+            return Stack(
+              children: [
+                Positioned(
+                  left: widget.orientation == Axis.horizontal
+                      ? columnPosition
+                      : adjustedPosition,
+                  top: widget.orientation == Axis.vertical
+                      ? columnPosition
+                      : adjustedPosition,
+                  child: Flex(
+                    direction: widget.orientation == Axis.horizontal
+                        ? Axis.horizontal
+                        : Axis.vertical,
+                    children: [
+                      Container(
+                        width: ballSize,
+                        height: ballSize,
+                        decoration: BoxDecoration(
+                          color: indicatorColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(
+                        width: _calculateWidth(),
+                        height:
+                            widget.orientation == Axis.horizontal ? widget.width : null,
+                        child: Container(
+                          color: indicatorColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             );
           },
-          child: Flex(
-            direction: widget.orientation == Axis.vertical
-                ? Axis.horizontal
-                : Axis.vertical,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: indicatorColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  width: widget.orientation == Axis.horizontal
-                      ? widget.width
-                      : null,
-                  height:
-                      widget.orientation == Axis.vertical ? widget.width : null,
-                  color: indicatorColor,
-                ),
-              ),
-            ],
-          ),
         );
       },
     );
@@ -177,8 +165,21 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     final today = DateTime(now.year, now.month, now.day);
     final start = widget.startDate;
     final end = widget.endDate;
-    
-    return today.isAfter(start.subtract(const Duration(days: 1))) && 
-           today.isBefore(end.add(const Duration(days: 1)));
+
+    return today.isAfter(start.subtract(const Duration(days: 1))) &&
+        today.isBefore(end.add(const Duration(days: 1)));
   }
+
+  double _calculateWidth() {
+    if (widget.orientation == Axis.vertical) {
+      return widget.width;
+    }
+
+    final today = DateTime.now().startOfDay;
+    final daysDiff = today.difference(widget.startDate).inDays;
+    return widget.slotWidth * (daysDiff + 1) - ballSize;
+  }
+
+  
 }
+

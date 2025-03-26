@@ -31,14 +31,15 @@ class _CalendarGridItem extends StatefulWidget {
   State<_CalendarGridItem> createState() => _CalendarGridItemState();
 }
 
-class _CalendarGridItemState extends State<_CalendarGridItem> with AutomaticKeepAliveClientMixin {
+class _CalendarGridItemState extends State<_CalendarGridItem>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return RepaintBoundary(
       child: SizedBox(
         width: widget.isVertical ? widget.slotWidth : null,
@@ -46,7 +47,8 @@ class _CalendarGridItemState extends State<_CalendarGridItem> with AutomaticKeep
         child: Flex(
           direction: widget.isVertical ? Axis.horizontal : Axis.vertical,
           children: [
-            widget.buildHeader(widget.index, widget.isVertical, widget.slotWidth, widget.slotHeight),
+            widget.buildHeader(widget.index, widget.isVertical,
+                widget.slotWidth, widget.slotHeight),
             ...widget.buildSlots(widget.index, widget.isVertical),
           ],
         ),
@@ -112,14 +114,17 @@ class CalendarGridState extends State<CalendarGrid> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Only apply initial scroll if it hasn't been done for day-based views
-      if (!_viewService.hasInitialScrollBeenApplied(widget.controller.currentView)) {
+      if (!_viewService
+          .hasInitialScrollBeenApplied(widget.controller.currentView)) {
         if (widget.controller.scrollToCurrentTimeOnLoad) {
-          _scrollToTime(DateTime.now(), animate: widget.controller.animateTimeScroll);
+          _scrollToTime(DateTime.now(),
+              animate: widget.controller.animateTimeScroll);
         } else {
-          final defaultTime = widget.controller.getStartTimeForDay(widget.startDate);
+          final defaultTime =
+              widget.controller.getStartTimeForDay(widget.startDate);
           final scrollTime = DateTime(
             widget.startDate.year,
             widget.startDate.month,
@@ -127,7 +132,8 @@ class CalendarGridState extends State<CalendarGrid> {
             defaultTime.hour,
             defaultTime.minute,
           );
-          _scrollToTime(scrollTime, animate: widget.controller.animateTimeScroll);
+          _scrollToTime(scrollTime,
+              animate: widget.controller.animateTimeScroll);
         }
       }
     });
@@ -194,9 +200,8 @@ class CalendarGridState extends State<CalendarGrid> {
         return Stack(
           children: [
             CustomScrollView(
-              key: PageStorageKey(
-                CalendarViewService().getScrollStorageKey(widget.controller.currentView)
-              ),
+              key: PageStorageKey(CalendarViewService()
+                  .getScrollStorageKey(widget.controller.currentView)),
               controller: _scrollController,
               scrollDirection: widget.orientation,
               slivers: [
@@ -209,9 +214,11 @@ class CalendarGridState extends State<CalendarGrid> {
                           width: isVertical ? slotWidth : null,
                           height: isVertical ? slotHeight : null,
                           child: Flex(
-                            direction: isVertical ? Axis.horizontal : Axis.vertical,
+                            direction:
+                                isVertical ? Axis.horizontal : Axis.vertical,
                             children: [
-                              _buildHeader(index, isVertical, slotWidth, slotHeight),
+                              _buildHeader(
+                                  index, isVertical, slotWidth, slotHeight),
                               ..._buildSlots(index, isVertical),
                             ],
                           ),
@@ -228,7 +235,7 @@ class CalendarGridState extends State<CalendarGrid> {
             if (widget.showCurrentTimeIndicator)
               CurrentTimeIndicator(
                 scrollController: _scrollController,
-                orientation: widget.orientation,
+                orientation: widget.orientation == Axis.vertical ? Axis.horizontal : Axis.vertical,
                 headerOffset:
                     isVertical ? widget.headerWidth : widget.headerHeight,
                 availableSpace: isVertical ? availableHeight : availableWidth,
@@ -237,6 +244,7 @@ class CalendarGridState extends State<CalendarGrid> {
                 controller: widget.controller,
                 autoScroll: true,
                 intervalPixels: isVertical ? slotHeight : slotWidth,
+                slotWidth: slotWidth,
               ),
           ],
         );
