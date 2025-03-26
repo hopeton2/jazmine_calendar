@@ -43,6 +43,14 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
   late double _currentPosition;
   final double ballSize = 12.00;
 
+  double _calculateTodayColumnPosition() {
+    final today = DateTime.now().startOfDay;
+    final daysDiff = today.difference(widget.startDate).inDays;
+    return widget.orientation == Axis.horizontal
+        ? widget.headerOffset + (widget.slotWidth * daysDiff)
+        : widget.headerOffset;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,15 +108,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
                 calendarTheme?.getCurrentTimeIndicatorColor(context);
             final interval = widget.controller.intervalNotifier.value;
 
-            final columnWidth =
-                widget.availableSpace / widget.controller.visibleTimeZones.length;
-
-            final columnPosition = widget.orientation == Axis.horizontal
-                ? widget.headerOffset +
-                    (columnWidth *
-                        widget.controller.visibleTimeZones
-                            .indexOf('UTC'))
-                : widget.headerOffset;
+            final columnPosition = _calculateTodayColumnPosition();
 
             final totalMinutesSinceStart =
                 (currentTime.hour * 60 + currentTime.minute);
@@ -121,17 +121,31 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
 
             return Stack(
               children: [
+                // Dotted line extending from left
+                if (widget.orientation == Axis.horizontal)
+                  Positioned(
+                    left: widget.headerOffset,
+                    top: adjustedPosition + ballSize / 2,
+                    child: CustomPaint(
+                      size: Size(columnPosition - widget.headerOffset, widget.width),
+                      painter: DottedLinePainter(
+                        color: (indicatorColor ?? Colors.blue).withOpacity(0.5), // Made semi-transparent
+                        strokeWidth: widget.width / 2,
+                      ),
+                    ),
+                  ),
+                // Main time indicator
                 Positioned(
-                  left: widget.orientation == Axis.horizontal
-                      ? columnPosition
-                      : adjustedPosition,
-                  top: widget.orientation == Axis.vertical
-                      ? columnPosition
-                      : adjustedPosition,
+                  left: widget.orientation == Axis.vertical
+                      ? adjustedPosition
+                      : columnPosition,
+                  top: widget.orientation == Axis.horizontal
+                      ? adjustedPosition
+                      : columnPosition,
                   child: Flex(
-                    direction: widget.orientation == Axis.horizontal
-                        ? Axis.horizontal
-                        : Axis.vertical,
+                    direction: widget.orientation == Axis.vertical
+                        ? Axis.vertical
+                        : Axis.horizontal,
                     children: [
                       Container(
                         width: ballSize,
@@ -142,9 +156,12 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
                         ),
                       ),
                       SizedBox(
-                        width: _calculateWidth(),
-                        height:
-                            widget.orientation == Axis.horizontal ? widget.width : null,
+                        width: widget.orientation == Axis.vertical 
+                            ? widget.width 
+                            : _calculateWidth(),
+                        height: widget.orientation == Axis.vertical 
+                            ? _calculateWidth()
+                            : widget.width,
                         child: Container(
                           color: indicatorColor,
                         ),
@@ -172,14 +189,45 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
 
   double _calculateWidth() {
     if (widget.orientation == Axis.vertical) {
-      return widget.width;
+      return widget.availableSpace;
     }
-
-    final today = DateTime.now().startOfDay;
-    final daysDiff = today.difference(widget.startDate).inDays;
-    return widget.slotWidth * (daysDiff + 1) - ballSize;
+    return widget.slotWidth - ballSize;
   }
 
   
 }
 
+class DottedLinePainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  DottedLinePainter({
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    const double dashWidth = 4;
+    const double dashSpace = 4;
+    double distance = 0;
+
+    while (distance < size.width) {
+      canvas.drawLine(
+        Offset(distance, 0),
+        Offset(distance + dashWidth, 0),
+        paint,
+      );
+      distance += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(DottedLinePainter oldDelegate) =>
+      color != oldDelegate.color || strokeWidth != oldDelegate.strokeWidth;
+}
