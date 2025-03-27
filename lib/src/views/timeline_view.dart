@@ -25,7 +25,7 @@ class _TimelineViewState extends State<TimelineView> {
     final calendarWidget = JazmineCalendar.of(context);
     final controller = calendarWidget.controller!;
     final configuration = calendarWidget.timelineConfiguration;
-    
+
     return ValueListenableBuilder<DateTime>(
       valueListenable: controller.displayDateNotifier,
       builder: (context, displayDate, _) {
@@ -48,12 +48,13 @@ class _TimelineViewState extends State<TimelineView> {
                     endDate: endTime,
                     controller: controller,
                     headerDateFormat: DateFormat('HH:mm'),
-                    numberOfColumns: const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
+                    numberOfColumns: const Duration(hours: 24).inMinutes ~/
+                        interval.inMinutes,
                     numberOfRows: controller.visibleTimeZones.length,
                     slotDuration: interval,
                     intervalDuration: interval,
                     orientation: Axis.horizontal,
-                    headerWidth: configuration.timeAxisWidth,
+                    rowHeaderWidth: configuration.timeAxisWidth,
                     headerBuilder: _buildTimeHeader,
                   ),
                 ),
@@ -105,10 +106,10 @@ class _TimelineViewState extends State<TimelineView> {
   ) {
     final theme = Theme.of(context);
     final is24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
-    
+
     final String timeText;
     if (time.minute == 0) {
-      timeText = is24HourFormat 
+      timeText = is24HourFormat
           ? DateFormat('HH').format(time)
           : DateFormat('h a').format(time);
     } else {
@@ -119,8 +120,8 @@ class _TimelineViewState extends State<TimelineView> {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: theme.brightness == Brightness.light 
-            ? Colors.grey[50] 
+        color: theme.brightness == Brightness.light
+            ? Colors.grey[50]
             : theme.colorScheme.surface,
         border: Border(
           right: BorderSide(
@@ -138,6 +139,4 @@ class _TimelineViewState extends State<TimelineView> {
       ),
     );
   }
-
- 
 }

@@ -112,4 +112,12 @@ extension DateTimeExtensions on DateTime {
     final diff = weekday - firstDayOfWeek;
     return subtract(Duration(days: diff < 0 ? diff + 7 : diff));
   }
+
+  /// Returns the week number of the year for this date
+  int get weekNumber => (difference(firstDayOfYear).inDays / 7).ceil();
+}
+
+extension DurationExtensions on Duration {
+  /// Returns true if the duration equals Duration.zero
+  bool get isZero => this == Duration.zero;
 }

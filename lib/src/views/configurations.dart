@@ -81,9 +81,9 @@ class MonthViewConfiguration extends BaseViewConfiguration {
   const MonthViewConfiguration({
     super.dateAlignment,
     this.daysPerWeek = 7,
-    this.weekdayFormat = 'E',
+    this.weekdayFormat = 'EEEE',
     this.weekdayHeaderStyle = const TextStyle(fontWeight: FontWeight.w500),
-    this.weekdayHeaderPadding = const EdgeInsets.symmetric(vertical: 8),
+    this.weekdayHeaderPadding = const EdgeInsets.fromLTRB(8, 8, 8, 16),
     this.weekdayHeaderAlignment = Alignment.center,
     this.showDateInCell = true,
     this.showTrailingDays = true,

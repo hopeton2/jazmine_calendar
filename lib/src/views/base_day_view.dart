@@ -31,7 +31,8 @@ class BaseDayView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = JazmineCalendar.of(context).controller!;
-    final startTime = DateTime(days.first.year, days.first.month, days.first.day);
+    final startTime =
+        DateTime(days.first.year, days.first.month, days.first.day);
     final endTime = DateTime(days.last.year, days.last.month, days.last.day);
 
     return ValueListenableBuilder<Duration>(
@@ -55,13 +56,13 @@ class BaseDayView extends StatelessWidget {
                 controller: controller,
                 headerDateFormat: DateFormat('HH:mm'),
                 numberOfColumns: days.length,
-                numberOfRows: const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
+                numberOfRows:
+                    const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
                 slotDuration: const Duration(days: 1),
                 intervalDuration: interval,
                 orientation: Axis.vertical,
-                headerWidth: configuration.timebarWidth,
+                rowHeaderWidth: configuration.timebarWidth,
                 headerBuilder: _buildTimebarHeader,
-
               ),
             ),
           ],
@@ -92,7 +93,8 @@ class BaseDayView extends StatelessWidget {
                               alignment: configuration.dateAlignment,
                               child: Text(
                                 DateFormat('E d').format(date),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                       ))
@@ -114,7 +116,7 @@ class BaseDayView extends StatelessWidget {
     final theme = Theme.of(context);
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
     final is24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
-    
+
     // Format the time based on whether it's on the hour
     final String timeText;
     if (time.minute == 0) {
@@ -131,17 +133,17 @@ class BaseDayView extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: theme.brightness == Brightness.light 
-            ? Colors.grey[50] 
+        color: theme.brightness == Brightness.light
+            ? Colors.grey[50]
             : theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: calendarTheme?.getGridLineColor(context) 
-                ?? Colors.grey.withOpacity(0.2),
+            color: calendarTheme?.getGridLineColor(context) ??
+                Colors.grey.withOpacity(0.2),
           ),
           right: BorderSide(
-            color: calendarTheme?.getGridLineColor(context) 
-                ?? Colors.grey.withOpacity(0.2),
+            color: calendarTheme?.getGridLineColor(context) ??
+                Colors.grey.withOpacity(0.2),
           ),
         ),
       ),
@@ -149,7 +151,7 @@ class BaseDayView extends StatelessWidget {
       alignment: Alignment.topRight,
       child: Text(
         timeText,
-        style: calendarTheme?.getTimeTextStyle(context) ?? 
+        style: calendarTheme?.getTimeTextStyle(context) ??
             theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),

@@ -14,14 +14,15 @@ typedef CalendarHeaderBuilder = Widget Function(
 typedef DateHeaderBuilder = Widget Function(
   BuildContext context,
   DateTime date,
+  Size size,
 );
 
 /// Builder for calendar slots that provides context, date, row, and column
-typedef CalendarSlotBuilder = Widget Function(
+typedef CellBuilder = Widget Function(
   BuildContext context,
   DateTime date,
-  int row,
-  int column,
+  int index,
+  Axis orientation,
 );
 
 /// Callback for event creation

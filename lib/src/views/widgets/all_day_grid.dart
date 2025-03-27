@@ -11,8 +11,9 @@ class AllDayGrid extends StatelessWidget {
   final double headerWidth;
   final double allDayRegionHeight;
   final Color? borderColor;
-  final Widget Function(BuildContext, DateTime, bool, double, double)? headerBuilder;
-  
+  final Widget Function(BuildContext, DateTime, bool, double, double)?
+      headerBuilder;
+
   const AllDayGrid({
     super.key,
     required this.startDate,
@@ -38,8 +39,8 @@ class AllDayGrid extends StatelessWidget {
         slotDuration: const Duration(days: 1),
         intervalDuration: const Duration(days: 1),
         orientation: Axis.vertical,
-        headerWidth: headerWidth,
-        headerHeight: allDayRegionHeight,
+        rowHeaderWidth: headerWidth,
+        columnHeaderHeight: allDayRegionHeight,
         headerBuilder: headerBuilder ?? _buildAllDayHeader,
         showCurrentTimeIndicator: false,
         isAllDay: true,
@@ -49,7 +50,8 @@ class AllDayGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildAllDayHeader(BuildContext context, DateTime date, bool isVertical, double width, double height) {
+  Widget _buildAllDayHeader(BuildContext context, DateTime date,
+      bool isVertical, double width, double height) {
     return SizedBox(
       width: width,
       height: height,
