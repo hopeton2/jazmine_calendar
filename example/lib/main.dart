@@ -69,6 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: JazmineCalendar(
               showNavigationBar: true,
               showViewSelector: true,
+              navigationBarStyle: NavigationBarStyle.compact,
             ),
           ),
         ],

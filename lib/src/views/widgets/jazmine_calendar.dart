@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
-import 'package:jazmine_calendar/src/views/widgets/calendar_navigation_bar.dart';
+import 'package:jazmine_calendar/src/views/widgets/navigation_bars/calendar_navigation_bar.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_view_switcher.dart';
 import 'package:jazmine_calendar/src/views/widgets/event_editor.dart';
-import 'package:jazmine_calendar/src/views/widgets/view_selector.dart';
+import 'package:jazmine_calendar/src/views/widgets/navigation_bars/compact_navigation_bar.dart';
+import 'package:jazmine_calendar/src/views/widgets/navigation_bars/view_selector.dart';
 
 import 'package:provider/provider.dart';
 
@@ -12,6 +13,7 @@ class JazmineCalendar extends StatelessWidget {
   final Widget Function(BuildContext, Event)? eventBuilder;
   final bool showNavigationBar;
   final bool showViewSelector;
+  final NavigationBarStyle navigationBarStyle;  // New property
   final JazmineCalendarTheme? theme;
   
   final DayViewConfiguration dayConfiguration;
@@ -20,12 +22,13 @@ class JazmineCalendar extends StatelessWidget {
   final AgendaViewConfiguration agendaConfiguration;
   final TimelineConfiguration timelineConfiguration;
 
-  JazmineCalendar({  // Remove const since we're creating controller
+  JazmineCalendar({
     super.key,
     JazmineCalendarController? controller,  // Accept nullable controller
     this.eventBuilder,
     this.showNavigationBar = true,
     this.showViewSelector = true,
+    this.navigationBarStyle = NavigationBarStyle.standard,  // Default to standard
     this.theme,
     this.dayConfiguration = const DayViewConfiguration(),
     this.weekConfiguration = const WeekViewConfiguration(),
@@ -33,9 +36,11 @@ class JazmineCalendar extends StatelessWidget {
     this.agendaConfiguration = const AgendaViewConfiguration(),
     this.timelineConfiguration = const TimelineConfiguration(),
   }) : controller = controller ?? JazmineCalendarController(
-         initialView: CalendarView.week,
+         initialView: CalendarView.month,
          initialDate: DateTime.now(),
-       );  // Create if null
+         scrollToCurrentTimeOnLoad: true,
+         interval: const Duration(minutes: 30),
+       );
 
   static JazmineCalendar of(BuildContext context) {
     final widget = context.findAncestorWidgetOfExactType<JazmineCalendar>();
@@ -47,44 +52,39 @@ class JazmineCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildCalendarContent(context, controller);
+    final currentTheme = Theme.of(context);
+    final effectiveTheme = theme ?? const JazmineCalendarTheme();  // Use base theme as fallback
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: controller),
+      ],
+      child: Theme(
+        data: currentTheme.copyWith(
+          extensions: [
+            ...?currentTheme.extensions.values,  // Preserve existing extensions
+            effectiveTheme,  // Add our calendar theme
+          ],
+        ),
+        child: Column(
+          children: [
+            if (showNavigationBar)
+              _buildNavigationBar(),
+            if (showViewSelector && navigationBarStyle == NavigationBarStyle.standard)
+              const ViewSelector(),
+            const Expanded(child: CalendarViewSwitcher()),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildCalendarContent(BuildContext context, JazmineCalendarController controller) {
-    return ChangeNotifierProvider.value(
-      value: controller,
-      child: Builder(
-        builder: (context) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              extensions: [
-                ...Theme.of(context).extensions.values.where(
-                  (extension) => extension is! JazmineCalendarTheme,
-                ),
-                theme ?? const JazmineCalendarTheme(),
-              ],
-            ),
-            child: Scaffold(
-              body: Column(
-                children: [
-                  if (showNavigationBar) const CalendarNavigationBar(),
-                  if (showViewSelector) const ViewSelector(),
-                  const Expanded(child: CalendarViewSwitcher()),
-                ],
-              ),
-              floatingActionButton: controller.showFloatingActionButton
-                  ? FloatingActionButton(
-                      onPressed: () => _showAddEventDialog(context, controller),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      child: const Icon(Icons.add),
-                    )
-                  : null,
-            ),
-          );
-        },
-      ),
-    );  }
+  Widget _buildNavigationBar() {
+    return switch (navigationBarStyle) {
+      NavigationBarStyle.standard => const CalendarNavigationBar(),
+      NavigationBarStyle.compact => const CompactNavigationBar(),
+    };
+  }
 
   Future<void> _showAddEventDialog(
     BuildContext context,

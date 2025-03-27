@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
+import 'package:jazmine_calendar/src/utils/ui_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -12,6 +13,9 @@ class CalendarNavigationBar extends StatelessWidget {
     return Consumer<JazmineCalendarController>(
       builder: (context, controller, child) {
         final dateFormat = DateFormat.yMMMM();
+        final shouldUseMobileLayout = UIHelper.shouldUseMobileLayout(context);
+        final deviceSize = UIHelper.getDeviceSize(context);
+        
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -19,18 +23,10 @@ class CalendarNavigationBar extends StatelessWidget {
               icon: const Icon(Icons.chevron_left),
               onPressed: () => _navigatePrevious(controller),
             ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => _selectDate(context, controller),
-                  child: Text(dateFormat.format(controller.selectedDate)),
-                ),
-                TextButton(
-                  onPressed: () => controller.navigateToDate(DateTime.now()),
-                  child: const Text('Today'),
-                ),
-              ],
-            ),
+            if (deviceSize == DeviceSize.small || shouldUseMobileLayout)
+              _buildCompactNavigation(context, controller, dateFormat)
+            else
+              _buildRegularNavigation(context, controller, dateFormat),
             IconButton(
               icon: const Icon(Icons.chevron_right),
               onPressed: () => _navigateNext(controller),
@@ -38,6 +34,56 @@ class CalendarNavigationBar extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCompactNavigation(
+    BuildContext context, 
+    JazmineCalendarController controller, 
+    DateFormat dateFormat
+  ) {
+    return Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => _selectDate(context, controller),
+            child: Text(
+              dateFormat.format(controller.selectedDate),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => controller.navigateToDate(DateTime.now()),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 36),
+            ),
+            child: const Text('Today'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegularNavigation(
+    BuildContext context, 
+    JazmineCalendarController controller, 
+    DateFormat dateFormat
+  ) {
+    return Row(
+      children: [
+        TextButton(
+          onPressed: () => _selectDate(context, controller),
+          child: Text(dateFormat.format(controller.selectedDate)),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: () => controller.navigateToDate(DateTime.now()),
+          child: const Text('Today'),
+        ),
+      ],
     );
   }
 

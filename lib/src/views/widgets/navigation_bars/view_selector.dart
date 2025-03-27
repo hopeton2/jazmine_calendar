@@ -1,18 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
+import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/utils/ui_helper.dart';
+import 'package:jazmine_calendar/src/views/widgets/navigation_bars/popup_view_selector.dart';
 
 class ViewSelector extends StatelessWidget {
-  const ViewSelector({super.key});
+  final bool showCheckmarks;
+
+  const ViewSelector({
+    super.key,
+    this.showCheckmarks = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
+    final controller = JazmineCalendar.of(context).controller;
+    return buildViewSelector(controller);
+  }
 
+  Widget buildViewSelector(JazmineCalendarController controller) {
     return ValueListenableBuilder<CalendarView>(
       valueListenable: controller.currentViewNotifier,
       builder: (context, currentView, child) {
+        final deviceSize = UIHelper.getDeviceSize(context);
+        if (deviceSize == DeviceSize.medium || deviceSize == DeviceSize.small) {
+          return PopupViewSelector(
+            showSelection: deviceSize == DeviceSize.medium,
+          );
+        }
+
         return SegmentedButton<CalendarView>(
           segments: const [
             ButtonSegment(
@@ -41,6 +59,7 @@ class ViewSelector extends StatelessWidget {
             ),
           ],
           selected: {currentView},
+          showSelectedIcon: showCheckmarks,
           onSelectionChanged: (Set<CalendarView> selected) {
             controller.changeView(selected.first);
           },

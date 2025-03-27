@@ -22,3 +22,8 @@ enum TimelineInterval {
     };
   }
 }
+
+enum NavigationBarStyle {
+  standard,  // Current two-row layout
+  compact,   // New single-row layout
+}
