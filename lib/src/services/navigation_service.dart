@@ -3,16 +3,14 @@ import 'package:jazmine_calendar/src/enums/enums.dart';
 
 class NavigationService {
   static final NavigationService _instance = NavigationService._internal();
-  
-  final ValueNotifier<DateTime> selectedDateNotifier;
-  final ValueNotifier<DateTime> displayDateNotifier;
-  final ValueNotifier<CalendarView> currentViewNotifier;
-  final Map<String, double> _scrollPositions = {};
 
+  final ValueNotifier<DateTime> selectedDateNotifier;
+  final ValueNotifier<DateTime> startDateNotifier;
+  final ValueNotifier<CalendarViewType> currentViewNotifier;
 
   factory NavigationService({
     DateTime? initialDate,
-    CalendarView initialView = CalendarView.week,
+    CalendarViewType initialView = CalendarViewType.week,
   }) {
     _instance._initialize(initialDate, initialView);
     return _instance;
@@ -20,37 +18,37 @@ class NavigationService {
 
   NavigationService._internal()
       : selectedDateNotifier = ValueNotifier(DateTime.now()),
-        displayDateNotifier = ValueNotifier(DateTime.now()),
-        currentViewNotifier = ValueNotifier(CalendarView.week);
+        startDateNotifier = ValueNotifier(DateTime.now()),
+        currentViewNotifier = ValueNotifier(CalendarViewType.week);
 
-  void _initialize(DateTime? initialDate, CalendarView initialView) {
+  void _initialize(DateTime? initialDate, CalendarViewType initialView) {
     final date = initialDate ?? DateTime.now();
     selectedDateNotifier.value = date;
-    displayDateNotifier.value = date;
+    startDateNotifier.value = date;
     currentViewNotifier.value = initialView;
   }
 
   static NavigationService get instance => _instance;
 
-  void changeView(CalendarView view) {
+  void changeView(CalendarViewType view) {
     currentViewNotifier.value = view;
   }
 
   void selectDate(DateTime date) {
     selectedDateNotifier.value = date;
-    displayDateNotifier.value = date;  // Also update display date when selecting a date
-    if (currentViewNotifier.value != CalendarView.day) {
-      changeView(CalendarView.day);
+    startDateNotifier.value =
+        date; // Also update display date when selecting a date
+    if (currentViewNotifier.value != CalendarViewType.day) {
+      changeView(CalendarViewType.day);
     }
   }
 
   void navigateToDate(DateTime date) {
-    if (currentViewNotifier.value == CalendarView.day) {
-      selectedDateNotifier.value = date;  // Update selected date for day view
+    if (currentViewNotifier.value == CalendarViewType.day) {
+      selectedDateNotifier.value = date; // Update selected date for day view
     }
-    displayDateNotifier.value = date;
+    startDateNotifier.value = date;
   }
-
 
   void navigateToNextPage() {
     _navigatePage(forward: true);
@@ -61,22 +59,23 @@ class NavigationService {
   }
 
   void _navigatePage({required bool forward}) {
-    final date = currentViewNotifier.value == CalendarView.day 
-        ? selectedDateNotifier.value 
-        : displayDateNotifier.value;
-        
+    final date = currentViewNotifier.value == CalendarViewType.day
+        ? selectedDateNotifier.value
+        : startDateNotifier.value;
+
     final newDate = switch (currentViewNotifier.value) {
-      CalendarView.day => date.add(Duration(days: forward ? 1 : -1)),
-      CalendarView.workWeek => date.add(Duration(days: forward ? 5 : -5)),
-      CalendarView.week => date.add(Duration(days: forward ? 7 : -7)),
-      CalendarView.month => DateTime(date.year, date.month + (forward ? 1 : -1), 1),
-      CalendarView.timeline => date.add(Duration(days: forward ? 1 : -1)),
-      CalendarView.agenda => date.add(Duration(days: forward ? 1 : -1)),
+      CalendarViewType.day => date.add(Duration(days: forward ? 1 : -1)),
+      CalendarViewType.workWeek => date.add(Duration(days: forward ? 5 : -5)),
+      CalendarViewType.week => date.add(Duration(days: forward ? 7 : -7)),
+      CalendarViewType.month =>
+        DateTime(date.year, date.month + (forward ? 1 : -1), 1),
+      CalendarViewType.timeline => date.add(Duration(days: forward ? 1 : -1)),
+      CalendarViewType.agenda => date.add(Duration(days: forward ? 1 : -1)),
     };
 
-    if (currentViewNotifier.value == CalendarView.day) {
+    if (currentViewNotifier.value == CalendarViewType.day) {
       selectedDateNotifier.value = newDate;
     }
-    displayDateNotifier.value = newDate;
+    startDateNotifier.value = newDate;
   }
 }

@@ -5,41 +5,38 @@ import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
+import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 
-class MonthView extends StatelessWidget {
+class MonthView extends BaseCalendarView {
   const MonthView({super.key});
 
- 
   @override
-  Widget build(BuildContext context) {
+  Widget buildCalendarView(
+      BuildContext context, DateTime startDate, DateTime selectedDate) {
     final calendarWidget = JazmineCalendar.of(context);
     final controller = calendarWidget.controller;
     final configuration = calendarWidget.monthConfiguration;
     const weekNumberWidth = 30.0;
 
-    return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.displayDateNotifier,
-      builder: (context, displayDate, _) {
-        return Column(
-          children: [
-            _buildWeekdayHeader(context, configuration, weekNumberWidth),
-            Expanded(
-              child: _buildMonthGrid(
-                displayDate,
-                controller,
-                context,
-                configuration,
-                weekNumberWidth,
-              ),
-            ),
-          ],
-        );
-      },
+    return Column(
+      children: [
+        _buildWeekdayHeader(context, configuration, weekNumberWidth),
+        Expanded(
+          child: _buildMonthGrid(
+            startDate,
+            controller,
+            context,
+            configuration,
+            weekNumberWidth,
+          ),
+        ),
+      ],
     );
   }
 
@@ -51,22 +48,18 @@ class MonthView extends StatelessWidget {
     weekNumberWidth,
   ) {
     final firstDay = selectedDate.firstDayOfMonth;
-    final daysInMonth = selectedDate.getDaysInMonth();
-    final firstWeekday = firstDay.weekday;
-    final weeksCount =
-        ((daysInMonth.length + firstWeekday - 1) / configuration.daysPerWeek)
-            .ceil();
+    final firstDayOfWeek = configuration.firstDayOfWeek;
+    final startDate = firstDay.getWeekStartDate(firstDayOfWeek);
+    //final lastDayOfMonth = selectedDate.lastDayOfMonth;
 
-    // Calculate start and end dates for the grid
-    final startDate = firstDay.subtract(Duration(days: firstWeekday - 1));
-    final endDate =
-        startDate.add(Duration(days: weeksCount * configuration.daysPerWeek));
+    final dateRange = CalendarViewService().monthViewDateRange(selectedDate);
+    final weeksCount = startDate.weeksBetween(dateRange.last);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return CalendarGrid(
-          startDate: startDate,
-          endDate: endDate,
+          startDate: dateRange.first,
+          endDate: dateRange.last,
           controller: controller,
           headerDateFormat: DateFormat(
               ''), // Empty since we handle date display in cellBuilder
@@ -211,30 +204,54 @@ class MonthView extends StatelessWidget {
   ) {
     final weekdayFormat = DateFormat(configuration.weekdayFormat);
     final now = DateTime.now();
-    return Row(
-      children: [
-        // Add space for week number column
-        SizedBox(width: weekNumberWidth),
-        // Wrap weekday headers in Expanded to take remaining space
-        Expanded(
-          child: Row(
-            children: List.generate(configuration.daysPerWeek, (index) {
-              final weekday =
-                  DateTime(now.year, now.month, now.day - now.weekday + index);
-              return Expanded(
-                child: Container(
-                  padding: configuration.weekdayHeaderPadding,
-                  alignment: configuration.weekdayHeaderAlignment,
-                  child: Text(
-                    weekdayFormat.format(weekday),
-                    style: configuration.weekdayHeaderStyle,
-                  ),
+    final theme = Theme.of(context);
+    final calendarTheme = theme.extension<JazmineCalendarTheme>();
+    final gridLineColor = theme.brightness == Brightness.light
+        ? calendarTheme?.getGridLineColor(context) ??
+            Colors.grey.withOpacity(0.2)
+        : calendarTheme?.getGridLineColor(context) ??
+            Colors.grey.withOpacity(0.3);
+
+    return Container(
+      decoration: BoxDecoration(
+        border: configuration.showWeekdayHeaderBottomBorder
+            ? Border(
+                bottom: BorderSide(
+                  color: gridLineColor,
+                  width: configuration.gridLineWidth,
                 ),
-              );
-            }),
+              )
+            : null,
+      ),
+      child: Row(
+        children: [
+          // Add space for week number column
+          SizedBox(width: weekNumberWidth),
+          // Wrap weekday headers in Expanded to take remaining space
+          Expanded(
+            child: Row(
+              children: List.generate(configuration.daysPerWeek, (index) {
+                // Calculate weekday based on firstDayOfWeek
+                final weekday = DateTime(
+                  now.year,
+                  now.month,
+                  now.day - now.weekday + configuration.firstDayOfWeek + index,
+                );
+                return Expanded(
+                  child: Container(
+                    padding: configuration.weekdayHeaderPadding,
+                    alignment: configuration.weekdayHeaderAlignment,
+                    child: Text(
+                      weekdayFormat.format(weekday),
+                      style: configuration.weekdayHeaderStyle,
+                    ),
+                  ),
+                );
+              }),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -245,10 +262,27 @@ class MonthView extends StatelessWidget {
     double width,
     double height,
   ) {
+    final theme = Theme.of(context);
+    final calendarTheme = theme.extension<JazmineCalendarTheme>();
+    final gridLineColor = theme.brightness == Brightness.light
+        ? calendarTheme?.getGridLineColor(context) ??
+            Colors.grey.withOpacity(0.2)
+        : calendarTheme?.getGridLineColor(context) ??
+            Colors.grey.withOpacity(0.3);
+
     return Container(
       width: width,
       height: height,
       alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: gridLineColor,
+            width:
+                1.0, // Using a default width since we can't access configuration
+          ),
+        ),
+      ),
       child: RotatedBox(
         quarterTurns: 3,
         child: Row(
@@ -274,5 +308,4 @@ class MonthView extends StatelessWidget {
       ),
     );
   }
-
 }

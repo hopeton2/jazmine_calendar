@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
-import 'package:provider/provider.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/view_selector.dart';
+import 'package:jazmine_calendar/src/widgets/date_selector.dart';
+import 'package:intl/intl.dart';
 
 class CompactNavigationBar extends StatelessWidget {
   const CompactNavigationBar({super.key});
@@ -13,16 +14,19 @@ class CompactNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final calendarTheme = Theme.of(context).extension<JazmineCalendarTheme>();
-    
-    return Consumer<JazmineCalendarController>(
-      builder: (context, controller, child) {
+
+    final controller = JazmineCalendar.of(context).controller;
+    return ValueListenableBuilder<DateTime>(
+      valueListenable: controller.selectedDateNotifier,
+      builder: (context, selectedDate, child) {
         final dateFormat = DateFormat.yMMMM();
-        
+
         return Container(
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: calendarTheme?.getGridLineColor(context) ?? Theme.of(context).dividerColor,
+                color: calendarTheme?.getGridLineColor(context) ??
+                    Theme.of(context).dividerColor,
               ),
             ),
           ),
@@ -33,37 +37,27 @@ class CompactNavigationBar extends StatelessWidget {
                 onPressed: () => controller.navigateToDate(DateTime.now()),
                 child: const Text('Today'),
               ),
-              const SizedBox(width: 10),
-              
-              if (!UIHelper.isSmallDevice(context)) 
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios),
-                onPressed: () => _navigatePrevious(controller),
-              ),
-              
-              if (!UIHelper.isSmallDevice(context)) 
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_ios),
-                onPressed: () => _navigateNext(controller),
-              ),
-              const SizedBox(width: 10),
-              
-              TextButton(
-                onPressed: () => _selectDate(context, controller),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      dateFormat.format(controller.selectedDate),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Icon(Icons.arrow_drop_down),
-                  ],
+              if (!UIHelper.isSmallDevice(context))
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () => _navigatePrevious(controller),
+                ),
+              if (!UIHelper.isSmallDevice(context))
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () => _navigateNext(controller),
+                ),
+              ValueListenableBuilder<DateTime>(
+                valueListenable: controller.startDateNotifier,
+                builder: (context, displayDate, _) => DateSelector(
+                  date: controller.startDate,
+                  caption: _getDateRangeCaption(controller),
+                  onDateSelected: (date) => controller.navigateToDate(date),
+                  isCompact: UIHelper.isSmallDevice(context),
+                  dateFormat: dateFormat,
                 ),
               ),
-              
               const Spacer(),
-              
               const ViewSelector(showCheckmarks: false),
             ],
           ),
@@ -72,21 +66,20 @@ class CompactNavigationBar extends StatelessWidget {
     );
   }
 
-
   void _navigatePrevious(JazmineCalendarController controller) {
-    final date = controller.currentView == CalendarView.day 
+    final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
-        : controller.displayDate;
-        
+        : controller.startDate;
+
     switch (controller.currentView) {
-      case CalendarView.day:
+      case CalendarViewType.day:
         controller.selectDate(date.subtract(const Duration(days: 1)));
-      case CalendarView.workWeek:
-      case CalendarView.week:
+      case CalendarViewType.workWeek:
+      case CalendarViewType.week:
         controller.navigateToDate(date.subtract(const Duration(days: 7)));
-      case CalendarView.month:
+      case CalendarViewType.month:
         controller.navigateToDate(DateTime(date.year, date.month - 1));
-      case CalendarView.timeline:
+      case CalendarViewType.timeline:
         controller.navigateToDate(date.subtract(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.subtract(const Duration(days: 1)));
@@ -94,36 +87,44 @@ class CompactNavigationBar extends StatelessWidget {
   }
 
   void _navigateNext(JazmineCalendarController controller) {
-    final date = controller.currentView == CalendarView.day 
+    final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
-        : controller.displayDate;
-        
+        : controller.startDate;
+
     switch (controller.currentView) {
-      case CalendarView.day:
+      case CalendarViewType.day:
         controller.selectDate(date.add(const Duration(days: 1)));
-      case CalendarView.workWeek:
-      case CalendarView.week:
+      case CalendarViewType.workWeek:
+      case CalendarViewType.week:
         controller.navigateToDate(date.add(const Duration(days: 7)));
-      case CalendarView.month:
+      case CalendarViewType.month:
         controller.navigateToDate(DateTime(date.year, date.month + 1));
-      case CalendarView.timeline:
+      case CalendarViewType.timeline:
         controller.navigateToDate(date.add(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.add(const Duration(days: 1)));
     }
   }
 
-  void _selectDate(BuildContext context, JazmineCalendarController controller) {
-    showDatePicker(
-      context: context,
-      initialDate: controller.selectedDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime(2100),
-    ).then((date) {
-      if (date != null) {
-        controller.navigateToDate(date);
-      }
-    });
-  }
+  String _getDateRangeCaption(JazmineCalendarController controller) {
+    if (controller.visibleDateRange.isEmpty) {
+      return '';
+    }
+    final startDate = controller.visibleDateRange.first;
+    final endDate = controller.visibleDateRange.last;
 
+    if (controller.currentView == CalendarViewType.month) {
+      return DateFormat('yMMM').format(startDate);
+    }
+
+    if (startDate == endDate) {
+      return DateFormat('MMM d, y').format(startDate);
+    }
+
+    if (startDate.year == endDate.year && startDate.month == endDate.month) {
+      return '${DateFormat('MMM d').format(startDate)} - ${DateFormat('d, y').format(endDate)}';
+    }
+
+    return '${DateFormat('MMM d').format(startDate)} - ${DateFormat('MMM d, y').format(endDate)}';
+  }
 }

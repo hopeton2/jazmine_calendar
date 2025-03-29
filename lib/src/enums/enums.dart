@@ -1,4 +1,4 @@
-enum CalendarView {
+enum CalendarViewType {
   day,
   workWeek,
   week,
@@ -24,6 +24,6 @@ enum TimelineInterval {
 }
 
 enum NavigationBarStyle {
-  standard,  // Current two-row layout
-  compact,   // New single-row layout
+  standard, // Current two-row layout
+  compact, // New single-row layout
 }

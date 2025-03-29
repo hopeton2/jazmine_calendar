@@ -1,32 +1,27 @@
 import 'package:flutter/widgets.dart';
-import 'base_day_view.dart';
-import '../extensions/date_extensions.dart';
-import 'configurations.dart';
-import '../../jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
+import 'package:jazmine_calendar/src/views/base_day_view.dart';
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
-class WeekView extends StatelessWidget {
+class WeekView extends BaseCalendarView {
   const WeekView({
     super.key,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
+  Widget buildCalendarView(
+      BuildContext context, DateTime startDate, DateTime selectedDate) {
     final configuration = JazmineCalendar.of(context).weekConfiguration;
 
-    return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.displayDateNotifier,
-      builder: (context, displayDate, _) {
-        final weekStartDate = displayDate.getWeekStartDate(DateTime.sunday);
+    final weekStartDate = startDate.getWeekStartDate(configuration.firstDayOfWeek);
 
-        return BaseDayView(
-          configuration: configuration,
-          days: List.generate(
-              7, (index) => weekStartDate.add(Duration(days: index))),
-          hourHeight: configuration.hourHeight,
-          showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
-        );
-      },
+    return BaseDayView(
+      configuration: configuration,
+      days:
+          List.generate(7, (index) => weekStartDate.add(Duration(days: index))),
+      hourHeight: configuration.hourHeight,
+      showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
     );
   }
 }

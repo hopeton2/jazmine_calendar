@@ -77,6 +77,8 @@ class MonthViewConfiguration extends BaseViewConfiguration {
   final String firstTrailingDaysFormat;
   final String monthDaysFormat;
   final String firstDayOfMonthFormat;
+  final bool showWeekdayHeaderBottomBorder;
+  final int firstDayOfWeek;
 
   const MonthViewConfiguration({
     super.dateAlignment,
@@ -91,5 +93,7 @@ class MonthViewConfiguration extends BaseViewConfiguration {
     this.firstTrailingDaysFormat = 'MMM d',
     this.monthDaysFormat = 'd',
     this.firstDayOfMonthFormat = 'MMM d',
+    this.showWeekdayHeaderBottomBorder = true,
+    this.firstDayOfWeek = DateTime.sunday,
   });
 }

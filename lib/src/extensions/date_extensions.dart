@@ -1,7 +1,10 @@
-extension DateTimeExtensions on DateTime {
-  DateTime get startOfDay => DateTime(year, month, day);
+import 'dart:math';
+import 'package:dart_date/dart_date.dart';
 
-  DateTime get endOfDay => DateTime(year, month, day, 23, 59, 59, 999);
+extension DateTimeExtensions on DateTime {
+  DateTime get dayStarts => DateTime(year, month, day);
+
+  DateTime get dayEnds => DateTime(year, month, day, 23, 59, 59, 999);
 
   DateTime get firstDayOfMonth => DateTime(year, month, 1);
 
@@ -51,7 +54,7 @@ extension DateTimeExtensions on DateTime {
   /// Calculates the start date of the week containing this date based on the specified first day of week.
   DateTime getWeekStartDate(int firstDayOfWeek) {
     final weekday = this.weekday;
-    
+
     int daysToSubtract;
     if (weekday > firstDayOfWeek) {
       daysToSubtract = weekday - firstDayOfWeek;
@@ -60,7 +63,7 @@ extension DateTimeExtensions on DateTime {
     } else {
       daysToSubtract = 0;
     }
-    
+
     return subtract(Duration(days: daysToSubtract));
   }
 
@@ -115,6 +118,18 @@ extension DateTimeExtensions on DateTime {
 
   /// Returns the week number of the year for this date
   int get weekNumber => (difference(firstDayOfYear).inDays / 7).ceil();
+
+/// Calculate the number of days between two dates
+  int daysBetween(DateTime other) {
+    var from = DateTime(year, month, day);
+    other = DateTime(other.year, other.month, other.day);
+    return (other.difference(from).inHours / 24).round();
+  }
+
+  int weeksBetween(DateTime other) {
+    var result = (daysBetween(other) / 7).ceil().abs();
+    return result;
+  }
 }
 
 extension DurationExtensions on Duration {

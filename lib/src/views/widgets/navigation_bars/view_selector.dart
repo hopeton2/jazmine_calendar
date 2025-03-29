@@ -4,7 +4,7 @@ import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
-import 'package:jazmine_calendar/src/views/widgets/navigation_bars/popup_view_selector.dart';
+import 'package:jazmine_calendar/src/views/widgets/navigation_bars/dropdown_view_selector.dart';
 
 class ViewSelector extends StatelessWidget {
   final bool showCheckmarks;
@@ -21,46 +21,46 @@ class ViewSelector extends StatelessWidget {
   }
 
   Widget buildViewSelector(JazmineCalendarController controller) {
-    return ValueListenableBuilder<CalendarView>(
+    return ValueListenableBuilder<CalendarViewType>(
       valueListenable: controller.currentViewNotifier,
       builder: (context, currentView, child) {
         final deviceSize = UIHelper.getDeviceSize(context);
         if (deviceSize == DeviceSize.medium || deviceSize == DeviceSize.small) {
-          return PopupViewSelector(
+          return DropdownViewSelector(
             showSelection: deviceSize == DeviceSize.medium,
           );
         }
 
-        return SegmentedButton<CalendarView>(
+        return SegmentedButton<CalendarViewType>(
           segments: const [
             ButtonSegment(
-              value: CalendarView.day,
+              value: CalendarViewType.day,
               label: Text(CalendarStrings.dayViewLabel),
             ),
             ButtonSegment(
-              value: CalendarView.workWeek,
+              value: CalendarViewType.workWeek,
               label: Text(CalendarStrings.workWeekViewLabel),
             ),
             ButtonSegment(
-              value: CalendarView.week,
+              value: CalendarViewType.week,
               label: Text(CalendarStrings.weekViewLabel),
             ),
             ButtonSegment(
-              value: CalendarView.month,
+              value: CalendarViewType.month,
               label: Text(CalendarStrings.monthViewLabel),
             ),
             ButtonSegment(
-              value: CalendarView.timeline,
+              value: CalendarViewType.timeline,
               label: Text(CalendarStrings.timelineViewLabel),
             ),
             ButtonSegment(
-              value: CalendarView.agenda,
+              value: CalendarViewType.agenda,
               label: Text(CalendarStrings.agendaViewLabel),
             ),
           ],
           selected: {currentView},
           showSelectedIcon: showCheckmarks,
-          onSelectionChanged: (Set<CalendarView> selected) {
+          onSelectionChanged: (Set<CalendarViewType> selected) {
             controller.changeView(selected.first);
           },
         );

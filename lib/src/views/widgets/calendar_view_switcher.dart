@@ -8,23 +8,23 @@ class CalendarViewSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
-    
+    final controller = JazmineCalendar.of(context).controller;
+
     return ListenableBuilder(
       listenable: Listenable.merge([
         controller.currentViewNotifier,
-        controller,  // For displayDate and selectedDate changes
+        controller, // For displayDate and selectedDate changes
       ]),
       builder: (context, _) {
         return switch (controller.currentView) {
-          CalendarView.day => const DayView(),
-          CalendarView.workWeek => const WorkWeekView(),
-          CalendarView.week => const WeekView(),
-          CalendarView.month => const MonthView(),
-          CalendarView.agenda => const AgendaView(),
-          CalendarView.timeline => TimelineView(
-            configuration: JazmineCalendar.of(context).timelineConfiguration,
-          ),
+          CalendarViewType.day => const DayView(),
+          CalendarViewType.workWeek => const WorkWeekView(),
+          CalendarViewType.week => const WeekView(),
+          CalendarViewType.month => const MonthView(),
+          CalendarViewType.agenda => const AgendaView(),
+          CalendarViewType.timeline => TimelineView(
+              configuration: JazmineCalendar.of(context).timelineConfiguration,
+            ),
         };
       },
     );

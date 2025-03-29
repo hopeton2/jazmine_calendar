@@ -15,7 +15,7 @@ class CalendarNavigationBar extends StatelessWidget {
         final dateFormat = DateFormat.yMMMM();
         final shouldUseMobileLayout = UIHelper.shouldUseMobileLayout(context);
         final deviceSize = UIHelper.getDeviceSize(context);
-        
+
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -37,11 +37,8 @@ class CalendarNavigationBar extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactNavigation(
-    BuildContext context, 
-    JazmineCalendarController controller, 
-    DateFormat dateFormat
-  ) {
+  Widget _buildCompactNavigation(BuildContext context,
+      JazmineCalendarController controller, DateFormat dateFormat) {
     return Expanded(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -67,11 +64,8 @@ class CalendarNavigationBar extends StatelessWidget {
     );
   }
 
-  Widget _buildRegularNavigation(
-    BuildContext context, 
-    JazmineCalendarController controller, 
-    DateFormat dateFormat
-  ) {
+  Widget _buildRegularNavigation(BuildContext context,
+      JazmineCalendarController controller, DateFormat dateFormat) {
     return Row(
       children: [
         TextButton(
@@ -88,19 +82,19 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   void _navigatePrevious(JazmineCalendarController controller) {
-    final date = controller.currentView == CalendarView.day 
+    final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
-        : controller.displayDate;
-        
+        : controller.startDate;
+
     switch (controller.currentView) {
-      case CalendarView.day:
+      case CalendarViewType.day:
         controller.selectDate(date.subtract(const Duration(days: 1)));
-      case CalendarView.workWeek:
-      case CalendarView.week:
+      case CalendarViewType.workWeek:
+      case CalendarViewType.week:
         controller.navigateToDate(date.subtract(const Duration(days: 7)));
-      case CalendarView.month:
+      case CalendarViewType.month:
         controller.navigateToDate(DateTime(date.year, date.month - 1));
-      case CalendarView.timeline:
+      case CalendarViewType.timeline:
         controller.navigateToDate(date.subtract(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.subtract(const Duration(days: 1)));
@@ -108,26 +102,27 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   void _navigateNext(JazmineCalendarController controller) {
-    final date = controller.currentView == CalendarView.day 
+    final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
-        : controller.displayDate;
-        
+        : controller.startDate;
+
     switch (controller.currentView) {
-      case CalendarView.day:
+      case CalendarViewType.day:
         controller.selectDate(date.add(const Duration(days: 1)));
-      case CalendarView.workWeek:
-      case CalendarView.week:
+      case CalendarViewType.workWeek:
+      case CalendarViewType.week:
         controller.navigateToDate(date.add(const Duration(days: 7)));
-      case CalendarView.month:
+      case CalendarViewType.month:
         controller.navigateToDate(DateTime(date.year, date.month + 1));
-      case CalendarView.timeline:
+      case CalendarViewType.timeline:
         controller.navigateToDate(date.add(const Duration(days: 1)));
       default:
         controller.navigateToDate(date.add(const Duration(days: 1)));
     }
   }
 
-  Future<void> _selectDate(BuildContext context, JazmineCalendarController controller) async {
+  Future<void> _selectDate(
+      BuildContext context, JazmineCalendarController controller) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: controller.selectedDate,

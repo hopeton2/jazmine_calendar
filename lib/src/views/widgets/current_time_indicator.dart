@@ -44,7 +44,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
   final double ballSize = 12.00;
 
   double _calculateTodayColumnPosition() {
-    final today = DateTime.now().startOfDay;
+    final today = DateTime.now().dayStarts;
     final daysDiff = today.difference(widget.startDate).inDays;
     return widget.orientation == Axis.horizontal
         ? widget.headerOffset + (widget.slotWidth * daysDiff)
@@ -127,9 +127,11 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
                     left: widget.headerOffset,
                     top: adjustedPosition + ballSize / 2,
                     child: CustomPaint(
-                      size: Size(columnPosition - widget.headerOffset, widget.width),
+                      size: Size(
+                          columnPosition - widget.headerOffset, widget.width),
                       painter: DottedLinePainter(
-                        color: (indicatorColor ?? Colors.blue).withOpacity(0.5), // Made semi-transparent
+                        color: (indicatorColor ?? Colors.blue)
+                            .withOpacity(0.5), // Made semi-transparent
                         strokeWidth: widget.width / 2,
                       ),
                     ),
@@ -156,10 +158,10 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
                         ),
                       ),
                       SizedBox(
-                        width: widget.orientation == Axis.vertical 
-                            ? widget.width 
+                        width: widget.orientation == Axis.vertical
+                            ? widget.width
                             : _calculateWidth(),
-                        height: widget.orientation == Axis.vertical 
+                        height: widget.orientation == Axis.vertical
                             ? _calculateWidth()
                             : widget.width,
                         child: Container(
@@ -193,8 +195,6 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     }
     return widget.slotWidth - ballSize;
   }
-
-  
 }
 
 class DottedLinePainter extends CustomPainter {

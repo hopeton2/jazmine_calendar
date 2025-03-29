@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 
-import '../../jazmine_calendar.dart';
-import 'base_calendar_view.dart';
-import 'base_day_view.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
+import 'package:jazmine_calendar/src/views/base_day_view.dart';
+import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class DayView extends BaseCalendarView {
 
@@ -11,20 +11,13 @@ class DayView extends BaseCalendarView {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
+  Widget buildCalendarView(BuildContext context, startDate, selectedDate) {
     final configuration = JazmineCalendar.of(context).dayConfiguration;
-    
-    return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.selectedDateNotifier,
-      builder: (context, selectedDate, _) {
-        return BaseDayView(
-          configuration: configuration,
-          days: [selectedDate],
-          hourHeight: configuration.hourHeight,
-          showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
-        );
-      },
+    return BaseDayView(
+      configuration: configuration,
+      days: [selectedDate],
+      hourHeight: configuration.hourHeight,
+      showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
     );
   }
 }

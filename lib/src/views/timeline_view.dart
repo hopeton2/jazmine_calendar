@@ -27,7 +27,7 @@ class _TimelineViewState extends State<TimelineView> {
     final configuration = calendarWidget.timelineConfiguration;
 
     return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.displayDateNotifier,
+      valueListenable: controller.startDateNotifier,
       builder: (context, displayDate, _) {
         final startTime = DateTime(
           displayDate.year,

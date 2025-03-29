@@ -5,7 +5,7 @@ void main() {
   group('JazmineCalendarController', () {
     test('creates with default values', () async {
       final controller = await JazmineCalendarController.create();
-      expect(controller.currentView, equals(CalendarView.week));
+      expect(controller.currentView, equals(CalendarViewType.week));
       expect(controller.visibleTimeZones, equals(['UTC']));
     });
 
@@ -21,7 +21,7 @@ void main() {
 
       await controller.addEvent(event);
       final events = await controller.getAllEvents();
-      
+
       expect(events.length, equals(1));
       expect(events.first.title, equals('Test Event'));
     });

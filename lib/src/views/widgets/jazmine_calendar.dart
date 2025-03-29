@@ -9,13 +9,13 @@ import 'package:jazmine_calendar/src/views/widgets/navigation_bars/view_selector
 import 'package:provider/provider.dart';
 
 class JazmineCalendar extends StatelessWidget {
-  final JazmineCalendarController controller;  // Not nullable anymore
+  final JazmineCalendarController controller; // Not nullable anymore
   final Widget Function(BuildContext, Event)? eventBuilder;
   final bool showNavigationBar;
   final bool showViewSelector;
-  final NavigationBarStyle navigationBarStyle;  // New property
+  final NavigationBarStyle navigationBarStyle; // New property
   final JazmineCalendarTheme? theme;
-  
+
   final DayViewConfiguration dayConfiguration;
   final WeekViewConfiguration weekConfiguration;
   final MonthViewConfiguration monthConfiguration;
@@ -24,28 +24,31 @@ class JazmineCalendar extends StatelessWidget {
 
   JazmineCalendar({
     super.key,
-    JazmineCalendarController? controller,  // Accept nullable controller
+    JazmineCalendarController? controller, // Accept nullable controller
     this.eventBuilder,
     this.showNavigationBar = true,
     this.showViewSelector = true,
-    this.navigationBarStyle = NavigationBarStyle.standard,  // Default to standard
+    this.navigationBarStyle =
+        NavigationBarStyle.standard, // Default to standard
     this.theme,
     this.dayConfiguration = const DayViewConfiguration(),
     this.weekConfiguration = const WeekViewConfiguration(),
     this.monthConfiguration = const MonthViewConfiguration(),
     this.agendaConfiguration = const AgendaViewConfiguration(),
     this.timelineConfiguration = const TimelineConfiguration(),
-  }) : controller = controller ?? JazmineCalendarController(
-         initialView: CalendarView.month,
-         initialDate: DateTime.now(),
-         scrollToCurrentTimeOnLoad: true,
-         interval: const Duration(minutes: 30),
-       );
+  }) : controller = controller ??
+            JazmineCalendarController(
+              initialView: CalendarViewType.month,
+              initialDate: DateTime.now(),
+              scrollToCurrentTimeOnLoad: true,
+              interval: const Duration(minutes: 30),
+            );
 
   static JazmineCalendar of(BuildContext context) {
     final widget = context.findAncestorWidgetOfExactType<JazmineCalendar>();
     if (widget == null) {
-      throw FlutterError('JazmineCalendar.of() called with a context that does not contain a JazmineCalendar.');
+      throw FlutterError(
+          'JazmineCalendar.of() called with a context that does not contain a JazmineCalendar.');
     }
     return widget;
   }
@@ -53,7 +56,8 @@ class JazmineCalendar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentTheme = Theme.of(context);
-    final effectiveTheme = theme ?? const JazmineCalendarTheme();  // Use base theme as fallback
+    final effectiveTheme =
+        theme ?? const JazmineCalendarTheme(); // Use base theme as fallback
 
     return MultiProvider(
       providers: [
@@ -62,15 +66,15 @@ class JazmineCalendar extends StatelessWidget {
       child: Theme(
         data: currentTheme.copyWith(
           extensions: [
-            ...?currentTheme.extensions.values,  // Preserve existing extensions
-            effectiveTheme,  // Add our calendar theme
+            ...?currentTheme.extensions.values, // Preserve existing extensions
+            effectiveTheme, // Add our calendar theme
           ],
         ),
         child: Column(
           children: [
-            if (showNavigationBar)
-              _buildNavigationBar(),
-            if (showViewSelector && navigationBarStyle == NavigationBarStyle.standard)
+            if (showNavigationBar) _buildNavigationBar(),
+            if (showViewSelector &&
+                navigationBarStyle == NavigationBarStyle.standard)
               const ViewSelector(),
             const Expanded(child: CalendarViewSwitcher()),
           ],

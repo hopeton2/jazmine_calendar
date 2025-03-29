@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/views/widgets/all_day_grid.dart';
 
-class BaseDayView extends StatelessWidget {
+class BaseDayView extends BaseCalendarView {
   final List<DateTime> days;
   final double hourHeight;
   final bool showCurrentTimeIndicator;
@@ -24,13 +25,10 @@ class BaseDayView extends StatelessWidget {
     this.headerBuilder,
   });
 
-  void _scrollToCurrentTime(BuildContext context) {
-    CalendarGrid.scrollToTime(context, DateTime.now());
-  }
 
   @override
-  Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
+  Widget buildCalendarView(BuildContext context, DateTime startDate, DateTime selectedDate) {
+    final controller = JazmineCalendar.of(context).controller;
     final startTime =
         DateTime(days.first.year, days.first.month, days.first.day);
     final endTime = DateTime(days.last.year, days.last.month, days.last.day);
@@ -50,7 +48,7 @@ class BaseDayView extends StatelessWidget {
             ),
             Expanded(
               child: CalendarGrid(
-                key: PageStorageKey('day_view_scroll'),
+                key: const PageStorageKey('day_view_scroll'),
                 startDate: startTime,
                 endDate: endTime,
                 controller: controller,

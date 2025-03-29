@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../jazmine_calendar.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:intl/intl.dart';
-
-import 'base_calendar_view.dart';
+import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 
 class AgendaView extends BaseCalendarView {
   final AgendaViewConfiguration configuration;
@@ -13,8 +12,8 @@ class AgendaView extends BaseCalendarView {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final controller = JazmineCalendar.of(context).controller!;
+  Widget buildCalendarView(BuildContext context, DateTime startDate, DateTime selectedDate) {
+    final controller = JazmineCalendar.of(context).controller;
     
     return ValueListenableBuilder<List<Event>>(
       valueListenable: _createEventsNotifier(controller),
