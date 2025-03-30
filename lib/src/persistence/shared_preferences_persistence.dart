@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/event.dart';
+import '../models/calendar_event.dart';
 import 'calendar_persistence.dart';
 
 class SharedPreferencesPersistence implements CalendarPersistence {
   static const String _eventsKey = 'jazmine_calendar_events';
   final SharedPreferences _prefs;
-  List<Event>? _cachedEvents;
+  List<CalendarEvent>? _cachedEvents;
 
   SharedPreferencesPersistence(this._prefs);
 
@@ -16,7 +16,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<List<Event>> loadEvents() async {
+  Future<List<CalendarEvent>> loadEvents() async {
     try {
       if (_cachedEvents != null) return List.from(_cachedEvents!);
 
@@ -25,9 +25,9 @@ class SharedPreferencesPersistence implements CalendarPersistence {
 
       final List<dynamic> jsonList = json.decode(jsonString);
       _cachedEvents = jsonList
-          .map((json) => Event.fromJson(json as Map<String, dynamic>))
+          .map((json) => CalendarEvent.fromJson(json as Map<String, dynamic>))
           .toList();
-      
+
       return List.from(_cachedEvents!);
     } catch (e) {
       print('Error loading events: $e');
@@ -36,7 +36,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> saveEvents(List<Event> events) async {
+  Future<void> saveEvents(List<CalendarEvent> events) async {
     try {
       final jsonString = json.encode(
         events.map((event) => event.toJson()).toList(),
@@ -61,7 +61,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> addEvent(Event event) async {
+  Future<void> addEvent(CalendarEvent event) async {
     try {
       final events = await loadEvents();
       events.add(event);
@@ -73,7 +73,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> updateEvent(Event event) async {
+  Future<void> updateEvent(CalendarEvent event) async {
     try {
       final events = await loadEvents();
       final index = events.indexWhere((e) => e.id == event.id);
@@ -88,7 +88,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> deleteEvent(Event event) async {
+  Future<void> deleteEvent(CalendarEvent event) async {
     try {
       final events = await loadEvents();
       events.removeWhere((e) => e.id == event.id);

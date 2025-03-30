@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../models/event.dart';
+import '../../../models/calendar_event.dart';
 import 'event_renderer.dart';
 
 class StandardEventRenderer implements EventRenderer {
   @override
   Widget buildEventWidget({
     required BuildContext context,
-    required Event event,
+    required CalendarEvent event,
     required DateTime cellDate,
     required Size availableSpace,
   }) {

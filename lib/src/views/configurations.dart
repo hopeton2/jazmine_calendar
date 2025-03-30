@@ -27,7 +27,6 @@ class DayViewConfiguration extends BaseViewConfiguration {
 class WeekViewConfiguration extends DayViewConfiguration {
   final bool showWeekends;
   final String weekdayFormat;
-  final int firstDayOfWeek;
 
   const WeekViewConfiguration({
     super.dateAlignment,
@@ -35,7 +34,6 @@ class WeekViewConfiguration extends DayViewConfiguration {
     super.hourHeight,
     this.showWeekends = true,
     this.weekdayFormat = 'EEE',
-    this.firstDayOfWeek = DateTime.monday,
   });
 }
 
@@ -78,7 +76,6 @@ class MonthViewConfiguration extends BaseViewConfiguration {
   final String monthDaysFormat;
   final String firstDayOfMonthFormat;
   final bool showWeekdayHeaderBottomBorder;
-  final int firstDayOfWeek;
 
   const MonthViewConfiguration({
     super.dateAlignment,
@@ -94,6 +91,5 @@ class MonthViewConfiguration extends BaseViewConfiguration {
     this.monthDaysFormat = 'd',
     this.firstDayOfMonthFormat = 'MMM d',
     this.showWeekdayHeaderBottomBorder = true,
-    this.firstDayOfWeek = DateTime.sunday,
   });
 }

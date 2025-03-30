@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
@@ -8,7 +9,7 @@ import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/views/widgets/all_day_grid.dart';
 
 class BaseDayView extends BaseCalendarView {
-  final List<DateTime> days;
+  final List<DateTime> dates;
   final double hourHeight;
   final bool showCurrentTimeIndicator;
   final DayViewConfiguration configuration;
@@ -17,7 +18,7 @@ class BaseDayView extends BaseCalendarView {
 
   const BaseDayView({
     super.key,
-    required this.days,
+    required this.dates,
     required this.configuration,
     this.hourHeight = 60,
     this.showCurrentTimeIndicator = true,
@@ -25,23 +26,19 @@ class BaseDayView extends BaseCalendarView {
     this.headerBuilder,
   });
 
-
   @override
-  Widget buildCalendarView(BuildContext context, DateTime startDate, DateTime selectedDate) {
-    final controller = JazmineCalendar.of(context).controller;
-    final startTime =
-        DateTime(days.first.year, days.first.month, days.first.day);
-    final endTime = DateTime(days.last.year, days.last.month, days.last.day);
+  Widget buildCalendar(BuildContext context, CalendarController controller,
+      startDate, DateTime selectedDate) {
+      final uniqueDays = dates.map((date) => DateTime(date.year, date.month, date.day)).toSet().toList();
 
     return ValueListenableBuilder<Duration>(
       valueListenable: controller.intervalNotifier,
       builder: (context, interval, _) {
         return Column(
           children: [
-            _buildHeader(context, days),
+            _buildHeader(context, uniqueDays),
             AllDayGrid(
-              startDate: startTime,
-              days: days,
+              dates: uniqueDays,
               controller: controller,
               headerWidth: configuration.timebarWidth,
               borderColor: Colors.grey.withOpacity(0.2),
@@ -49,13 +46,11 @@ class BaseDayView extends BaseCalendarView {
             Expanded(
               child: CalendarGrid(
                 key: const PageStorageKey('day_view_scroll'),
-                startDate: startTime,
-                endDate: endTime,
+                dates: dates,
                 controller: controller,
                 headerDateFormat: DateFormat('HH:mm'),
-                numberOfColumns: days.length,
-                numberOfRows:
-                    const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
+                numberOfColumns: uniqueDays.length,
+                numberOfRows: const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
                 slotDuration: const Duration(days: 1),
                 intervalDuration: interval,
                 orientation: Axis.vertical,

@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-class Event {
+class CalendarEvent {
   final String id;
   final String title;
   final String? description;
@@ -14,7 +14,7 @@ class Event {
   final String? recurrenceRule;
   final List<String>? resourceIds;
 
-  Event({
+  CalendarEvent({
     required this.id,
     required this.title,
     this.description,
@@ -34,7 +34,7 @@ class Event {
   }
 
   /// Creates a copy of this event with the given fields replaced with new values
-  Event copyWith({
+  CalendarEvent copyWith({
     String? id,
     String? title,
     String? description,
@@ -48,7 +48,7 @@ class Event {
     String? recurrenceRule,
     List<String>? resourceIds,
   }) {
-    return Event(
+    return CalendarEvent(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -65,22 +65,20 @@ class Event {
   }
 
   /// Creates an Event from a JSON map
-  factory Event.fromJson(Map<String, dynamic> json) {
-    return Event(
+  factory CalendarEvent.fromJson(Map<String, dynamic> json) {
+    return CalendarEvent(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
       start: DateTime.parse(json['start'] as String),
       end: DateTime.parse(json['end'] as String),
-      color: json['color'] != null 
-          ? Color(json['color'] as int) 
-          : null,
+      color: json['color'] != null ? Color(json['color'] as int) : null,
       location: json['location'] as String?,
       timeZone: json['timeZone'] as String? ?? 'UTC',
       isAllDay: json['isAllDay'] as bool? ?? false,
       recurrenceType: json['recurrenceType'] as String?,
       recurrenceRule: json['recurrenceRule'] as String?,
-      resourceIds: json['resourceIds'] != null 
+      resourceIds: json['resourceIds'] != null
           ? List<String>.from(json['resourceIds'] as List)
           : null,
     );
@@ -108,14 +106,14 @@ class Event {
   Duration get duration => end.difference(start);
 
   /// Checks if this event overlaps with another event
-  bool overlaps(Event other) {
+  bool overlaps(CalendarEvent other) {
     return start.isBefore(other.end) && end.isAfter(other.start);
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Event &&
+    return other is CalendarEvent &&
         other.id == id &&
         other.title == title &&
         other.description == description &&

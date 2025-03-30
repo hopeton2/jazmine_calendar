@@ -1,19 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/models/event.dart';
+import 'package:jazmine_calendar/src/models/calendar_event.dart';
 import 'package:jazmine_calendar/src/persistence/calendar_persistence.dart';
 import 'package:jazmine_calendar/src/persistence/in_memory_persistence.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/services/navigation_service.dart';
 import 'package:jazmine_calendar/src/services/time_service.dart';
+import 'package:jazmine_calendar/src/utils/date_helper.dart';
 
-typedef EventCallback = Future<void> Function(Event event);
+typedef EventCallback = Future<void> Function(CalendarEvent event);
 typedef EventTimeCallback = Future<void> Function(
-    Event event, DateTime newStart, DateTime newEnd);
+    CalendarEvent event, DateTime newStart, DateTime newEnd);
 
-class JazmineCalendarController extends ChangeNotifier {
+class CalendarController extends ChangeNotifier {
   final NavigationService _navigationService;
   final TimeService _timeService;
   Timer? _timer;
@@ -30,13 +31,14 @@ class JazmineCalendarController extends ChangeNotifier {
   int? _targetHour;
   final Map<CalendarViewType, double> _scrollPositions = {};
   bool _hasInitialScroll = false; // Add missing field
+  final int firstDayOfWeek;
 
   late final CalendarPersistence _persistence;
-  List<Event>? _cachedEvents;
+  List<CalendarEvent>? _cachedEvents;
   bool _isLoading = false;
   bool _batchNotifications = false;
-  final ValueNotifier<List<Event>> _eventsNotifier =
-      ValueNotifier<List<Event>>([]);
+  final ValueNotifier<List<CalendarEvent>> _eventsNotifier =
+      ValueNotifier<List<CalendarEvent>>([]);
 
   ValueNotifier<CalendarViewType> get _currentViewNotifier =>
       _navigationService.currentViewNotifier;
@@ -53,8 +55,8 @@ class JazmineCalendarController extends ChangeNotifier {
   ValueNotifier<Duration> get intervalNotifier => _timeService.intervalNotifier;
 
   // Factory constructor to replace the removed create method
-  static Future<JazmineCalendarController> create({
-    CalendarViewType initialView = CalendarViewType.week,
+  static Future<CalendarController> create({
+    CalendarViewType initialView = CalendarViewType.day,
     DateTime? initialDate,
     List<String> visibleTimeZones = const ['UTC'],
     bool showFloatingActionButton = true,
@@ -65,8 +67,9 @@ class JazmineCalendarController extends ChangeNotifier {
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
     CalendarPersistence? persistence,
+    int firstDayOfWeek = DateTime.monday,
   }) async {
-    return JazmineCalendarController(
+    return CalendarController(
       initialView: initialView,
       initialDate: initialDate,
       visibleTimeZones: visibleTimeZones,
@@ -78,10 +81,11 @@ class JazmineCalendarController extends ChangeNotifier {
       onEventResized: onEventResized,
       interval: interval,
       persistence: persistence,
+      firstDayOfWeek: firstDayOfWeek,
     );
   }
 
-  JazmineCalendarController({
+  CalendarController({
     required CalendarViewType initialView,
     DateTime? initialDate,
     List<String> visibleTimeZones = const ['UTC'],
@@ -93,6 +97,7 @@ class JazmineCalendarController extends ChangeNotifier {
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
     CalendarPersistence? persistence,
+    this.firstDayOfWeek = DateTime.monday,
   })  : _navigationService = NavigationService(
             initialDate: initialDate, initialView: initialView),
         _timeService = TimeService(interval: interval),
@@ -104,6 +109,14 @@ class JazmineCalendarController extends ChangeNotifier {
         _onEventRescheduled = onEventRescheduled,
         _onEventResized = onEventResized,
         _persistence = persistence ?? InMemoryPersistence() {
+    DateHelper.controller = this;
+    CalendarViewService.controller = this;
+
+    // Initialize visible date range
+    final dateRange = CalendarViewService()
+        .dateRangeOfView(initialView, initialDate ?? DateTime.now());
+    CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
+
     _startTimer();
   }
 
@@ -192,26 +205,53 @@ class JazmineCalendarController extends ChangeNotifier {
     // Only change if it's actually a different view
     if (currentView != view) {
       _navigationService.changeView(view);
+
+      // Update visible date range for the new view
+      final dateRange = CalendarViewService().dateRangeOfView(view, startDate);
+      CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
+
       notifyListeners();
     }
   }
 
   void selectDate(DateTime date) {
     _navigationService.selectDate(date);
+
+    // Update visible date range for day view (since selectDate switches to day view)
+    final dateRange =
+        CalendarViewService().dateRangeOfView(CalendarViewType.day, date);
+    CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
   }
 
   void navigateToDate(DateTime date) {
     _navigationService.navigateToDate(date);
+
+    // Update visible date range for the current view
+    final dateRange = CalendarViewService().dateRangeOfView(currentView, date);
+    CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
+
     notifyListeners();
   }
 
   void navigateToNextPage() {
     _navigationService.navigateToNextPage();
+
+    // Update visible date range after navigation
+    final dateRange =
+        CalendarViewService().dateRangeOfView(currentView, startDate);
+    CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
+
     notifyListeners();
   }
 
   void navigateToPreviousPage() {
     _navigationService.navigateToPreviousPage();
+
+    // Update visible date range after navigation
+    final dateRange =
+        CalendarViewService().dateRangeOfView(currentView, startDate);
+    CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
+
     notifyListeners();
   }
 
@@ -233,7 +273,7 @@ class JazmineCalendarController extends ChangeNotifier {
   }
 
   // Event Management
-  Future<void> addEvent(Event event) async {
+  Future<void> addEvent(CalendarEvent event) async {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.addEvent(event);
@@ -246,7 +286,7 @@ class JazmineCalendarController extends ChangeNotifier {
     });
   }
 
-  Future<void> updateEvent(Event event) async {
+  Future<void> updateEvent(CalendarEvent event) async {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.updateEvent(event);
@@ -255,7 +295,7 @@ class JazmineCalendarController extends ChangeNotifier {
     });
   }
 
-  Future<void> deleteEvent(Event event) async {
+  Future<void> deleteEvent(CalendarEvent event) async {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.deleteEvent(event);
@@ -264,7 +304,7 @@ class JazmineCalendarController extends ChangeNotifier {
     });
   }
 
-  Future<List<Event>> getAllEvents() async {
+  Future<List<CalendarEvent>> getAllEvents() async {
     if (_cachedEvents != null) {
       return List.from(_cachedEvents!);
     }
@@ -293,7 +333,7 @@ class JazmineCalendarController extends ChangeNotifier {
   }
 
   Future<void> rescheduleEvent(
-      Event event, DateTime newStart, DateTime newEnd) async {
+      CalendarEvent event, DateTime newStart, DateTime newEnd) async {
     await _batchUpdate(() async {
       _isLoading = true;
       final updatedEvent = event.copyWith(
@@ -343,7 +383,7 @@ class JazmineCalendarController extends ChangeNotifier {
   }
 
   // Add missing getter
-  ValueNotifier<List<Event>> get eventsNotifier => _eventsNotifier;
+  ValueNotifier<List<CalendarEvent>> get eventsNotifier => _eventsNotifier;
 
   bool get scrollToCurrentTimeOnLoad => _scrollToCurrentTimeOnLoad;
 

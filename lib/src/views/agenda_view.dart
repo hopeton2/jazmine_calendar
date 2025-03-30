@@ -12,10 +12,9 @@ class AgendaView extends BaseCalendarView {
   });
 
   @override
-  Widget buildCalendarView(BuildContext context, DateTime startDate, DateTime selectedDate) {
-    final controller = JazmineCalendar.of(context).controller;
-    
-    return ValueListenableBuilder<List<Event>>(
+  Widget buildCalendar(BuildContext context, CalendarController controller,
+      startDate, DateTime selectedDate) {
+    return ValueListenableBuilder<List<CalendarEvent>>(
       valueListenable: _createEventsNotifier(controller),
       builder: (context, events, child) {
         if (events.isEmpty) {
@@ -23,13 +22,13 @@ class AgendaView extends BaseCalendarView {
         }
 
         events.sort((a, b) => a.start.compareTo(b.start));
-        
+
         return ListView.builder(
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-            final isFirstOfDay = index == 0 ||
-                !_isSameDay(events[index - 1].start, event.start);
+            final isFirstOfDay =
+                index == 0 || !_isSameDay(events[index - 1].start, event.start);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,14 +43,15 @@ class AgendaView extends BaseCalendarView {
     );
   }
 
-  ValueNotifier<List<Event>> _createEventsNotifier(JazmineCalendarController controller) {
-    final notifier = ValueNotifier<List<Event>>([]);
-    
+  ValueNotifier<List<CalendarEvent>> _createEventsNotifier(
+      CalendarController controller) {
+    final notifier = ValueNotifier<List<CalendarEvent>>([]);
+
     Future.microtask(() async {
       final events = await controller.getAllEvents();
       notifier.value = events;
     });
-    
+
     return notifier;
   }
 
@@ -73,9 +73,9 @@ class AgendaView extends BaseCalendarView {
     );
   }
 
-  Widget _buildAgendaItem(BuildContext context, Event event) {
+  Widget _buildAgendaItem(BuildContext context, CalendarEvent event) {
     final timeFormat = DateFormat.jm();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

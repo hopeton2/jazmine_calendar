@@ -4,14 +4,14 @@ import 'package:jazmine_calendar/jazmine_calendar.dart';
 void main() {
   group('JazmineCalendarController', () {
     test('creates with default values', () async {
-      final controller = await JazmineCalendarController.create();
+      final controller = await CalendarController.create();
       expect(controller.currentView, equals(CalendarViewType.week));
       expect(controller.visibleTimeZones, equals(['UTC']));
     });
 
     test('adds and retrieves events', () async {
-      final controller = await JazmineCalendarController.create();
-      final event = Event(
+      final controller = await CalendarController.create();
+      final event = CalendarEvent(
         id: 'test-event-1',
         title: 'Test Event',
         start: DateTime(2024, 1, 1, 9),

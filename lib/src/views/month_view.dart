@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
-import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/utils/date_helper.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
@@ -17,8 +17,8 @@ class MonthView extends BaseCalendarView {
   const MonthView({super.key});
 
   @override
-  Widget buildCalendarView(
-      BuildContext context, DateTime startDate, DateTime selectedDate) {
+  Widget buildCalendar(BuildContext context, CalendarController controller,
+      startDate, DateTime selectedDate) {
     final calendarWidget = JazmineCalendar.of(context);
     final controller = calendarWidget.controller;
     final configuration = calendarWidget.monthConfiguration;
@@ -42,24 +42,18 @@ class MonthView extends BaseCalendarView {
 
   Widget _buildMonthGrid(
     DateTime selectedDate,
-    JazmineCalendarController controller,
+    CalendarController controller,
     BuildContext context,
     MonthViewConfiguration configuration,
     weekNumberWidth,
   ) {
-    final firstDay = selectedDate.firstDayOfMonth;
-    final firstDayOfWeek = configuration.firstDayOfWeek;
-    final startDate = firstDay.getWeekStartDate(firstDayOfWeek);
-    //final lastDayOfMonth = selectedDate.lastDayOfMonth;
-
-    final dateRange = CalendarViewService().monthViewDateRange(selectedDate);
-    final weeksCount = startDate.weeksBetween(dateRange.last);
+    final dates = DateHelper.calendarDaysForMonth(selectedDate);
+    final weeksCount = dates.first.weeksBetween(dates.last);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return CalendarGrid(
-          startDate: dateRange.first,
-          endDate: dateRange.last,
+          dates: dates,
           controller: controller,
           headerDateFormat: DateFormat(
               ''), // Empty since we handle date display in cellBuilder
@@ -110,7 +104,7 @@ class MonthView extends BaseCalendarView {
 
   Widget _buildDayCell(
     DateTime date,
-    JazmineCalendarController controller,
+    CalendarController controller,
     BuildContext context,
     MonthViewConfiguration configuration, {
     bool isFirstDayOfMonth = false,
@@ -157,7 +151,7 @@ class MonthView extends BaseCalendarView {
   Widget _buildTrailingDayCell(
     DateTime date,
     BuildContext context,
-    JazmineCalendarController controller,
+    CalendarController controller,
     MonthViewConfiguration configuration, {
     bool isFirstTrailingDay = false,
   }) {
@@ -202,6 +196,7 @@ class MonthView extends BaseCalendarView {
     MonthViewConfiguration configuration,
     double weekNumberWidth,
   ) {
+    final controller = JazmineCalendar.of(context).controller;
     final weekdayFormat = DateFormat(configuration.weekdayFormat);
     final now = DateTime.now();
     final theme = Theme.of(context);
@@ -235,7 +230,7 @@ class MonthView extends BaseCalendarView {
                 final weekday = DateTime(
                   now.year,
                   now.month,
-                  now.day - now.weekday + configuration.firstDayOfWeek + index,
+                  now.day - now.weekday + controller.firstDayOfWeek + index,
                 );
                 return Expanded(
                   child: Container(

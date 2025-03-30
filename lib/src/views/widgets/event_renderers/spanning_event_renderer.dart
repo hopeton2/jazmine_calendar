@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
-import '../../../models/event.dart';
+import '../../../models/calendar_event.dart';
 import 'event_renderer.dart';
 
 class SpanningEventRenderer implements EventRenderer {
   @override
   Widget buildEventWidget({
     required BuildContext context,
-    required Event event,
+    required CalendarEvent event,
     required DateTime cellDate,
     required Size availableSpace,
   }) {

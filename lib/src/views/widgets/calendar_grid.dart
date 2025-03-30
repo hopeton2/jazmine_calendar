@@ -2,7 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/utils/typedefs.dart';
@@ -58,16 +59,14 @@ class _CalendarGridItemState extends State<_CalendarGridItem>
 }
 
 class CalendarGrid extends StatefulWidget {
-  final DateTime startDate;
-  final DateTime endDate;
+
   final Duration slotDuration;
   final Duration intervalDuration;
   final Axis orientation;
   final int numberOfColumns;
   final int numberOfRows;
-  final int startOfWeek;
   final DateFormat headerDateFormat;
-  final JazmineCalendarController controller;
+  final CalendarController controller;
   final Widget Function(BuildContext, DateTime, bool, double, double)?
       headerBuilder;
   final CellBuilder? cellBuilder;
@@ -76,27 +75,29 @@ class CalendarGrid extends StatefulWidget {
   final bool showCurrentTimeIndicator;
   final double gridLineWidth;
   final bool isAllDay;
+  final List<DateTime> dates;
 
   const CalendarGrid({
     super.key,
-    required this.startDate,
-    required this.endDate,
     required this.controller,
+    required this.dates,
     required this.headerDateFormat,
     this.slotDuration = const Duration(days: 1),
     this.intervalDuration = const Duration(minutes: 30),
     this.orientation = Axis.vertical,
     required this.numberOfColumns,
     required this.numberOfRows,
-    this.startOfWeek = DateTime.monday,
     this.headerBuilder,
     this.cellBuilder,
     this.rowHeaderWidth = 60.0,
     this.columnHeaderHeight = 60.0,
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
-    this.isAllDay = false,
+    this.isAllDay = false, 
   });
+   
+   get startDate => dates.first;
+   get endDate => dates.last;
 
   /// Scrolls the grid to show the specified time
   static void scrollToTime(BuildContext context, DateTime time) {
@@ -119,7 +120,8 @@ class CalendarGridState extends State<CalendarGrid> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Only apply initial scroll if it hasn't been done for day-based views
-      if (!_viewService
+      if (widget.controller.currentView != CalendarViewType.month &&
+          !_viewService
           .hasInitialScrollBeenApplied(widget.controller.currentView)) {
         if (widget.controller.scrollToCurrentTimeOnLoad) {
           _scrollToTime(DateTime.now(),
@@ -259,7 +261,8 @@ class CalendarGridState extends State<CalendarGrid> {
 
   Widget _buildHeader(
       int index, bool isVertical, double slotWidth, double slotHeight) {
-    final cellsOfHeaderCount = isVertical ? widget.numberOfColumns : widget.numberOfRows;
+    final cellsOfHeaderCount =
+        isVertical ? widget.numberOfColumns : widget.numberOfRows;
     final headerDate = widget.intervalDuration.isZero
         ? widget.startDate.add(widget.slotDuration * index * cellsOfHeaderCount)
         : widget.startDate.add(widget.intervalDuration * index);
@@ -314,15 +317,20 @@ class CalendarGridState extends State<CalendarGrid> {
             ? Colors.grey.withOpacity(0.2)
             : Colors.grey.withOpacity(0.3));
     final slotCount = isVertical ? widget.numberOfColumns : widget.numberOfRows;
-    DateTime cellGroupStartDate = !widget.intervalDuration.isZero
-        ? widget.startDate
-        : widget.startDate.add(widget.slotDuration * index * slotCount);
+   // DateTime cellGroupStartDate = !widget.intervalDuration.isZero
+   //     ? widget.startDate
+   //     : widget.startDate.add(widget.slotDuration * index * slotCount);
 
     return List.generate(slotCount, (slotIndex) {
-      final DateTime slotDate = cellGroupStartDate
-          .add(widget.slotDuration * slotIndex)
-          .add(widget.intervalDuration * index);
-
+      int dateIndex = index * slotCount + slotIndex;
+      DateTime slotDate = widget.dates[dateIndex];
+  /*     if (widget.lDateDelegate != null) {
+        slotDate = widget.cellDateDelegate!(slotIndex * (index + 1));
+      } else {
+        slotDate = cellGroupStartDate
+            .add(widget.slotDuration * slotIndex)
+            .add(widget.intervalDuration * index);
+      } */
       return Expanded(
         child: widget.cellBuilder != null
             ? widget.cellBuilder!(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
+import 'package:jazmine_calendar/src/widgets/dual_view_date_picker.dart';
+
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -10,7 +12,7 @@ class CalendarNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JazmineCalendarController>(
+    return Consumer<CalendarController>(
       builder: (context, controller, child) {
         final dateFormat = DateFormat.yMMMM();
         final shouldUseMobileLayout = UIHelper.shouldUseMobileLayout(context);
@@ -38,7 +40,7 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   Widget _buildCompactNavigation(BuildContext context,
-      JazmineCalendarController controller, DateFormat dateFormat) {
+      CalendarController controller, DateFormat dateFormat) {
     return Expanded(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -65,7 +67,7 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   Widget _buildRegularNavigation(BuildContext context,
-      JazmineCalendarController controller, DateFormat dateFormat) {
+      CalendarController controller, DateFormat dateFormat) {
     return Row(
       children: [
         TextButton(
@@ -81,7 +83,7 @@ class CalendarNavigationBar extends StatelessWidget {
     );
   }
 
-  void _navigatePrevious(JazmineCalendarController controller) {
+  void _navigatePrevious(CalendarController controller) {
     final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
         : controller.startDate;
@@ -101,7 +103,7 @@ class CalendarNavigationBar extends StatelessWidget {
     }
   }
 
-  void _navigateNext(JazmineCalendarController controller) {
+  void _navigateNext(CalendarController controller) {
     final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
         : controller.startDate;
@@ -122,15 +124,71 @@ class CalendarNavigationBar extends StatelessWidget {
   }
 
   Future<void> _selectDate(
-      BuildContext context, JazmineCalendarController controller) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: controller.selectedDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      controller.navigateToDate(picked);
+      BuildContext context, CalendarController controller) async {
+    if (controller.currentView == CalendarViewType.month) {
+      // For month view, show a combined month/day picker
+
+      // Show the combined picker in a dialog
+      final DateTime? picked = await showDialog<DateTime>(
+        context: context,
+        builder: (BuildContext context) {
+          final theme = Theme.of(context);
+          return Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Date',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close,
+                            color: theme.colorScheme.onSurface),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    // Use a much taller height to ensure all dates are visible
+                    height:
+                        850.0, // Much taller height to ensure all dates are visible
+                    child: DualViewDatePicker(
+                      initialDate: controller.startDate,
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime(2100),
+                      onDateSelected: (date) => Navigator.of(context).pop(date),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      if (picked != null) {
+        controller.navigateToDate(picked);
+      }
+    } else {
+      // For other views, show the standard date picker
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: controller.selectedDate,
+        firstDate: DateTime(1900),
+        lastDate: DateTime(2100),
+      );
+      if (picked != null) {
+        controller.navigateToDate(picked);
+      }
     }
   }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
-import 'package:intl/intl.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   runApp(MaterialApp(
     title: 'Jazmine Calendar Example',
     debugShowCheckedModeBanner: false,
@@ -27,7 +26,6 @@ void main() {
   ));
 }
 
-
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
@@ -38,11 +36,10 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   String _lastAction = '';
 
-  
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       body: Column(
         children: [
@@ -65,8 +62,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
-           Expanded(
+          Expanded(
             child: JazmineCalendar(
+              // Using default controller to test default behavior
               showNavigationBar: true,
               showViewSelector: true,
               navigationBarStyle: NavigationBarStyle.compact,

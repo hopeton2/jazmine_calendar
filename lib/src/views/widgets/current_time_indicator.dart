@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 
@@ -11,7 +11,7 @@ class CurrentTimeIndicator extends StatefulWidget {
   final double width;
   final DateTime startDate;
   final DateTime endDate;
-  final JazmineCalendarController controller;
+  final CalendarController controller;
   final bool autoScroll;
   final ScrollController scrollController;
   final double intervalPixels; // New property
@@ -40,7 +40,6 @@ class CurrentTimeIndicator extends StatefulWidget {
 class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late double _currentPosition;
   final double ballSize = 12.00;
 
   double _calculateTodayColumnPosition() {
@@ -59,16 +58,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
       duration: const Duration(milliseconds: 100),
     );
 
-    // Initialize position correctly
-    final currentTime = widget.controller.currentTimeNotifier.value;
-
-    final totalMinutesSinceStart = (currentTime.hour * 60 + currentTime.minute);
-    final interval = widget.controller.intervalNotifier.value;
-    final position =
-        (totalMinutesSinceStart / interval.inMinutes) * widget.intervalPixels -
-            ballSize / 2;
-
-    _currentPosition = position - widget.scrollController.offset;
+    // Initialize animation controller
 
     // Add scroll listener
     widget.scrollController.addListener(_handleScroll);
@@ -86,8 +76,7 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     if (mounted) setState(() {});
   }
 
-  void _updatePosition(double newPosition) {
-    _currentPosition = newPosition;
+  void _updateIndicator() {
     _animationController.forward(from: 0.0);
   }
 
@@ -113,11 +102,12 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
             final totalMinutesSinceStart =
                 (currentTime.hour * 60 + currentTime.minute);
             final position = (totalMinutesSinceStart / interval.inMinutes) *
-                    widget.intervalPixels -
-                6;
-            final adjustedPosition = position - widget.scrollController.offset;
+                widget.intervalPixels;
+            // Adjust position to center the ball on the time line
+            final adjustedPosition =
+                position - widget.scrollController.offset - (ballSize / 2);
 
-            _updatePosition(adjustedPosition);
+            _updateIndicator();
 
             return Stack(
               children: [
@@ -193,6 +183,9 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
     if (widget.orientation == Axis.vertical) {
       return widget.availableSpace;
     }
+
+    // Use the same logic for all views - the width of a single column/slot
+    // This ensures consistency between day view and week view
     return widget.slotWidth - ballSize;
   }
 }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 
 class AllDayGrid extends StatelessWidget {
-  final DateTime startDate;
-  final List<DateTime> days;
-  final JazmineCalendarController controller;
+  final List<DateTime> dates;
+  final CalendarController controller;
   final double headerWidth;
   final double allDayRegionHeight;
   final Color? borderColor;
@@ -16,8 +15,7 @@ class AllDayGrid extends StatelessWidget {
 
   const AllDayGrid({
     super.key,
-    required this.startDate,
-    required this.days,
+    required this.dates,
     required this.controller,
     this.headerWidth = 60.0,
     this.allDayRegionHeight = 60.0,
@@ -30,11 +28,10 @@ class AllDayGrid extends StatelessWidget {
     return SizedBox(
       height: allDayRegionHeight,
       child: CalendarGrid(
-        startDate: startDate,
-        endDate: startDate.add(Duration(days: days.length)),
+        dates: dates,
         controller: controller,
         headerDateFormat: DateFormat(''),
-        numberOfColumns: days.length,
+        numberOfColumns: dates.length,
         numberOfRows: 1,
         slotDuration: const Duration(days: 1),
         intervalDuration: const Duration(days: 1),

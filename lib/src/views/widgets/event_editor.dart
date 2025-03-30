@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../models/event.dart';
+import '../../models/calendar_event.dart';
 
 typedef EventEditorBuilder = Widget Function(
   BuildContext context,
-  Event? event,
-  ValueChanged<Event> onSave,
+  CalendarEvent? event,
+  ValueChanged<CalendarEvent> onSave,
   VoidCallback onCancel,
 );
 
 class EventEditor extends StatelessWidget {
-  final Event? event;
-  final ValueChanged<Event> onSave;
+  final CalendarEvent? event;
+  final ValueChanged<CalendarEvent> onSave;
   final VoidCallback onCancel;
   final EventEditorBuilder? builder;
 
@@ -36,8 +36,8 @@ class EventEditor extends StatelessWidget {
 }
 
 class DefaultEventEditor extends StatefulWidget {
-  final Event? event;
-  final ValueChanged<Event> onSave;
+  final CalendarEvent? event;
+  final ValueChanged<CalendarEvent> onSave;
   final VoidCallback onCancel;
 
   const DefaultEventEditor({
@@ -64,7 +64,8 @@ class _DefaultEventEditorState extends State<DefaultEventEditor> {
     super.initState();
     final event = widget.event;
     _titleController = TextEditingController(text: event?.title ?? '');
-    _descriptionController = TextEditingController(text: event?.description ?? '');
+    _descriptionController =
+        TextEditingController(text: event?.description ?? '');
     _locationController = TextEditingController(text: event?.location ?? '');
     _startTime = event?.start ?? DateTime.now();
     _endTime = event?.end ?? DateTime.now().add(const Duration(hours: 1));
@@ -153,10 +154,14 @@ class _DefaultEventEditorState extends State<DefaultEventEditor> {
               ),
               items: const [
                 DropdownMenuItem(value: 'UTC', child: Text('UTC')),
-                DropdownMenuItem(value: 'America/New_York', child: Text('Eastern Time')),
-                DropdownMenuItem(value: 'America/Chicago', child: Text('Central Time')),
-                DropdownMenuItem(value: 'America/Denver', child: Text('Mountain Time')),
-                DropdownMenuItem(value: 'America/Los_Angeles', child: Text('Pacific Time')),
+                DropdownMenuItem(
+                    value: 'America/New_York', child: Text('Eastern Time')),
+                DropdownMenuItem(
+                    value: 'America/Chicago', child: Text('Central Time')),
+                DropdownMenuItem(
+                    value: 'America/Denver', child: Text('Mountain Time')),
+                DropdownMenuItem(
+                    value: 'America/Los_Angeles', child: Text('Pacific Time')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -241,7 +246,7 @@ class _DefaultEventEditorState extends State<DefaultEventEditor> {
 
   void _handleSave() {
     widget.onSave(
-      Event(
+      CalendarEvent(
         id: widget.event!.id,
         title: _titleController.text,
         description: _descriptionController.text,

@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/calendar_navigation_bar.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_view_switcher.dart';
-import 'package:jazmine_calendar/src/views/widgets/event_editor.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/compact_navigation_bar.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/view_selector.dart';
 
 import 'package:provider/provider.dart';
 
 class JazmineCalendar extends StatelessWidget {
-  final JazmineCalendarController controller; // Not nullable anymore
-  final Widget Function(BuildContext, Event)? eventBuilder;
+  final CalendarController controller; // Not nullable anymore
+  final Widget Function(BuildContext, CalendarEvent)? eventBuilder;
   final bool showNavigationBar;
   final bool showViewSelector;
   final NavigationBarStyle navigationBarStyle; // New property
@@ -24,7 +23,7 @@ class JazmineCalendar extends StatelessWidget {
 
   JazmineCalendar({
     super.key,
-    JazmineCalendarController? controller, // Accept nullable controller
+    CalendarController? controller, // Accept nullable controller
     this.eventBuilder,
     this.showNavigationBar = true,
     this.showViewSelector = true,
@@ -36,13 +35,17 @@ class JazmineCalendar extends StatelessWidget {
     this.monthConfiguration = const MonthViewConfiguration(),
     this.agendaConfiguration = const AgendaViewConfiguration(),
     this.timelineConfiguration = const TimelineConfiguration(),
-  }) : controller = controller ??
-            JazmineCalendarController(
-              initialView: CalendarViewType.month,
-              initialDate: DateTime.now(),
-              scrollToCurrentTimeOnLoad: true,
-              interval: const Duration(minutes: 30),
-            );
+  }) : controller = controller ?? _createDefaultController();
+
+  // Create a default controller that uses the same defaults as the CalendarController.create method
+  static CalendarController _createDefaultController() {
+    return CalendarController(
+      initialView: CalendarViewType.day, // Use day as default view
+      initialDate: DateTime.now(),
+      scrollToCurrentTimeOnLoad: true,
+      interval: const Duration(minutes: 30),
+    );
+  }
 
   static JazmineCalendar of(BuildContext context) {
     final widget = context.findAncestorWidgetOfExactType<JazmineCalendar>();
@@ -66,7 +69,7 @@ class JazmineCalendar extends StatelessWidget {
       child: Theme(
         data: currentTheme.copyWith(
           extensions: [
-            ...?currentTheme.extensions.values, // Preserve existing extensions
+            ...currentTheme.extensions.values, // Preserve existing extensions
             effectiveTheme, // Add our calendar theme
           ],
         ),
@@ -88,25 +91,5 @@ class JazmineCalendar extends StatelessWidget {
       NavigationBarStyle.standard => const CalendarNavigationBar(),
       NavigationBarStyle.compact => const CompactNavigationBar(),
     };
-  }
-
-  Future<void> _showAddEventDialog(
-    BuildContext context,
-    JazmineCalendarController controller,
-  ) async {
-    final result = await showDialog<Event>(
-      context: context,
-      builder: (context) => EventEditor(
-        onSave: (event) => Navigator.of(context).pop(event),
-        onCancel: () => Navigator.of(context).pop(),
-      ),
-    );
-
-    if (result != null) {
-      await controller.addEvent(result);
-      if (controller.onEventCreated != null) {
-        await controller.onEventCreated!(result);
-      }
-    }
   }
 }

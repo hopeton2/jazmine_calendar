@@ -35,6 +35,7 @@ class _TimelineViewState extends State<TimelineView> {
           displayDate.day,
         );
         final endTime = startTime.add(const Duration(days: 1));
+        var dates = [startTime, endTime];
 
         return ValueListenableBuilder<Duration>(
           valueListenable: controller.intervalNotifier,
@@ -44,8 +45,7 @@ class _TimelineViewState extends State<TimelineView> {
                 _buildTimeZoneHeader(controller.visibleTimeZones),
                 Expanded(
                   child: CalendarGrid(
-                    startDate: startTime,
-                    endDate: endTime,
+                    dates: dates,
                     controller: controller,
                     headerDateFormat: DateFormat('HH:mm'),
                     numberOfColumns: const Duration(hours: 24).inMinutes ~/

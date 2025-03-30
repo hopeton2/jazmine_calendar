@@ -1,4 +1,5 @@
 import 'package:dart_date/dart_date.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
@@ -12,6 +13,8 @@ class CalendarViewService {
   factory CalendarViewService() {
     return _instance;
   }
+
+  static CalendarController? controller;
 
   CalendarViewService._internal();
 
@@ -86,7 +89,7 @@ class CalendarViewService {
   }
 
   List<DateTime> monthViewDateRange(DateTime date) {
-    final firstDayOfWeek = configuration.firstDayOfWeek;
+    final firstDayOfWeek = controller!.firstDayOfWeek;
     final firstDay = date.firstDayOfMonth;
     final lastDayOfMonth = date.lastDayOfMonth;
     final startDate = firstDay.getWeekStartDate(firstDayOfWeek);

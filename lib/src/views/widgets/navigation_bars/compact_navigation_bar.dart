@@ -3,9 +3,10 @@ import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/view_selector.dart';
 import 'package:jazmine_calendar/src/widgets/date_selector.dart';
+import 'package:jazmine_calendar/src/widgets/month_selector.dart';
 import 'package:intl/intl.dart';
 
 class CompactNavigationBar extends StatelessWidget {
@@ -16,9 +17,13 @@ class CompactNavigationBar extends StatelessWidget {
     final calendarTheme = Theme.of(context).extension<JazmineCalendarTheme>();
 
     final controller = JazmineCalendar.of(context).controller;
-    return ValueListenableBuilder<DateTime>(
-      valueListenable: controller.selectedDateNotifier,
-      builder: (context, selectedDate, child) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        controller.selectedDateNotifier,
+        controller.startDateNotifier,
+        controller.currentViewNotifier,
+      ]),
+      builder: (context, child) {
         final dateFormat = DateFormat.yMMMM();
 
         return Container(
@@ -47,16 +52,25 @@ class CompactNavigationBar extends StatelessWidget {
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => _navigateNext(controller),
                 ),
-              ValueListenableBuilder<DateTime>(
-                valueListenable: controller.startDateNotifier,
-                builder: (context, displayDate, _) => DateSelector(
-                  date: controller.startDate,
-                  caption: _getDateRangeCaption(controller),
-                  onDateSelected: (date) => controller.navigateToDate(date),
-                  isCompact: UIHelper.isSmallDevice(context),
-                  dateFormat: dateFormat,
-                ),
-              ),
+              // Use MonthSelector for month view, DateSelector for other views
+              controller.currentView == CalendarViewType.month
+                  ? MonthSelector(
+                      date: controller.startDate,
+                      caption: _getDateRangeCaption(controller),
+                      onMonthSelected: (date) =>
+                          controller.navigateToDate(date),
+                      isCompact: UIHelper.isSmallDevice(context),
+                      dateFormat: dateFormat,
+                      allowDaySelection:
+                          true, // Enable combined month/day selection
+                    )
+                  : DateSelector(
+                      date: controller.startDate,
+                      caption: _getDateRangeCaption(controller),
+                      onDateSelected: (date) => controller.navigateToDate(date),
+                      isCompact: UIHelper.isSmallDevice(context),
+                      dateFormat: dateFormat,
+                    ),
               const Spacer(),
               const ViewSelector(showCheckmarks: false),
             ],
@@ -66,7 +80,7 @@ class CompactNavigationBar extends StatelessWidget {
     );
   }
 
-  void _navigatePrevious(JazmineCalendarController controller) {
+  void _navigatePrevious(CalendarController controller) {
     final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
         : controller.startDate;
@@ -86,7 +100,7 @@ class CompactNavigationBar extends StatelessWidget {
     }
   }
 
-  void _navigateNext(JazmineCalendarController controller) {
+  void _navigateNext(CalendarController controller) {
     final date = controller.currentView == CalendarViewType.day
         ? controller.selectedDate
         : controller.startDate;
@@ -106,7 +120,7 @@ class CompactNavigationBar extends StatelessWidget {
     }
   }
 
-  String _getDateRangeCaption(JazmineCalendarController controller) {
+  String _getDateRangeCaption(CalendarController controller) {
     if (controller.visibleDateRange.isEmpty) {
       return '';
     }

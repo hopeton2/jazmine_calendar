@@ -1,10 +1,10 @@
-import '../models/event.dart';
+import '../models/calendar_event.dart';
 
 abstract class CalendarPersistence {
-  Future<List<Event>> loadEvents();
-  Future<void> saveEvents(List<Event> events);
+  Future<List<CalendarEvent>> loadEvents();
+  Future<void> saveEvents(List<CalendarEvent> events);
   Future<void> clearEvents();
-  Future<void> addEvent(Event event);
-  Future<void> updateEvent(Event event);
-  Future<void> deleteEvent(Event event);
+  Future<void> addEvent(CalendarEvent event);
+  Future<void> updateEvent(CalendarEvent event);
+  Future<void> deleteEvent(CalendarEvent event);
 }

@@ -1,7 +1,7 @@
-import '../models/event.dart';
+import '../models/calendar_event.dart';
 
 class EventPosition {
-  final Event event;
+  final CalendarEvent event;
   final double top;
   final double left;
   final double width;
@@ -18,14 +18,14 @@ class EventPosition {
 
 class EventPacker {
   static List<EventPosition> packEvents({
-    required List<Event> events,
+    required List<CalendarEvent> events,
     required double containerWidth,
     required double hourHeight,
   }) {
     if (events.isEmpty) return [];
 
     // Sort events by start time
-    final sortedEvents = List<Event>.from(events)
+    final sortedEvents = List<CalendarEvent>.from(events)
       ..sort((a, b) => a.start.compareTo(b.start));
 
     // Group overlapping events
@@ -44,11 +44,12 @@ class EventPacker {
     return positions;
   }
 
-  static List<List<Event>> _groupOverlappingEvents(List<Event> sortedEvents) {
+  static List<List<CalendarEvent>> _groupOverlappingEvents(
+      List<CalendarEvent> sortedEvents) {
     if (sortedEvents.isEmpty) return [];
 
-    final groups = <List<Event>>[];
-    var currentGroup = <Event>[sortedEvents.first];
+    final groups = <List<CalendarEvent>>[];
+    var currentGroup = <CalendarEvent>[sortedEvents.first];
 
     for (var i = 1; i < sortedEvents.length; i++) {
       final event = sortedEvents[i];
@@ -58,7 +59,7 @@ class EventPacker {
         currentGroup.add(event);
       } else {
         groups.add(currentGroup);
-        currentGroup = <Event>[event];
+        currentGroup = <CalendarEvent>[event];
       }
     }
 
@@ -70,7 +71,7 @@ class EventPacker {
   }
 
   static List<EventPosition> _packGroup(
-    List<Event> group, {
+    List<CalendarEvent> group, {
     required double containerWidth,
     required double hourHeight,
   }) {

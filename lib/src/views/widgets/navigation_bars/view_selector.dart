@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
-import 'package:jazmine_calendar/src/controller/jazmine_calendar_controller.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
@@ -20,7 +20,7 @@ class ViewSelector extends StatelessWidget {
     return buildViewSelector(controller);
   }
 
-  Widget buildViewSelector(JazmineCalendarController controller) {
+  Widget buildViewSelector(CalendarController controller) {
     return ValueListenableBuilder<CalendarViewType>(
       valueListenable: controller.currentViewNotifier,
       builder: (context, currentView, child) {

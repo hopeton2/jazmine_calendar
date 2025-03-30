@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 class CalendarTimeSlot extends StatelessWidget {
   final DateTime date;
-  final JazmineCalendarController controller;
+  final CalendarController controller;
   final bool showDate;
   final DateFormat formatDate;
   final String? formatDatePrefix;
@@ -41,14 +41,16 @@ class CalendarTimeSlot extends StatelessWidget {
 
   /// Returns the render box offset of this time slot relative to the global position
   Offset? getOffset() {
-    final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        _key.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) return null;
     return renderBox.localToGlobal(Offset.zero);
   }
 
   /// Returns the size of the time slot
   Size? getSize() {
-    final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        _key.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) return null;
     return renderBox.size;
   }
@@ -59,9 +61,9 @@ class CalendarTimeSlot extends StatelessWidget {
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
     final isSelected = date.isSameDay(controller.selectedDate);
     final isToday = date.isSameDay(DateTime.now());
-    final gridLineColor = calendarTheme?.getGridLineColor(context) ?? 
-        (theme.brightness == Brightness.light 
-            ? Colors.grey.withOpacity(0.2) 
+    final gridLineColor = calendarTheme?.getGridLineColor(context) ??
+        (theme.brightness == Brightness.light
+            ? Colors.grey.withOpacity(0.2)
             : Colors.grey.withOpacity(0.3));
 
     // Get the appropriate background color based on whether it's an all-day slot
@@ -99,7 +101,8 @@ class CalendarTimeSlot extends StatelessWidget {
                 if (showDate) ...[
                   Padding(
                     padding: datePadding,
-                    child: _buildDateIndicator(context, isSelected, isToday, calendarTheme, theme),
+                    child: _buildDateIndicator(
+                        context, isSelected, isToday, calendarTheme, theme),
                   ),
                 ],
               ],
@@ -129,9 +132,8 @@ class CalendarTimeSlot extends StatelessWidget {
                 shape: formatDatePrefix != null
                     ? BoxShape.rectangle
                     : BoxShape.circle,
-                borderRadius: formatDatePrefix != null
-                    ? BorderRadius.circular(25)
-                    : null,
+                borderRadius:
+                    formatDatePrefix != null ? BorderRadius.circular(25) : null,
               )
             : isToday
                 ? BoxDecoration(
@@ -163,8 +165,9 @@ class CalendarTimeSlot extends StatelessWidget {
                     )
                   : isToday
                       ? TextStyle(
-                          color: calendarTheme?.getTodayIndicatorColor(context) ??
-                              theme.colorScheme.primary,
+                          color:
+                              calendarTheme?.getTodayIndicatorColor(context) ??
+                                  theme.colorScheme.primary,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         )

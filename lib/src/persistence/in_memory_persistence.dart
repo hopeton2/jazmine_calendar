@@ -1,16 +1,16 @@
 import 'package:jazmine_calendar/src/persistence/calendar_persistence.dart';
-import 'package:jazmine_calendar/src/models/event.dart';
+import 'package:jazmine_calendar/src/models/calendar_event.dart';
 
 class InMemoryPersistence implements CalendarPersistence {
-  final List<Event> _events = [];
+  final List<CalendarEvent> _events = [];
 
   @override
-  Future<void> addEvent(Event event) async {
+  Future<void> addEvent(CalendarEvent event) async {
     _events.add(event);
   }
 
   @override
-  Future<void> updateEvent(Event event) async {
+  Future<void> updateEvent(CalendarEvent event) async {
     final index = _events.indexWhere((e) => e.id == event.id);
     if (index != -1) {
       _events[index] = event;
@@ -18,12 +18,12 @@ class InMemoryPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> deleteEvent(Event event) async {
+  Future<void> deleteEvent(CalendarEvent event) async {
     _events.removeWhere((e) => e.id == event.id);
   }
 
   @override
-  Future<List<Event>> loadEvents() async {
+  Future<List<CalendarEvent>> loadEvents() async {
     return List.from(_events);
   }
 
@@ -33,7 +33,7 @@ class InMemoryPersistence implements CalendarPersistence {
   }
 
   @override
-  Future<void> saveEvents(List<Event> events) async {
+  Future<void> saveEvents(List<CalendarEvent> events) async {
     _events.clear();
     _events.addAll(events);
   }
