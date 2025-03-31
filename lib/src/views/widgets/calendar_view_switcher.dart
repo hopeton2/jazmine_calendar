@@ -22,7 +22,7 @@ class CalendarViewSwitcher extends StatelessWidget {
           CalendarViewType.week => const WeekView(),
           CalendarViewType.month => const MonthView(),
           CalendarViewType.agenda => const AgendaView(),
-          CalendarViewType.timeline => TimelineView(),
+          CalendarViewType.timeline => const TimelineView(),
         };
       },
     );

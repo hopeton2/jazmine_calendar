@@ -95,8 +95,7 @@ abstract class DateHelper {
     final interval = controller!.intervalNotifier.value;
     const rows = 1;
     final cols = const Duration(days: 1).inMinutes ~/ interval.inMinutes;
-    return intervalDates(
-        date, interval, interval, cols, rows, Axis.horizontal);
+    return intervalDates(date, interval, interval, cols, rows, Axis.horizontal);
   }
 
   /// Returns a list of DateTime objects for the calendar month grid including leading/trailing days
@@ -221,4 +220,6 @@ abstract class DateHelper {
     to = DateTime(to.year, to.month, to.day);
     return (to.difference(from).inHours / 24).round();
   }
+
+  
 }

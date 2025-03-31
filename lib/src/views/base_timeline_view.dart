@@ -2,31 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/utils/date_helper.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 
 /// Base class for timeline views that display events horizontally with time on the top.
-///
+/// 
 /// This class provides the foundation for creating timeline views where time is displayed
 /// horizontally across the top, and rows represent different resources.
 class BaseTimelineView extends BaseCalendarView {
   /// Creates a base timeline view.
-
-  final DateTime date;
-  final TimelineConfiguration configuration;
-
+  
+  final List<DateTime> dates;
+  final double hourWidth;
+  final bool showCurrentTimeIndicator;
+  final DayViewConfiguration configuration;
+  final Widget Function(BuildContext, DateTime, int, int)? slotBuilder;
+  final Widget Function(BuildContext, DateTime)? headerBuilder;
+  
   const BaseTimelineView({
     super.key,
-    required this.date,
+    required this.dates,
     required this.configuration,
+    this.hourWidth = 100,
+    this.showCurrentTimeIndicator = true,
+    this.slotBuilder,
+    this.headerBuilder,
   });
-
-  /// Get the configuration for the timeline view.
-  /// This method can be overridden by subclasses to provide a custom configuration.
-  TimelineConfiguration getConfiguration(BuildContext context) {
-    return configuration;
-  }
 
   /// Builds the time header for each time slot.
   Widget buildTimebarHeader(
@@ -63,11 +66,11 @@ class BaseTimelineView extends BaseCalendarView {
             : theme.colorScheme.surface,
         border: Border(
           right: BorderSide(
-            color: calendarTheme?.getGridLineColor(context) ??
+            color: calendarTheme?.getGridLineColor(context) ?? 
                 Colors.grey.withOpacity(0.2),
           ),
           bottom: BorderSide(
-            color: calendarTheme?.getGridLineColor(context) ??
+            color: calendarTheme?.getGridLineColor(context) ?? 
                 Colors.grey.withOpacity(0.2),
           ),
         ),
@@ -86,29 +89,12 @@ class BaseTimelineView extends BaseCalendarView {
   @override
   Widget buildCalendar(BuildContext context, CalendarController controller,
       DateTime startDate, DateTime selectedDate) {
-    // Get the configuration from the subclass
-    final config = getConfiguration(context);
 
     // Use ValueListenableBuilder to listen for interval changes
     return ValueListenableBuilder<Duration>(
       valueListenable: controller.intervalNotifier,
       builder: (context, interval, _) {
-        // Calculate the start time for the timeline
-        final startTime = DateTime(
-          date.year,
-          date.month,
-          date.day,
-        );
-
-        // Calculate the number of time slots
-        final numberOfTimeSlots =
-            const Duration(hours: 24).inMinutes ~/ interval.inMinutes;
-
-        // Generate dates for each time slot based on the interval
-        final dates = List.generate(numberOfTimeSlots, (index) {
-          return startTime.add(Duration(minutes: index * interval.inMinutes));
-        });
-
+   
         // Let CalendarGrid handle scrolling internally
         return CalendarGrid(
           key: const PageStorageKey('timeline_view_scroll'),
@@ -122,7 +108,7 @@ class BaseTimelineView extends BaseCalendarView {
           orientation: Axis.horizontal,
           rowHeaderWidth: 0, // No row header for now
           headerBuilder: buildTimebarHeader,
-          showCurrentTimeIndicator: config.showCurrentTimeIndicator,
+          showCurrentTimeIndicator: showCurrentTimeIndicator,
         );
       },
     );
