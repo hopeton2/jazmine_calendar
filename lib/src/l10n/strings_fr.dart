@@ -16,4 +16,5 @@ final Map<String, String> frenchStrings = {
   'allDay': 'Toute la journée',
   'dateLabel': 'Date',
   'monthLabel': 'Mois',
+  'weekLabel': 'Semaine',
 };

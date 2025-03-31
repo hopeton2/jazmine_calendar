@@ -16,4 +16,5 @@ final Map<String, String> germanStrings = {
   'allDay': 'Ganztägig',
   'dateLabel': 'Datum',
   'monthLabel': 'Monat',
+  'weekLabel': 'Woche',
 };

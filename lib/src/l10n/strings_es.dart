@@ -16,6 +16,7 @@ final Map<String, String> spanishStrings = {
   'allDay': 'Todo el día',
   'dateLabel': 'Fecha',
   'monthLabel': 'Mes',
+  'weekLabel': 'Semana',
 
   // Date format patterns
   'fullDateFormat': 'd \'de\' MMMM \'de\' y', // e.g., 15 de mayo de 2023

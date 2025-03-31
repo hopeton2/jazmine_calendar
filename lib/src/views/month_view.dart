@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
@@ -296,7 +297,7 @@ class MonthView extends BaseCalendarView {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Week ',
+              '${CalendarLocalization.of(context).weekLabel} ',
               style: TextStyle(
                 fontSize: 10,
                 color: Theme.of(context).textTheme.bodySmall?.color,

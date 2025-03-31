@@ -16,4 +16,5 @@ final Map<String, String> englishStrings = {
   'allDay': 'All Day',
   'dateLabel': 'Date',
   'monthLabel': 'Month',
+  'weekLabel': 'Week',
 };

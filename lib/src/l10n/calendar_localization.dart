@@ -96,6 +96,7 @@ class CalendarLocalization {
   String get allDay => translate('allDay');
   String get dateLabel => translate('dateLabel');
   String get monthLabel => translate('monthLabel');
+  String get weekLabel => translate('weekLabel');
 
   // Date formats
   String formatYearMonth(DateTime date) {

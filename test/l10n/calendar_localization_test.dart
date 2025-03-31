@@ -23,6 +23,7 @@ void main() {
       expect(localizations.allDay, 'All Day');
       expect(localizations.dateLabel, 'Date');
       expect(localizations.monthLabel, 'Month');
+      expect(localizations.weekLabel, 'Week');
     });
 
     testWidgets('loads French strings for fr locale',
@@ -41,6 +42,7 @@ void main() {
       expect(localizations.allDay, 'Toute la journée');
       expect(localizations.dateLabel, 'Date');
       expect(localizations.monthLabel, 'Mois');
+      expect(localizations.weekLabel, 'Semaine');
     });
 
     testWidgets('loads German strings for de locale',
@@ -59,6 +61,7 @@ void main() {
       expect(localizations.allDay, 'Ganztägig');
       expect(localizations.dateLabel, 'Datum');
       expect(localizations.monthLabel, 'Monat');
+      expect(localizations.weekLabel, 'Woche');
     });
 
     testWidgets('loads Spanish strings for es locale',
@@ -77,6 +80,7 @@ void main() {
       expect(localizations.allDay, 'Todo el día');
       expect(localizations.dateLabel, 'Fecha');
       expect(localizations.monthLabel, 'Mes');
+      expect(localizations.weekLabel, 'Semana');
     });
 
     testWidgets('falls back to English for unsupported locale',
@@ -96,6 +100,7 @@ void main() {
       expect(localizations.allDay, 'All Day');
       expect(localizations.dateLabel, 'Date');
       expect(localizations.monthLabel, 'Month');
+      expect(localizations.weekLabel, 'Week');
     });
 
     testWidgets('formats dates according to locale',
