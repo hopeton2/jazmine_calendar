@@ -161,9 +161,9 @@ class MonthView extends BaseCalendarView {
         color: theme.colorScheme.onSurface,
       ),
       padding: const EdgeInsets.all(1),
-      dateAlignment: configuration.dateAlignment,
+      dateAlignment: Alignment.topCenter,
       todayCircleSize: 32,
-      datePadding: const EdgeInsets.only(top: 4),
+      datePadding: const EdgeInsets.only(top: 8),
     );
   }
 
@@ -203,9 +203,9 @@ class MonthView extends BaseCalendarView {
         color: monthTheme?.getTrailingDaysBackgroundColor(context),
       ),
       padding: const EdgeInsets.all(2),
-      dateAlignment: configuration.dateAlignment,
+      dateAlignment: Alignment.topCenter,
       todayCircleSize: 32,
-      datePadding: const EdgeInsets.only(top: 4),
+      datePadding: const EdgeInsets.only(top: 8),
     );
   }
 
