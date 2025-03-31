@@ -36,10 +36,13 @@ class CalendarLocalization {
   /// Map of localized string getters
   late final Map<String, String> _localizedStrings;
 
+  /// Date formatter for full dates
+  late final DateFormat _dateFormatter;
+
   /// Initialize the localized strings based on the locale
   Future<bool> load() async {
     // Initialize date formatting for the locale
-    await initializeDateFormatting(locale.languageCode, null);
+    await initializeDateFormatting(locale.languageCode);
 
     // Load the language strings
     switch (locale.languageCode) {
@@ -57,6 +60,17 @@ class CalendarLocalization {
         break;
       default:
         _localizedStrings = englishStrings;
+    }
+
+    // Initialize the date formatter after locale is loaded
+    if (locale.languageCode == 'es') {
+      // Use custom Spanish date format
+      _dateFormatter = DateFormat(
+          _localizedStrings['fullDateFormat'] ?? 'd \'de\' MMMM \'de\' y',
+          locale.languageCode);
+    } else {
+      // Use standard date format for other languages
+      _dateFormatter = DateFormat.yMMMd(locale.languageCode);
     }
     return true;
   }
@@ -78,6 +92,11 @@ class CalendarLocalization {
   String get today => translate('today');
   String get selectDate => translate('selectDate');
 
+  // Calendar labels
+  String get allDay => translate('allDay');
+  String get dateLabel => translate('dateLabel');
+  String get monthLabel => translate('monthLabel');
+
   // Date formats
   String formatYearMonth(DateTime date) {
     return DateFormat.yMMMM(locale.languageCode).format(date);
@@ -88,11 +107,19 @@ class CalendarLocalization {
   }
 
   String formatFullDate(DateTime date) {
-    return DateFormat.yMMMd(locale.languageCode).format(date);
+    return _dateFormatter.format(date);
   }
 
   String formatMonthYear(DateTime date) {
-    return DateFormat('MMM y', locale.languageCode).format(date);
+    if (locale.languageCode == 'es') {
+      // Use custom Spanish month-year format
+      return DateFormat(_localizedStrings['monthYearFormat'] ?? 'MMMM \'de\' y',
+              locale.languageCode)
+          .format(date);
+    } else {
+      // Use standard format for other languages
+      return DateFormat('MMM y', locale.languageCode).format(date);
+    }
   }
 
   String formatDateRange(DateTime start, DateTime end) {
@@ -100,11 +127,26 @@ class CalendarLocalization {
       return formatFullDate(start);
     }
 
-    if (start.year == end.year && start.month == end.month) {
-      return '${DateFormat.MMMd(locale.languageCode).format(start)} - ${DateFormat.d(locale.languageCode).format(end)}, ${start.year}';
-    }
+    if (locale.languageCode == 'es') {
+      // Spanish-specific date range formatting
+      if (start.year == end.year && start.month == end.month) {
+        // Same month and year: "15 - 20 de mayo de 2023"
+        return '${DateFormat.d(locale.languageCode).format(start)} - ${DateFormat.d(locale.languageCode).format(end)} de ${DateFormat.MMMM(locale.languageCode).format(start)} de ${start.year}';
+      } else if (start.year == end.year) {
+        // Same year, different months: "15 de mayo - 20 de junio de 2023"
+        return '${DateFormat.d(locale.languageCode).format(start)} de ${DateFormat.MMMM(locale.languageCode).format(start)} - ${DateFormat.d(locale.languageCode).format(end)} de ${DateFormat.MMMM(locale.languageCode).format(end)} de ${start.year}';
+      } else {
+        // Different years: "15 de mayo de 2023 - 20 de junio de 2024"
+        return '${DateFormat.d(locale.languageCode).format(start)} de ${DateFormat.MMMM(locale.languageCode).format(start)} de ${start.year} - ${DateFormat.d(locale.languageCode).format(end)} de ${DateFormat.MMMM(locale.languageCode).format(end)} de ${end.year}';
+      }
+    } else {
+      // Standard formatting for other languages
+      if (start.year == end.year && start.month == end.month) {
+        return '${DateFormat.MMMd(locale.languageCode).format(start)} - ${DateFormat.d(locale.languageCode).format(end)}, ${start.year}';
+      }
 
-    return '${DateFormat.MMMd(locale.languageCode).format(start)} - ${DateFormat.yMMMd(locale.languageCode).format(end)}';
+      return '${DateFormat.MMMd(locale.languageCode).format(start)} - ${DateFormat.yMMMd(locale.languageCode).format(end)}';
+    }
   }
 }
 

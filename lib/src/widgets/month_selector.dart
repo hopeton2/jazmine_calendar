@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/widgets/dual_view_date_picker.dart';
 
 /// A widget that displays a button which opens a month picker when pressed.
@@ -142,20 +143,23 @@ class MonthPicker extends StatefulWidget {
 
 class _MonthPickerState extends State<MonthPicker> {
   late DateTime _currentDisplayedYear;
-  final List<String> _monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
-  ];
+
+  // Get localized month names based on the current locale
+  List<String> _getLocalizedMonthNames(BuildContext context,
+      {bool abbreviated = false}) {
+    final locale = CalendarLocalization.of(context).locale.languageCode;
+    final months = <String>[];
+
+    // Generate month names using DateFormat for the current locale
+    for (int i = 0; i < 12; i++) {
+      final date = DateTime(2023, i + 1, 1); // Use any year
+      // Use MMM for abbreviated month names, MMMM for full month names
+      final format = abbreviated ? 'MMM' : 'MMMM';
+      months.add(DateFormat(format, locale).format(date));
+    }
+
+    return months;
+  }
 
   @override
   void initState() {
@@ -225,7 +229,10 @@ class _MonthPickerState extends State<MonthPicker> {
                   // Could add year picker here in the future
                 },
                 child: Text(
-                  _currentDisplayedYear.year.toString(),
+                  // Use localized year format
+                  DateFormat('y',
+                          CalendarLocalization.of(context).locale.languageCode)
+                      .format(_currentDisplayedYear),
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurface,
@@ -301,7 +308,8 @@ class _MonthPickerState extends State<MonthPicker> {
                           ),
                           child: Center(
                             child: Text(
-                              _monthNames[index].substring(0, 3),
+                              _getLocalizedMonthNames(context,
+                                  abbreviated: true)[index],
                               style: isSelected
                                   ? textTheme.labelLarge?.copyWith(
                                       color: colorScheme.onPrimary,

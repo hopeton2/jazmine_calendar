@@ -11,4 +11,13 @@ final Map<String, String> spanishStrings = {
   // Navigation buttons
   'today': 'Hoy',
   'selectDate': 'Seleccionar fecha',
+
+  // Calendar labels
+  'allDay': 'Todo el día',
+  'dateLabel': 'Fecha',
+  'monthLabel': 'Mes',
+
+  // Date format patterns
+  'fullDateFormat': 'd \'de\' MMMM \'de\' y', // e.g., 15 de mayo de 2023
+  'monthYearFormat': 'MMMM \'de\' y', // e.g., mayo de 2023
 };

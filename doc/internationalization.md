@@ -62,22 +62,22 @@ To add support for a new language:
 
 2. Define the translations in the file:
 
-```dart
-/// Spanish strings for the Jazmine Calendar
-final Map<String, String> spanishStrings = {
-  // Calendar view labels
-  'dayViewLabel': 'Día',
-  'workWeekViewLabel': 'Semana laboral',
-  'weekViewLabel': 'Semana',
-  'monthViewLabel': 'Mes',
-  'agendaViewLabel': 'Agenda',
-  'timelineViewLabel': 'Línea de tiempo',
+   ```dart
+   /// Spanish strings for the Jazmine Calendar
+   final Map<String, String> spanishStrings = {
+     // Calendar view labels
+     'dayViewLabel': 'Día',
+     'workWeekViewLabel': 'Semana laboral',
+     'weekViewLabel': 'Semana',
+     'monthViewLabel': 'Mes',
+     'agendaViewLabel': 'Agenda',
+     'timelineViewLabel': 'Línea de tiempo',
 
-  // Navigation buttons
-  'today': 'Hoy',
-  'selectDate': 'Seleccionar fecha',
-};
-```
+     // Navigation buttons
+     'today': 'Hoy',
+     'selectDate': 'Seleccionar fecha',
+   };
+   ```
 
 3. Update the `CalendarLocalization` class in `lib/src/l10n/calendar_localization.dart`:
 
@@ -98,3 +98,29 @@ The `CalendarLocalization` class provides methods for formatting dates according
 - `formatDateRange(DateTime start, DateTime end)`: Formats a date range
 
 These methods use the `intl` package's `DateFormat` class with the appropriate locale.
+
+### Language-Specific Date Formatting
+
+Some languages have specific date formatting patterns that differ from the standard patterns. For example:
+
+#### Spanish (es)
+
+- Full date: "15 de mayo de 2023" (day + "de" + month + "de" + year)
+- Month and year: "mayo de 2023" (month + "de" + year)
+- Date range (same month): "15 - 20 de mayo de 2023"
+- Date range (different months): "15 de mayo - 20 de junio de 2023"
+
+To add custom date formatting for a new language, you can:
+
+1. Add date format patterns to the language strings file:
+
+   ```dart
+   // In strings_xx.dart
+   final Map<String, String> xxStrings = {
+     // ...
+     'fullDateFormat': 'your custom pattern',
+     'monthYearFormat': 'your custom pattern',
+   };
+   ```
+
+2. Update the date formatting methods in `CalendarLocalization` to handle the new language.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 
 /// A calendar date picker with enhanced styling for larger selection circles
 /// that better matches the standard Material Design date picker
@@ -61,7 +62,7 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                 onPressed: widget.onBackToMonthView,
                 icon: Icon(Icons.chevron_left, color: colorScheme.primary),
                 label: Text(
-                  'Month',
+                  CalendarLocalization.of(context).monthLabel,
                   style: textTheme.labelMedium?.copyWith(
                     color: colorScheme.primary,
                   ),
@@ -141,22 +142,8 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
   }
 
   String _getMonthYearText() {
-    // Always use the current month from _currentMonth, not the first visible day
-    final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    return '${months[_currentMonth.month - 1]} ${_currentMonth.year}';
+    // Use localized month and year format
+    return CalendarLocalization.of(context).formatMonthYear(_currentMonth);
   }
 
   void _previousMonth() {
@@ -192,8 +179,21 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
     final firstDayOfMonth =
         DateTime(_currentMonth.year, _currentMonth.month, 1);
 
-    // Calculate the day of week (0 = Sunday, 1 = Monday, etc.)
-    int firstWeekdayOfMonth = firstDayOfMonth.weekday % 7;
+    // Get the locale for determining the first day of week
+    final locale = CalendarLocalization.of(context).locale.languageCode;
+
+    // Calculate the first weekday of month based on locale
+    int firstWeekdayOfMonth;
+
+    if (locale == 'es' || locale == 'fr' || locale == 'de') {
+      // For Spanish, French, and German, the week starts on Monday (1)
+      // Convert from 1-7 (Monday=1) to 0-6 (Monday=0)
+      firstWeekdayOfMonth = (firstDayOfMonth.weekday - 1) % 7;
+    } else {
+      // For English, the week starts on Sunday (7)
+      // Convert from 1-7 (Monday=1, Sunday=7) to 0-6 (Sunday=0, Monday=1)
+      firstWeekdayOfMonth = firstDayOfMonth.weekday % 7;
+    }
 
     // Calculate days in month
     final daysInMonth =
@@ -224,12 +224,72 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        for (final day in ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+                        // Get localized weekday abbreviations
+                        // For Spanish (es), the order should be: L M X J V S D
+                        // For English (en), the order should be: S M T W T F S
+                        for (int i = 0; i < 7; i++)
                           SizedBox(
                             width: cellWidth,
                             child: Center(
                               child: Text(
-                                day,
+                                // Get the first letter of the weekday name in the current locale
+                                () {
+                                  final locale =
+                                      CalendarLocalization.of(context)
+                                          .locale
+                                          .languageCode;
+
+                                  // Hardcoded weekday abbreviations for Spanish
+                                  if (locale == 'es') {
+                                    // Spanish weekday abbreviations: L M X J V S D
+                                    final weekdays = [
+                                      'L',
+                                      'M',
+                                      'X',
+                                      'J',
+                                      'V',
+                                      'S',
+                                      'D'
+                                    ];
+                                    return weekdays[i];
+                                  } else if (locale == 'fr') {
+                                    // French weekday abbreviations: L M M J V S D
+                                    final weekdays = [
+                                      'L',
+                                      'M',
+                                      'M',
+                                      'J',
+                                      'V',
+                                      'S',
+                                      'D'
+                                    ];
+                                    return weekdays[i];
+                                  } else if (locale == 'de') {
+                                    // German weekday abbreviations: M D M D F S S
+                                    final weekdays = [
+                                      'M',
+                                      'D',
+                                      'M',
+                                      'D',
+                                      'F',
+                                      'S',
+                                      'S'
+                                    ];
+                                    return weekdays[i];
+                                  } else {
+                                    // English weekday abbreviations: S M T W T F S
+                                    final weekdays = [
+                                      'S',
+                                      'M',
+                                      'T',
+                                      'W',
+                                      'T',
+                                      'F',
+                                      'S'
+                                    ];
+                                    return weekdays[i];
+                                  }
+                                }(),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),

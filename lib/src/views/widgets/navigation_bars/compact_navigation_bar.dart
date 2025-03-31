@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
@@ -57,7 +58,7 @@ class CompactNavigationBar extends StatelessWidget {
               controller.currentView == CalendarViewType.month
                   ? MonthSelector(
                       date: controller.startDate,
-                      caption: _getDateRangeCaption(controller),
+                      caption: _getDateRangeCaption(context, controller),
                       onMonthSelected: (date) =>
                           controller.navigateToDate(date),
                       isCompact: UIHelper.isSmallDevice(context),
@@ -67,7 +68,7 @@ class CompactNavigationBar extends StatelessWidget {
                     )
                   : DateSelector(
                       date: controller.startDate,
-                      caption: _getDateRangeCaption(controller),
+                      caption: _getDateRangeCaption(context, controller),
                       onDateSelected: (date) => controller.navigateToDate(date),
                       isCompact: UIHelper.isSmallDevice(context),
                       dateFormat: dateFormat,
@@ -121,25 +122,26 @@ class CompactNavigationBar extends StatelessWidget {
     }
   }
 
-  String _getDateRangeCaption(CalendarController controller) {
+  String _getDateRangeCaption(
+      BuildContext context, CalendarController controller) {
     if (controller.visibleDateRange.isEmpty) {
       return '';
     }
     final startDate = controller.visibleDateRange.first;
     final endDate = controller.visibleDateRange.last;
 
+    // Get the localization for proper date formatting
+    final localization = CalendarLocalization.of(context);
+
     if (controller.currentView == CalendarViewType.month) {
-      return DateFormat('yMMM').format(startDate);
+      return localization.formatMonthYear(startDate);
     }
 
     if (startDate == endDate) {
-      return DateFormat('MMM d, y').format(startDate);
+      return localization.formatFullDate(startDate);
     }
 
-    if (startDate.year == endDate.year && startDate.month == endDate.month) {
-      return '${DateFormat('MMM d').format(startDate)} - ${DateFormat('d, y').format(endDate)}';
-    }
-
-    return '${DateFormat('MMM d').format(startDate)} - ${DateFormat('MMM d, y').format(endDate)}';
+    // Use the localized date range formatter
+    return localization.formatDateRange(startDate, endDate);
   }
 }

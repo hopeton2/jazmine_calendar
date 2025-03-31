@@ -11,4 +11,9 @@ final Map<String, String> englishStrings = {
   // Navigation buttons
   'today': 'Today',
   'selectDate': 'Select Date',
+
+  // Calendar labels
+  'allDay': 'All Day',
+  'dateLabel': 'Date',
+  'monthLabel': 'Month',
 };

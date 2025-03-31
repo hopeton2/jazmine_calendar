@@ -11,4 +11,9 @@ final Map<String, String> frenchStrings = {
   // Navigation buttons
   'today': 'Aujourd\'hui',
   'selectDate': 'Sélectionner une date',
+
+  // Calendar labels
+  'allDay': 'Toute la journée',
+  'dateLabel': 'Date',
+  'monthLabel': 'Mois',
 };

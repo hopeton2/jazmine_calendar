@@ -20,6 +20,9 @@ void main() {
       expect(localizations.timelineViewLabel, 'Timeline');
       expect(localizations.today, 'Today');
       expect(localizations.selectDate, 'Select Date');
+      expect(localizations.allDay, 'All Day');
+      expect(localizations.dateLabel, 'Date');
+      expect(localizations.monthLabel, 'Month');
     });
 
     testWidgets('loads French strings for fr locale',
@@ -35,6 +38,9 @@ void main() {
       expect(localizations.timelineViewLabel, 'Chronologie');
       expect(localizations.today, 'Aujourd\'hui');
       expect(localizations.selectDate, 'Sélectionner une date');
+      expect(localizations.allDay, 'Toute la journée');
+      expect(localizations.dateLabel, 'Date');
+      expect(localizations.monthLabel, 'Mois');
     });
 
     testWidgets('loads German strings for de locale',
@@ -50,6 +56,9 @@ void main() {
       expect(localizations.timelineViewLabel, 'Zeitachse');
       expect(localizations.today, 'Heute');
       expect(localizations.selectDate, 'Datum auswählen');
+      expect(localizations.allDay, 'Ganztägig');
+      expect(localizations.dateLabel, 'Datum');
+      expect(localizations.monthLabel, 'Monat');
     });
 
     testWidgets('loads Spanish strings for es locale',
@@ -65,6 +74,9 @@ void main() {
       expect(localizations.timelineViewLabel, 'Línea de tiempo');
       expect(localizations.today, 'Hoy');
       expect(localizations.selectDate, 'Seleccionar fecha');
+      expect(localizations.allDay, 'Todo el día');
+      expect(localizations.dateLabel, 'Fecha');
+      expect(localizations.monthLabel, 'Mes');
     });
 
     testWidgets('falls back to English for unsupported locale',
@@ -81,24 +93,41 @@ void main() {
       expect(localizations.timelineViewLabel, 'Timeline');
       expect(localizations.today, 'Today');
       expect(localizations.selectDate, 'Select Date');
+      expect(localizations.allDay, 'All Day');
+      expect(localizations.dateLabel, 'Date');
+      expect(localizations.monthLabel, 'Month');
     });
 
     testWidgets('formats dates according to locale',
         (WidgetTester tester) async {
+      // Initialize English localization
       final enLocalizations = CalendarLocalization(const Locale('en'));
       await enLocalizations.load();
 
+      // Initialize Spanish localization
+      final esLocalizations = CalendarLocalization(const Locale('es'));
+      await esLocalizations.load();
+
       final date = DateTime(2023, 5, 15);
 
-      // We can only reliably test English formatting without initializing all locales
-      // Test formatYearMonth
+      // Test English date formatting
       expect(enLocalizations.formatYearMonth(date), 'May 2023');
-
-      // Test formatMonthDay
       expect(enLocalizations.formatMonthDay(date), 'May 15');
-
-      // Test formatFullDate
       expect(enLocalizations.formatFullDate(date), 'May 15, 2023');
+
+      // Test Spanish date formatting
+      expect(esLocalizations.formatMonthYear(date), 'mayo de 2023');
+      expect(esLocalizations.formatFullDate(date), '15 de mayo de 2023');
+
+      // Test date range formatting
+      final startDate = DateTime(2023, 5, 15);
+      final endDate = DateTime(2023, 5, 20);
+      expect(esLocalizations.formatDateRange(startDate, endDate),
+          '15 - 20 de mayo de 2023');
+
+      final endDateDifferentMonth = DateTime(2023, 6, 20);
+      expect(esLocalizations.formatDateRange(startDate, endDateDifferentMonth),
+          '15 de mayo - 20 de junio de 2023');
     });
   });
 }

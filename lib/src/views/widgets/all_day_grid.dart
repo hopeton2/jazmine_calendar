@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
 
@@ -54,7 +55,7 @@ class AllDayGrid extends StatelessWidget {
       height: height,
       child: Center(
         child: Text(
-          'All Day',
+          CalendarLocalization.of(context).allDay,
           style: TextStyle(
             fontSize: 12,
             color: Theme.of(context).textTheme.bodySmall?.color,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/widgets/enhanced_date_picker.dart';
 import 'package:jazmine_calendar/src/widgets/month_selector.dart';
 
@@ -79,7 +80,8 @@ class _DualViewDatePickerState extends State<DualViewDatePicker> {
                   Padding(
                     padding: const EdgeInsets.only(left: 16.0),
                     child: Text(
-                      DateFormat.yMMMM().format(_currentDate),
+                      CalendarLocalization.of(context)
+                          .formatMonthYear(_currentDate),
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
@@ -94,7 +96,7 @@ class _DualViewDatePickerState extends State<DualViewDatePicker> {
                       });
                     },
                     icon: Text(
-                      'Date',
+                      CalendarLocalization.of(context).dateLabel,
                       style: textTheme.labelMedium?.copyWith(
                         color: colorScheme.primary,
                       ),

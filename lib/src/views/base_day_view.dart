@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
@@ -28,7 +29,10 @@ class BaseDayView extends BaseCalendarView {
   @override
   Widget buildCalendar(BuildContext context, CalendarController controller,
       startDate, DateTime selectedDate) {
-      final uniqueDays = dates.map((date) => DateTime(date.year, date.month, date.day)).toSet().toList();
+    final uniqueDays = dates
+        .map((date) => DateTime(date.year, date.month, date.day))
+        .toSet()
+        .toList();
 
     return ValueListenableBuilder<Duration>(
       valueListenable: controller.intervalNotifier,
@@ -49,7 +53,8 @@ class BaseDayView extends BaseCalendarView {
                 controller: controller,
                 headerDateFormat: DateFormat('HH:mm'),
                 numberOfColumns: uniqueDays.length,
-                numberOfRows: const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
+                numberOfRows:
+                    const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
                 slotDuration: const Duration(days: 1),
                 intervalDuration: interval,
                 orientation: Axis.vertical,
@@ -84,7 +89,8 @@ class BaseDayView extends BaseCalendarView {
                             Align(
                               alignment: configuration.dateAlignment,
                               child: Text(
-                                DateFormat('E d').format(date),
+                                CalendarLocalization.of(context)
+                                    .formatMonthDay(date),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
                               ),
@@ -108,16 +114,22 @@ class BaseDayView extends BaseCalendarView {
     final theme = Theme.of(context);
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
     final is24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
+    final localization = CalendarLocalization.of(context);
 
     // Format the time based on whether it's on the hour
     final String timeText;
     if (time.minute == 0) {
       if (is24HourFormat) {
-        timeText = DateFormat('HH').format(time);
+        // 24-hour format
+        timeText =
+            DateFormat('HH', localization.locale.languageCode).format(time);
       } else {
-        timeText = DateFormat('h a').format(time);
+        // 12-hour format with AM/PM
+        timeText =
+            DateFormat('h a', localization.locale.languageCode).format(time);
       }
     } else {
+      // Just show minutes for non-hour marks
       timeText = ':${time.minute.toString().padLeft(2, '0')}';
     }
 

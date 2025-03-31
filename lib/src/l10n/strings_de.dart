@@ -11,4 +11,9 @@ final Map<String, String> germanStrings = {
   // Navigation buttons
   'today': 'Heute',
   'selectDate': 'Datum auswählen',
+
+  // Calendar labels
+  'allDay': 'Ganztägig',
+  'dateLabel': 'Datum',
+  'monthLabel': 'Monat',
 };
