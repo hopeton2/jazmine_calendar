@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:jazmine_calendar/src/l10n/strings_en.dart';
 import 'package:jazmine_calendar/src/l10n/strings_fr.dart';
 import 'package:jazmine_calendar/src/l10n/strings_de.dart';
+import 'package:jazmine_calendar/src/l10n/strings_es.dart';
 
 /// Class that provides localized strings for the Jazmine Calendar.
 class CalendarLocalization {
@@ -16,7 +17,8 @@ class CalendarLocalization {
 
   /// Helper method to keep the code in the widgets concise
   static CalendarLocalization of(BuildContext context) {
-    return Localizations.of<CalendarLocalization>(context, CalendarLocalization)!;
+    return Localizations.of<CalendarLocalization>(
+        context, CalendarLocalization)!;
   }
 
   /// Static member to have a simple access to the delegate from the MaterialApp
@@ -28,6 +30,7 @@ class CalendarLocalization {
     Locale('en'), // English
     Locale('fr'), // French
     Locale('de'), // German
+    Locale('es'), // Spanish
   ];
 
   /// Map of localized string getters
@@ -48,6 +51,9 @@ class CalendarLocalization {
         break;
       case 'de':
         _localizedStrings = germanStrings;
+        break;
+      case 'es':
+        _localizedStrings = spanishStrings;
         break;
       default:
         _localizedStrings = englishStrings;
@@ -109,7 +115,7 @@ class _CalendarLocalizationDelegate
 
   @override
   bool isSupported(Locale locale) {
-    return ['en', 'fr', 'de'].contains(locale.languageCode);
+    return ['en', 'fr', 'de', 'es'].contains(locale.languageCode);
   }
 
   @override

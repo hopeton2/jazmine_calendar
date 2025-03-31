@@ -29,6 +29,7 @@ void main() {
       GlobalCupertinoLocalizations.delegate,
     ],
     supportedLocales: CalendarLocalization.supportedLocales,
+    locale: const Locale('es'), // Set Spanish as the default language
     home: const MyHomePage(),
     themeMode: ThemeMode.dark,
   ));

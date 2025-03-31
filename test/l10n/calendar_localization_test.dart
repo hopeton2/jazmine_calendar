@@ -11,7 +11,7 @@ void main() {
         (WidgetTester tester) async {
       final localizations = CalendarLocalization(const Locale('en'));
       await localizations.load();
-      
+
       expect(localizations.dayViewLabel, 'Day');
       expect(localizations.workWeekViewLabel, 'Work Week');
       expect(localizations.weekViewLabel, 'Week');
@@ -26,7 +26,7 @@ void main() {
         (WidgetTester tester) async {
       final localizations = CalendarLocalization(const Locale('fr'));
       await localizations.load();
-      
+
       expect(localizations.dayViewLabel, 'Jour');
       expect(localizations.workWeekViewLabel, 'Semaine de travail');
       expect(localizations.weekViewLabel, 'Semaine');
@@ -41,7 +41,7 @@ void main() {
         (WidgetTester tester) async {
       final localizations = CalendarLocalization(const Locale('de'));
       await localizations.load();
-      
+
       expect(localizations.dayViewLabel, 'Tag');
       expect(localizations.workWeekViewLabel, 'Arbeitswoche');
       expect(localizations.weekViewLabel, 'Woche');
@@ -52,11 +52,27 @@ void main() {
       expect(localizations.selectDate, 'Datum auswählen');
     });
 
-    testWidgets('falls back to English for unsupported locale',
+    testWidgets('loads Spanish strings for es locale',
         (WidgetTester tester) async {
       final localizations = CalendarLocalization(const Locale('es'));
       await localizations.load();
-      
+
+      expect(localizations.dayViewLabel, 'Día');
+      expect(localizations.workWeekViewLabel, 'Semana laboral');
+      expect(localizations.weekViewLabel, 'Semana');
+      expect(localizations.monthViewLabel, 'Mes');
+      expect(localizations.agendaViewLabel, 'Agenda');
+      expect(localizations.timelineViewLabel, 'Línea de tiempo');
+      expect(localizations.today, 'Hoy');
+      expect(localizations.selectDate, 'Seleccionar fecha');
+    });
+
+    testWidgets('falls back to English for unsupported locale',
+        (WidgetTester tester) async {
+      final localizations =
+          CalendarLocalization(const Locale('pt')); // Portuguese
+      await localizations.load();
+
       expect(localizations.dayViewLabel, 'Day');
       expect(localizations.workWeekViewLabel, 'Work Week');
       expect(localizations.weekViewLabel, 'Week');
