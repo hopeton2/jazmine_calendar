@@ -20,13 +20,13 @@ class DropdownViewSelector extends StatelessWidget {
           CalendarViewType.values.map((view) {
         return PopupMenuItem(
           value: view,
-          child: Text(CalendarViewService().getViewLabel(view)),
+          child: Text(CalendarViewService().getViewLabel(view, context)),
         );
       }).toList(),
       position: PopupMenuPosition.under,
       child: Builder(
         builder: (context) => DropdownSelector(
-          CalendarViewService().getViewLabel(controller.currentView),
+          CalendarViewService().getViewLabel(controller.currentView, context),
           !showSelection,
           onPressed: () {
             PopupMenuButtonState<CalendarViewType> button =

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/src/constants/strings.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
@@ -59,7 +60,7 @@ class CalendarNavigationBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: const Size(0, 36),
             ),
-            child: const Text('Today'),
+            child: Text(CalendarStrings.today(context)),
           ),
         ],
       ),
@@ -77,7 +78,7 @@ class CalendarNavigationBar extends StatelessWidget {
         const SizedBox(width: 8),
         TextButton(
           onPressed: () => controller.navigateToDate(DateTime.now()),
-          child: const Text('Today'),
+          child: Text(CalendarStrings.today(context)),
         ),
       ],
     );
@@ -144,7 +145,7 @@ class CalendarNavigationBar extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Select Date',
+                        CalendarStrings.selectDate(context),
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

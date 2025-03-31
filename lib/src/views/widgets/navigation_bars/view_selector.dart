@@ -32,30 +32,30 @@ class ViewSelector extends StatelessWidget {
         }
 
         return SegmentedButton<CalendarViewType>(
-          segments: const [
+          segments: [
             ButtonSegment(
               value: CalendarViewType.day,
-              label: Text(CalendarStrings.dayViewLabel),
+              label: Text(CalendarStrings.dayViewLabel(context)),
             ),
             ButtonSegment(
               value: CalendarViewType.workWeek,
-              label: Text(CalendarStrings.workWeekViewLabel),
+              label: Text(CalendarStrings.workWeekViewLabel(context)),
             ),
             ButtonSegment(
               value: CalendarViewType.week,
-              label: Text(CalendarStrings.weekViewLabel),
+              label: Text(CalendarStrings.weekViewLabel(context)),
             ),
             ButtonSegment(
               value: CalendarViewType.month,
-              label: Text(CalendarStrings.monthViewLabel),
+              label: Text(CalendarStrings.monthViewLabel(context)),
             ),
             ButtonSegment(
               value: CalendarViewType.timeline,
-              label: Text(CalendarStrings.timelineViewLabel),
+              label: Text(CalendarStrings.timelineViewLabel(context)),
             ),
             ButtonSegment(
               value: CalendarViewType.agenda,
-              label: Text(CalendarStrings.agendaViewLabel),
+              label: Text(CalendarStrings.agendaViewLabel(context)),
             ),
           ],
           selected: {currentView},

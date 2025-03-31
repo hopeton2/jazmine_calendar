@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
 
 void main() {
@@ -21,6 +22,13 @@ void main() {
       ),
       useMaterial3: true,
     ),
+    localizationsDelegates: const [
+      CalendarLocalization.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: CalendarLocalization.supportedLocales,
     home: const MyHomePage(),
     themeMode: ThemeMode.dark,
   ));

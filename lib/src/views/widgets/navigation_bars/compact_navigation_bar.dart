@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/src/constants/strings.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/ui_helper.dart';
@@ -40,7 +41,7 @@ class CompactNavigationBar extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: () => controller.navigateToDate(DateTime.now()),
-                child: const Text('Today'),
+                child: Text(CalendarStrings.today(context)),
               ),
               if (!UIHelper.isSmallDevice(context))
                 IconButton(

@@ -1,25 +1,101 @@
 # Jazmine Calendar
 
-A flexible, cross-platform calendar widget for Flutter, inspired by Google Calendar. 
+A flexible, cross-platform calendar widget for Flutter, inspired by Google Calendar.
 Developed and maintained by Jazmine Technologies, Inc.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- Multiple calendar views: Day, Work Week, Week, Month, Agenda, and Timeline
+- Customizable themes and styles
+- Event management with custom rendering
+- Timezone support
+- Internationalization with support for English, French, and German
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+### Installation
+
+Add the package to your `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  jazmine_calendar: ^0.0.1
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+### Import
+
+```dart
+import 'package:jazmine_calendar/jazmine_calendar.dart';
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+### Basic Usage
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
+
+void main() {
+  runApp(MaterialApp(
+    home: Scaffold(
+      body: JazmineCalendar(),
+    ),
+  ));
+}
+```
+
+### With Internationalization
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
+
+void main() {
+  runApp(MaterialApp(
+    localizationsDelegates: const [
+      CalendarLocalization.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: CalendarLocalization.supportedLocales, // [en, fr, de]
+    home: Scaffold(
+      body: JazmineCalendar(),
+    ),
+  ));
+}
+```
+
+### Using LocalizedCalendar
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/jazmine_calendar.dart';
+
+void main() {
+  runApp(MaterialApp(
+    home: Scaffold(
+      body: LocalizedCalendar(
+        locale: const Locale('fr'), // French
+        calendar: JazmineCalendar(),
+      ),
+    ),
+  ));
+}
+```
+
+See the `/example` folder for more detailed examples.
 
 ## Additional information
 
-For more information, visit [jazmine.tech](https://jazmine.tech) or contact us at support@jazmine.tech.
+For more information, visit [jazmine.tech](https://jazmine.tech) or contact us at [support@jazmine.tech](mailto:support@jazmine.tech).
 
 ## License
 

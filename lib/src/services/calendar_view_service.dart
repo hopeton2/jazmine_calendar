@@ -1,4 +1,5 @@
 import 'package:dart_date/dart_date.dart';
+import 'package:flutter/widgets.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
 
@@ -49,14 +50,27 @@ class CalendarViewService {
       ..addAll([startDate, endDate]);
   }
 
-  String getViewLabel(CalendarViewType view) {
+  String getViewLabel(CalendarViewType view, [BuildContext? context]) {
+    // If context is provided, use localized strings
+    if (context != null) {
+      return switch (view) {
+        CalendarViewType.day => CalendarStrings.dayViewLabel(context),
+        CalendarViewType.workWeek => CalendarStrings.workWeekViewLabel(context),
+        CalendarViewType.week => CalendarStrings.weekViewLabel(context),
+        CalendarViewType.month => CalendarStrings.monthViewLabel(context),
+        CalendarViewType.timeline => CalendarStrings.timelineViewLabel(context),
+        CalendarViewType.agenda => CalendarStrings.agendaViewLabel(context),
+      };
+    }
+
+    // Fallback to default English strings for backward compatibility
     return switch (view) {
-      CalendarViewType.day => CalendarStrings.dayViewLabel,
-      CalendarViewType.workWeek => CalendarStrings.workWeekViewLabel,
-      CalendarViewType.week => CalendarStrings.weekViewLabel,
-      CalendarViewType.month => CalendarStrings.monthViewLabel,
-      CalendarViewType.timeline => CalendarStrings.timelineViewLabel,
-      CalendarViewType.agenda => CalendarStrings.agendaViewLabel,
+      CalendarViewType.day => 'Day',
+      CalendarViewType.workWeek => 'Work Week',
+      CalendarViewType.week => 'Week',
+      CalendarViewType.month => 'Month',
+      CalendarViewType.timeline => 'Timeline',
+      CalendarViewType.agenda => 'Agenda',
     };
   }
 
