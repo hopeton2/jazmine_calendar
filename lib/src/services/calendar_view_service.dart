@@ -1,9 +1,6 @@
 import 'package:dart_date/dart_date.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/constants/strings.dart';
-import 'package:jazmine_calendar/src/enums/enums.dart';
-import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
-import 'package:jazmine_calendar/src/views/configurations.dart';
 
 class CalendarViewService {
   // Singleton instance
@@ -15,6 +12,8 @@ class CalendarViewService {
   }
 
   static CalendarController? controller;
+  // We don't need to store the month configuration here
+  // The DateHelper.calendarDaysForMonth method will get it from the configuration parameter
 
   CalendarViewService._internal();
 
@@ -89,13 +88,17 @@ class CalendarViewService {
   }
 
   List<DateTime> monthViewDateRange(DateTime date) {
-    final firstDayOfWeek = controller!.firstDayOfWeek;
-    final firstDay = date.firstDayOfMonth;
-    final lastDayOfMonth = date.lastDayOfMonth;
-    final startDate = firstDay.getWeekStartDate(firstDayOfWeek);
-    //final weekCount = startDate.weeksBetween(lastDayOfMonth);
+    // Ensure we're using the first day of the selected month
+    final firstDay = DateTime(date.year, date.month, 1);
+    final lastDayOfMonth = DateTime(date.year, date.month + 1, 0);
+
+    // For the end date, we need to include all days that should be visible
+    // We use the extension method to get the end of the week containing the last day
     final endDate = lastDayOfMonth.endOfWeek;
 
-    return [startDate, endDate];
+    return [
+      firstDay,
+      endDate
+    ]; // Return the first day of the month as the start date
   }
 }

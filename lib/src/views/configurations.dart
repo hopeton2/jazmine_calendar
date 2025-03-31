@@ -63,6 +63,16 @@ class AgendaViewConfiguration extends BaseViewConfiguration {
   });
 }
 
+/// Defines how many days should be shown in the month view
+enum CalendarDaysMode {
+  /// Always show 6 weeks (42 days) regardless of the month
+  fixed,
+
+  /// Dynamically adjust the number of days based on the actual month
+  /// Only show the days needed for the month plus trailing days to complete the week
+  dynamic
+}
+
 class MonthViewConfiguration extends BaseViewConfiguration {
   final int daysPerWeek;
   final String weekdayFormat;
@@ -76,6 +86,11 @@ class MonthViewConfiguration extends BaseViewConfiguration {
   final String monthDaysFormat;
   final String firstDayOfMonthFormat;
   final bool showWeekdayHeaderBottomBorder;
+
+  /// Controls how many days are shown in the month view
+  /// When fixed, always shows 6 weeks (42 days)
+  /// When dynamic, only shows the days needed for the month plus trailing days to complete the week
+  final CalendarDaysMode calendarDaysMode;
 
   const MonthViewConfiguration({
     super.dateAlignment,
@@ -91,5 +106,6 @@ class MonthViewConfiguration extends BaseViewConfiguration {
     this.monthDaysFormat = 'd',
     this.firstDayOfMonthFormat = 'MMM d',
     this.showWeekdayHeaderBottomBorder = true,
+    this.calendarDaysMode = CalendarDaysMode.fixed,
   });
 }

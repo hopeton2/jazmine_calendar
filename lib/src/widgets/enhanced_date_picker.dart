@@ -141,6 +141,7 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
   }
 
   String _getMonthYearText() {
+    // Always use the current month from _currentMonth, not the first visible day
     final months = [
       'January',
       'February',

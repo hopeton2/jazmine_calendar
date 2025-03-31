@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
@@ -47,8 +45,11 @@ class MonthView extends BaseCalendarView {
     MonthViewConfiguration configuration,
     weekNumberWidth,
   ) {
-    final dates = DateHelper.calendarDaysForMonth(selectedDate);
-    final weeksCount = dates.first.weeksBetween(dates.last);
+    // Use the calendar days mode from configuration to determine how many days to show
+    final dates = DateHelper.calendarDaysForMonth(selectedDate,
+        calendarDaysMode: configuration.calendarDaysMode);
+    // Calculate the number of weeks between the first and last date
+    final weeksCount = (dates.length / configuration.daysPerWeek).ceil();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -77,13 +78,28 @@ class MonthView extends BaseCalendarView {
                 return Container();
               }
 
-              final isFirstTrailingDay = date.day == 1 || index == 0;
+              // Determine if this is a trailing day that should have special formatting
+              bool isSpecialTrailingDay = false;
+
+              // For previous month trailing days (at the beginning)
+              if (date.month < selectedDate.month ||
+                  (date.month == 12 && selectedDate.month == 1)) {
+                // Only the first day of the previous month that appears should have special formatting
+                isSpecialTrailingDay = index == 0 || date.day == 1;
+              }
+              // For next month trailing days (at the end)
+              else if (date.month > selectedDate.month ||
+                  (date.month == 1 && selectedDate.month == 12)) {
+                // Only the first day of the next month should have special formatting
+                isSpecialTrailingDay = date.day == 1;
+              }
+
               return _buildTrailingDayCell(
                 date,
                 context,
                 controller,
                 configuration,
-                isFirstTrailingDay: isFirstTrailingDay,
+                isFirstTrailingDay: isSpecialTrailingDay,
               );
             }
 
@@ -119,13 +135,15 @@ class MonthView extends BaseCalendarView {
         : calendarTheme?.getGridLineColor(context) ??
             Colors.grey.withOpacity(0.3);
 
+    final String formatString = isFirstDayOfMonth
+        ? configuration.firstDayOfMonthFormat
+        : configuration.monthDaysFormat;
+
     return CalendarTimeSlot(
       date: date,
       controller: controller,
       showDate: configuration.showDateInCell,
-      formatDate: DateFormat(isFirstDayOfMonth
-          ? configuration.firstDayOfMonthFormat
-          : configuration.monthDaysFormat),
+      formatDate: DateFormat(formatString),
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
@@ -133,10 +151,6 @@ class MonthView extends BaseCalendarView {
           bottom: BorderSide(
               color: gridLineColor, width: configuration.gridLineWidth),
         ),
-      ),
-      selectedDecoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        shape: BoxShape.circle,
       ),
       textStyle: theme.textTheme.bodyMedium?.copyWith(
         color: theme.colorScheme.onSurface,
@@ -164,13 +178,15 @@ class MonthView extends BaseCalendarView {
         : calendarTheme?.getGridLineColor(context) ??
             Colors.grey.withOpacity(0.3);
 
+    final String formatString = isFirstTrailingDay
+        ? configuration.firstTrailingDaysFormat
+        : configuration.monthDaysFormat;
+
     return CalendarTimeSlot(
       date: date,
       controller: controller,
       showDate: configuration.showDateInCell,
-      formatDate: DateFormat(isFirstTrailingDay
-          ? configuration.firstTrailingDaysFormat
-          : configuration.monthDaysFormat),
+      formatDate: DateFormat(formatString),
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
@@ -179,10 +195,6 @@ class MonthView extends BaseCalendarView {
               color: gridLineColor, width: configuration.gridLineWidth),
         ),
         color: monthTheme?.getTrailingDaysBackgroundColor(context),
-      ),
-      selectedDecoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.9),
-        shape: BoxShape.circle,
       ),
       padding: const EdgeInsets.all(2),
       dateAlignment: configuration.dateAlignment,

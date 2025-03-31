@@ -1,7 +1,7 @@
 import 'package:dart_date/dart_date.dart';
 import 'package:flutter/widgets.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
-import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
+import 'package:jazmine_calendar/src/views/configurations.dart'; // Import for CalendarDaysMode
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 
@@ -92,7 +92,10 @@ abstract class DateHelper {
   }
 
   /// Returns a list of DateTime objects for the calendar month grid including leading/trailing days
-  static List<DateTime> calendarDaysForMonth(DateTime date) {
+  /// If calendarDaysMode is fixed, always returns 42 days (6 weeks)
+  /// If calendarDaysMode is dynamic, returns only the days needed to show the month plus trailing days to complete the week
+  static List<DateTime> calendarDaysForMonth(DateTime date,
+      {CalendarDaysMode calendarDaysMode = CalendarDaysMode.fixed}) {
     final List<DateTime> calendarDays = [];
 
     // Get the first day of the month
@@ -119,12 +122,28 @@ abstract class DateHelper {
       calendarDays.add(DateTime(date.year, date.month, i));
     }
 
-    // Add days from the next month to complete the grid (6 rows of 7 days)
-    final remainingDays = 42 - calendarDays.length;
+    // Get the last day of the month
+    final lastDay = DateTime(date.year, date.month, daysCount);
+    // Calculate the weekday of the last day (0 = Monday, 6 = Sunday)
+    final lastWeekday = lastDay.weekday % 7;
+    // Calculate how many days we need to add to complete the week
+    final daysToCompleteWeek = lastWeekday < 6 ? 6 - lastWeekday : 0;
+
+    // Add days from the next month
     final nextMonth = DateTime(firstDay.year, firstDay.month + 1);
 
-    for (int i = 1; i <= remainingDays; i++) {
-      calendarDays.add(DateTime(nextMonth.year, nextMonth.month, i));
+    if (calendarDaysMode == CalendarDaysMode.fixed) {
+      // Fixed mode: Always show 6 weeks (42 days)
+      final remainingDays = 42 - calendarDays.length;
+
+      for (int i = 1; i <= remainingDays; i++) {
+        calendarDays.add(DateTime(nextMonth.year, nextMonth.month, i));
+      }
+    } else {
+      // Dynamic mode: Only add days to complete the last week
+      for (int i = 1; i <= daysToCompleteWeek; i++) {
+        calendarDays.add(DateTime(nextMonth.year, nextMonth.month, i));
+      }
     }
 
     return calendarDays;

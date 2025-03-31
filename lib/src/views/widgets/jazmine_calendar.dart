@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/calendar_navigation_bar.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_view_switcher.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/compact_navigation_bar.dart';
@@ -58,6 +59,10 @@ class JazmineCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Set up the calendar view service
+    CalendarViewService.controller = controller;
+    // The month configuration is passed directly to DateHelper.calendarDaysForMonth
+
     final currentTheme = Theme.of(context);
     final effectiveTheme =
         theme ?? const JazmineCalendarTheme(); // Use base theme as fallback

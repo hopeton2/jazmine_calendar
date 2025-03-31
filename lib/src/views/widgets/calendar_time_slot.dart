@@ -120,20 +120,34 @@ class CalendarTimeSlot extends StatelessWidget {
     JazmineCalendarTheme? calendarTheme,
     ThemeData theme,
   ) {
+    // Get the formatted date text to determine its length
+    final String dateText = formatDate.format(date);
+
+    // Use a rounded rectangle for dates with formats other than just the day number
+    // or when the date text is longer than 2 characters
+    final bool useRoundedRectangle = formatDate.pattern != 'd' ||
+        dateText.length > 2 ||
+        formatDatePrefix != null;
+
+    // Calculate the width needed for the container based on text length
+    final double containerWidth = useRoundedRectangle
+        ? (dateText.length * 10.0 + 16.0)
+            .clamp(todayCircleSize, 80.0) // Min width = circle size, max = 80
+        : todayCircleSize;
+
     return Align(
       alignment: dateAlignment,
       child: Container(
-        width: isToday || isSelected ? todayCircleSize : null,
+        width: isToday || isSelected ? containerWidth : null,
         height: isToday || isSelected ? todayCircleSize : null,
         decoration: isSelected
             ? BoxDecoration(
                 color: calendarTheme?.getSelectedDayColor(context) ??
                     theme.colorScheme.primary,
-                shape: formatDatePrefix != null
-                    ? BoxShape.rectangle
-                    : BoxShape.circle,
+                shape:
+                    useRoundedRectangle ? BoxShape.rectangle : BoxShape.circle,
                 borderRadius:
-                    formatDatePrefix != null ? BorderRadius.circular(25) : null,
+                    useRoundedRectangle ? BorderRadius.circular(16) : null,
               )
             : isToday
                 ? BoxDecoration(
@@ -142,21 +156,20 @@ class CalendarTimeSlot extends StatelessWidget {
                           theme.colorScheme.primary,
                       width: 1,
                     ),
-                    shape: formatDatePrefix != null
+                    shape: useRoundedRectangle
                         ? BoxShape.rectangle
                         : BoxShape.circle,
-                    borderRadius: formatDatePrefix != null
-                        ? BorderRadius.circular(25)
-                        : null,
+                    borderRadius:
+                        useRoundedRectangle ? BorderRadius.circular(16) : null,
                   )
                 : null,
         child: Container(
-          padding: formatDatePrefix != null
+          padding: useRoundedRectangle
               ? const EdgeInsets.symmetric(horizontal: 8)
               : null,
           child: Center(
             child: Text(
-              '${formatDatePrefix ?? ''}${formatDate.format(date)}',
+              '${formatDatePrefix ?? ''}$dateText',
               style: isSelected
                   ? TextStyle(
                       color: theme.colorScheme.surface,
