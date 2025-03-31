@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 
 /// A calendar date picker with enhanced styling for larger selection circles
@@ -11,6 +13,7 @@ class EnhancedDatePicker extends StatefulWidget {
   final DatePickerMode initialCalendarMode;
   final bool Function(DateTime)? selectableDayPredicate;
   final VoidCallback? onBackToMonthView;
+  final CalendarController? controller;
 
   const EnhancedDatePicker({
     super.key,
@@ -21,16 +24,27 @@ class EnhancedDatePicker extends StatefulWidget {
     this.initialCalendarMode = DatePickerMode.day,
     this.selectableDayPredicate,
     this.onBackToMonthView,
+    this.controller,
   });
 
   @override
   State<EnhancedDatePicker> createState() => _EnhancedDatePickerState();
 }
 
-class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
+class _EnhancedDatePickerState extends State<EnhancedDatePicker>
+    with SingleTickerProviderStateMixin {
   late DateTime _currentMonth;
   late DateTime _selectedDate;
   late DatePickerMode _currentView;
+  late PageController _pageController;
+  late AnimationController _animationController;
+
+  // Calculate the number of months between two dates
+  int _monthDelta(DateTime startDate, DateTime endDate) {
+    return (endDate.year - startDate.year) * 12 +
+        endDate.month -
+        startDate.month;
+  }
 
   @override
   void initState() {
@@ -38,6 +52,24 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
     _selectedDate = widget.initialDate;
     _currentMonth = DateTime(widget.initialDate.year, widget.initialDate.month);
     _currentView = widget.initialCalendarMode;
+
+    // Initialize the page controller with the initial month index
+    // We calculate the month delta from firstDate to initialDate
+    final initialPage = _monthDelta(widget.firstDate, _currentMonth);
+    _pageController = PageController(initialPage: initialPage);
+
+    // Initialize the animation controller for smooth transitions
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -123,14 +155,14 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
                     onPressed: _previousMonth,
-                    tooltip: 'Previous month',
+                    tooltip: CalendarLocalization.of(context).previousMonth,
                   ),
 
                   // Next month button
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: _nextMonth,
-                    tooltip: 'Next month',
+                    tooltip: CalendarLocalization.of(context).nextMonth,
                   ),
                 ],
               ),
@@ -147,14 +179,30 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
   }
 
   void _previousMonth() {
-    setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-    });
+    // Animate to the previous page
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _nextMonth() {
+    // Animate to the next page
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // Handle page change
+  void _handlePageChanged(int page) {
+    // Calculate the new month based on the page index
+    final monthsToAdd = page - _monthDelta(widget.firstDate, _currentMonth);
+    final newMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + monthsToAdd);
+
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+      _currentMonth = newMonth;
     });
   }
 
@@ -175,35 +223,13 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Calculate the first day of the month
-    final firstDayOfMonth =
-        DateTime(_currentMonth.year, _currentMonth.month, 1);
-
-    // Get the locale for determining the first day of week
-    final locale = CalendarLocalization.of(context).locale.languageCode;
-
-    // Calculate the first weekday of month based on locale
-    int firstWeekdayOfMonth;
-
-    if (locale == 'es' || locale == 'fr' || locale == 'de') {
-      // For Spanish, French, and German, the week starts on Monday (1)
-      // Convert from 1-7 (Monday=1) to 0-6 (Monday=0)
-      firstWeekdayOfMonth = (firstDayOfMonth.weekday - 1) % 7;
-    } else {
-      // For English, the week starts on Sunday (7)
-      // Convert from 1-7 (Monday=1, Sunday=7) to 0-6 (Sunday=0, Monday=1)
-      firstWeekdayOfMonth = firstDayOfMonth.weekday % 7;
-    }
-
-    // Calculate days in month
-    final daysInMonth =
-        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    // Calculate the total number of months between firstDate and lastDate
+    final monthCount = _monthDelta(widget.firstDate, widget.lastDate) + 1;
 
     // Use LayoutBuilder to get available height
     return LayoutBuilder(
       builder: (context, constraints) {
         // Calculate ideal row height based on available space
-        // We need space for weekday headers + 6 rows of dates
         final availableHeight = constraints.maxHeight;
         const weekdayHeaderHeight = 30.0; // Reduced height for weekday header
         final gridHeight = availableHeight - weekdayHeaderHeight;
@@ -232,17 +258,34 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                             width: cellWidth,
                             child: Center(
                               child: Text(
-                                // Get the first letter of the weekday name in the current locale
+                                // Get the weekday abbreviation based on locale and firstDayOfWeek
                                 () {
+                                  // Get the first day of week from controller or use locale-based default
+                                  int firstDayOfWeek;
+                                  if (widget.controller != null) {
+                                    // Use the controller's firstDayOfWeek if available
+                                    firstDayOfWeek =
+                                        widget.controller!.firstDayOfWeek;
+                                  } else {
+                                    // Otherwise, determine based on locale
+                                    final locale =
+                                        CalendarLocalization.of(context)
+                                            .locale
+                                            .languageCode;
+                                    firstDayOfWeek = CalendarController
+                                        .getFirstDayOfWeekForLocale(locale);
+                                  }
+
                                   final locale =
                                       CalendarLocalization.of(context)
                                           .locale
                                           .languageCode;
 
-                                  // Hardcoded weekday abbreviations for Spanish
+                                  // Get the appropriate weekday abbreviations for the locale
+                                  List<String> weekdays;
                                   if (locale == 'es') {
-                                    // Spanish weekday abbreviations: L M X J V S D
-                                    final weekdays = [
+                                    // Spanish weekday abbreviations
+                                    weekdays = [
                                       'L',
                                       'M',
                                       'X',
@@ -251,10 +294,9 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                                       'S',
                                       'D'
                                     ];
-                                    return weekdays[i];
                                   } else if (locale == 'fr') {
-                                    // French weekday abbreviations: L M M J V S D
-                                    final weekdays = [
+                                    // French weekday abbreviations
+                                    weekdays = [
                                       'L',
                                       'M',
                                       'M',
@@ -263,10 +305,9 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                                       'S',
                                       'D'
                                     ];
-                                    return weekdays[i];
                                   } else if (locale == 'de') {
-                                    // German weekday abbreviations: M D M D F S S
-                                    final weekdays = [
+                                    // German weekday abbreviations
+                                    weekdays = [
                                       'M',
                                       'D',
                                       'M',
@@ -275,20 +316,63 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                                       'S',
                                       'S'
                                     ];
-                                    return weekdays[i];
+                                  } else if (locale == 'hi') {
+                                    // Hindi weekday abbreviations
+                                    weekdays = [
+                                      'सो',
+                                      'मं',
+                                      'बु',
+                                      'गु',
+                                      'शु',
+                                      'श',
+                                      'र'
+                                    ];
+                                  } else if (locale == 'zh') {
+                                    // Chinese weekday abbreviations
+                                    weekdays = [
+                                      '一',
+                                      '二',
+                                      '三',
+                                      '四',
+                                      '五',
+                                      '六',
+                                      '日'
+                                    ];
                                   } else {
-                                    // English weekday abbreviations: S M T W T F S
-                                    final weekdays = [
-                                      'S',
+                                    // English weekday abbreviations
+                                    weekdays = [
                                       'M',
                                       'T',
                                       'W',
                                       'T',
                                       'F',
+                                      'S',
                                       'S'
                                     ];
-                                    return weekdays[i];
+                                    // For English, we need special handling since the default is Sunday-first
+                                    if (firstDayOfWeek == DateTime.sunday) {
+                                      weekdays = [
+                                        'S',
+                                        'M',
+                                        'T',
+                                        'W',
+                                        'T',
+                                        'F',
+                                        'S'
+                                      ];
+                                    }
                                   }
+
+                                  // Reorder the weekdays based on firstDayOfWeek
+                                  // For non-English locales with Sunday-first, we need to move the last item to the front
+                                  if (locale != 'en' &&
+                                      firstDayOfWeek == DateTime.sunday) {
+                                    // Move the last item (Sunday) to the front
+                                    final sunday = weekdays.removeLast();
+                                    weekdays.insert(0, sunday);
+                                  }
+
+                                  return weekdays[i];
                                 }(),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -303,18 +387,50 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
               ),
             ),
 
-            // Calendar grid
+            // Calendar grid with horizontal scrolling
             SizedBox(
               height: gridHeight,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // We're using fixed sizes, so we don't need to calculate based on constraints
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _handlePageChanged,
+                itemCount: monthCount,
+                itemBuilder: (context, pageIndex) {
+                  // Calculate the month for this page
+                  final pageMonth = DateTime(
+                    widget.firstDate.year,
+                    widget.firstDate.month + pageIndex,
+                  );
 
-                  // Use a fixed aspect ratio that ensures all dates fit
-                  // We don't need to calculate dynamically since we're using a fixed height
+                  // Calculate the first day of the month
+                  final firstDayOfMonth =
+                      DateTime(pageMonth.year, pageMonth.month, 1);
+
+                  // Get the first day of week from controller or use locale-based default
+                  int firstDayOfWeek;
+                  if (widget.controller != null) {
+                    // Use the controller's firstDayOfWeek if available
+                    firstDayOfWeek = widget.controller!.firstDayOfWeek;
+                  } else {
+                    // Otherwise, determine based on locale
+                    final locale =
+                        CalendarLocalization.of(context).locale.languageCode;
+                    firstDayOfWeek =
+                        CalendarController.getFirstDayOfWeekForLocale(locale);
+                  }
+
+                  // Calculate the first weekday of month based on the first day of week
+                  // Convert from 1-7 (Monday=1, Sunday=7) to 0-6 (firstDayOfWeek=0)
+                  int firstWeekdayOfMonth =
+                      (firstDayOfMonth.weekday - firstDayOfWeek) % 7;
+                  if (firstWeekdayOfMonth < 0) firstWeekdayOfMonth += 7;
+
+                  // Calculate days in month
+                  final daysInMonth =
+                      DateTime(pageMonth.year, pageMonth.month + 1, 0).day;
+
                   return GridView.builder(
-                    // Allow scrolling if needed
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    // Disable scrolling since we're using PageView for horizontal scrolling
+                    physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 7,
@@ -337,8 +453,8 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                       }
 
                       // Create the date for this cell
-                      final date = DateTime(
-                          _currentMonth.year, _currentMonth.month, day);
+                      final date =
+                          DateTime(pageMonth.year, pageMonth.month, day);
 
                       // Check if this date is selectable
                       final bool isSelectable =
@@ -381,7 +497,11 @@ class _EnhancedDatePickerState extends State<EnhancedDatePicker> {
                             ),
                             child: Center(
                               child: Text(
-                                day.toString(),
+                                // Use locale-aware date formatting
+                                DateFormat.d(CalendarLocalization.of(context)
+                                        .locale
+                                        .languageCode)
+                                    .format(date),
                                 style: TextStyle(
                                   fontSize: 14.0,
                                   fontWeight: isSelected || isToday

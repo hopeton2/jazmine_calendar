@@ -29,7 +29,7 @@ void main() {
       GlobalCupertinoLocalizations.delegate,
     ],
     supportedLocales: CalendarLocalization.supportedLocales,
-    locale: const Locale('es'), // Set Spanish as the default language
+    //locale: const Locale('fr'), // Set French as the default language
     home: const MyHomePage(),
     themeMode: ThemeMode.dark,
   ));
@@ -72,11 +72,23 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           Expanded(
-            child: JazmineCalendar(
-              // Using default controller to test default behavior
-              showNavigationBar: true,
-              showViewSelector: true,
-              navigationBarStyle: NavigationBarStyle.compact,
+            child: FutureBuilder<CalendarController>(
+              future: CalendarController.create(
+                // Pass the locale to the controller to set the first day of week
+                locale: Localizations.localeOf(context),
+              ),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return JazmineCalendar(
+                  controller: snapshot.data,
+                  showNavigationBar: true,
+                  showViewSelector: true,
+                  navigationBarStyle: NavigationBarStyle.compact,
+                );
+              },
             ),
           ),
         ],

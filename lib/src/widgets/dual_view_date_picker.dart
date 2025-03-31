@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/widgets/enhanced_date_picker.dart';
 import 'package:jazmine_calendar/src/widgets/month_selector.dart';
@@ -10,6 +10,7 @@ class DualViewDatePicker extends StatefulWidget {
   final DateTime firstDate;
   final DateTime lastDate;
   final ValueChanged<DateTime> onDateSelected;
+  final CalendarController? controller;
 
   const DualViewDatePicker({
     super.key,
@@ -17,6 +18,7 @@ class DualViewDatePicker extends StatefulWidget {
     required this.firstDate,
     required this.lastDate,
     required this.onDateSelected,
+    this.controller,
   });
 
   @override
@@ -114,8 +116,9 @@ class _DualViewDatePickerState extends State<DualViewDatePicker> {
             ),
           ),
 
-        // Content area - use all remaining space
-        Expanded(
+        // Content area - use fixed height instead of Expanded
+        SizedBox(
+          height: 350, // Fixed height to accommodate all content
           child: _showMonthPicker
               ? MonthPicker(
                   initialDate: _currentDate,
@@ -130,8 +133,9 @@ class _DualViewDatePickerState extends State<DualViewDatePicker> {
                   onDateChanged: _handleDaySelected,
                   initialCalendarMode: DatePickerMode.day,
                   onBackToMonthView: _showMonthView,
+                  controller: widget.controller,
                 ),
-        ),
+        )
       ],
     );
   }

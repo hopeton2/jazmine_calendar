@@ -55,6 +55,28 @@ class CalendarController extends ChangeNotifier {
   ValueNotifier<Duration> get intervalNotifier => _timeService.intervalNotifier;
 
   // Factory constructor to replace the removed create method
+  /// Helper method to determine the first day of week based on locale
+  static int getFirstDayOfWeekForLocale(String? languageCode) {
+    // Default to Monday if no locale is provided
+    if (languageCode == null) return DateTime.monday;
+
+    // For most locales, the week starts on Monday (1)
+    // For English (en) and a few others, the week starts on Sunday (7)
+    switch (languageCode) {
+      case 'en':
+        return DateTime.sunday;
+      case 'hi':
+        // For Hindi, the week traditionally starts on Sunday
+        return DateTime.sunday;
+      case 'zh':
+      case 'fr':
+      case 'de':
+      case 'es':
+      default:
+        return DateTime.monday;
+    }
+  }
+
   static Future<CalendarController> create({
     CalendarViewType initialView = CalendarViewType.day,
     DateTime? initialDate,
@@ -67,8 +89,12 @@ class CalendarController extends ChangeNotifier {
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
     CalendarPersistence? persistence,
-    int firstDayOfWeek = DateTime.monday,
+    int? firstDayOfWeek,
+    Locale? locale,
   }) async {
+    // If firstDayOfWeek is not explicitly set, determine it based on locale
+    int effectiveFirstDayOfWeek =
+        firstDayOfWeek ?? getFirstDayOfWeekForLocale(locale?.languageCode);
     return CalendarController(
       initialView: initialView,
       initialDate: initialDate,
@@ -81,7 +107,7 @@ class CalendarController extends ChangeNotifier {
       onEventResized: onEventResized,
       interval: interval,
       persistence: persistence,
-      firstDayOfWeek: firstDayOfWeek,
+      firstDayOfWeek: effectiveFirstDayOfWeek,
     );
   }
 

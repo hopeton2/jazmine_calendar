@@ -72,6 +72,7 @@ class CompactNavigationBar extends StatelessWidget {
                       onDateSelected: (date) => controller.navigateToDate(date),
                       isCompact: UIHelper.isSmallDevice(context),
                       dateFormat: dateFormat,
+                      controller: controller,
                     ),
               const Spacer(),
               const ViewSelector(showCheckmarks: false),

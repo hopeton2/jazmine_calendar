@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
+import '../../l10n/calendar_localization.dart';
 
 typedef EventEditorBuilder = Widget Function(
   BuildContext context,
@@ -212,7 +214,8 @@ class _DefaultEventEditorState extends State<DefaultEventEditor> {
             },
             icon: const Icon(Icons.calendar_today),
             label: Text(
-              '${initialDate.year}-${initialDate.month.toString().padLeft(2, '0')}-${initialDate.day.toString().padLeft(2, '0')}',
+              DateFormat.yMd(Localizations.localeOf(context).languageCode)
+                  .format(initialDate),
             ),
           ),
         ),
@@ -236,7 +239,8 @@ class _DefaultEventEditorState extends State<DefaultEventEditor> {
             },
             icon: const Icon(Icons.access_time),
             label: Text(
-              '${initialDate.hour.toString().padLeft(2, '0')}:${initialDate.minute.toString().padLeft(2, '0')}',
+              DateFormat.Hm(Localizations.localeOf(context).languageCode)
+                  .format(initialDate),
             ),
           ),
         ),

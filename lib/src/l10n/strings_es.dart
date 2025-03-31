@@ -11,6 +11,8 @@ final Map<String, String> spanishStrings = {
   // Navigation buttons
   'today': 'Hoy',
   'selectDate': 'Seleccionar fecha',
+  'previousMonth': 'Mes anterior',
+  'nextMonth': 'Mes siguiente',
 
   // Calendar labels
   'allDay': 'Todo el día',

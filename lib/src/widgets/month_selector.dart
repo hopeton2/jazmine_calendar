@@ -34,13 +34,13 @@ class MonthSelector extends StatelessWidget {
 
     return PopupMenuButton<DateTime>(
       position: position,
+      tooltip: '', // Remove default 'Show menu' tooltip
       onSelected: onMonthSelected,
       itemBuilder: (context) => [
         PopupMenuItem(
           enabled: false, // Prevents menu from closing on calendar interaction
           child: SizedBox(
-            width: 300,
-            height: 300,
+            width: 400, // Fixed width to accommodate Chinese characters
             child: allowDaySelection
                 ? DualViewDatePicker(
                     initialDate: date,
@@ -141,8 +141,11 @@ class MonthPicker extends StatefulWidget {
   State<MonthPicker> createState() => _MonthPickerState();
 }
 
-class _MonthPickerState extends State<MonthPicker> {
+class _MonthPickerState extends State<MonthPicker>
+    with SingleTickerProviderStateMixin {
   late DateTime _currentDisplayedYear;
+  late PageController _pageController;
+  late AnimationController _animationController;
 
   // Get localized month names based on the current locale
   List<String> _getLocalizedMonthNames(BuildContext context,
@@ -165,6 +168,25 @@ class _MonthPickerState extends State<MonthPicker> {
   void initState() {
     super.initState();
     _currentDisplayedYear = DateTime(widget.initialDate.year);
+
+    // Initialize the page controller with the initial year index
+    // We use a large initial page number to allow for "infinite" scrolling
+    _pageController = PageController(
+      initialPage: widget.initialDate.year - widget.firstDate.year,
+    );
+
+    // Initialize the animation controller for smooth transitions
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _animationController.dispose();
+    super.dispose();
   }
 
   bool _isYearInRange(int year) {
@@ -183,16 +205,30 @@ class _MonthPickerState extends State<MonthPicker> {
 
   void _previousYear() {
     if (_isYearInRange(_currentDisplayedYear.year - 1)) {
-      setState(() {
-        _currentDisplayedYear = DateTime(_currentDisplayedYear.year - 1);
-      });
+      // Animate to the previous page
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   void _nextYear() {
     if (_isYearInRange(_currentDisplayedYear.year + 1)) {
+      // Animate to the next page
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  // Handle page change
+  void _handlePageChanged(int page) {
+    final year = widget.firstDate.year + page;
+    if (_isYearInRange(year)) {
       setState(() {
-        _currentDisplayedYear = DateTime(_currentDisplayedYear.year + 1);
+        _currentDisplayedYear = DateTime(year);
       });
     }
   }
@@ -254,78 +290,87 @@ class _MonthPickerState extends State<MonthPicker> {
           ),
         ),
 
-        // Month grid
+        // Month grid with horizontal scrolling
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate ideal row height based on available height
-              final availableHeight = constraints.maxHeight;
-              final rowHeight = availableHeight / 4; // 4 rows of months
-              final cellWidth = constraints.maxWidth / 3; // 3 columns
-              final aspectRatio = cellWidth / rowHeight;
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: _handlePageChanged,
+            itemCount: widget.lastDate.year - widget.firstDate.year + 1,
+            itemBuilder: (context, pageIndex) {
+              final year = widget.firstDate.year + pageIndex;
 
-              return GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: aspectRatio.clamp(1.0, 2.0),
-                ),
-                itemCount: 12,
-                itemBuilder: (context, index) {
-                  final month = index + 1;
-                  final isEnabled =
-                      _isMonthInRange(_currentDisplayedYear.year, month);
-                  final isSelected =
-                      widget.initialDate.year == _currentDisplayedYear.year &&
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate ideal row height based on available height
+                  final availableHeight = constraints.maxHeight;
+                  final rowHeight = availableHeight / 4; // 4 rows of months
+                  final cellWidth = constraints.maxWidth / 3; // 3 columns
+                  final aspectRatio = cellWidth / rowHeight;
+
+                  return GridView.builder(
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Disable grid scrolling
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: aspectRatio.clamp(1.0, 2.0),
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final month = index + 1;
+                      final isEnabled = _isMonthInRange(year, month);
+                      final isSelected = widget.initialDate.year == year &&
                           widget.initialDate.month == month;
 
-                  // Match the style of the standard date picker
-                  const double itemSize =
-                      36.0; // Standard size for selected circle
+                      // Match the style of the standard date picker
+                      const double itemSize =
+                          36.0; // Standard size for selected circle
 
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(itemSize / 2),
-                      onTap: isEnabled
-                          ? () {
-                              final selectedDate = DateTime(
-                                _currentDisplayedYear.year,
-                                month,
-                                1,
-                              );
-                              widget.onMonthSelected(selectedDate);
-                            }
-                          : null,
-                      child: Center(
-                        child: Container(
-                          width: itemSize,
-                          height: itemSize,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? colorScheme.primary
-                                : Colors.transparent,
-                            shape: BoxShape.circle,
-                          ),
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(itemSize / 2),
+                          onTap: isEnabled
+                              ? () {
+                                  final selectedDate = DateTime(
+                                    year,
+                                    month,
+                                    1,
+                                  );
+                                  widget.onMonthSelected(selectedDate);
+                                }
+                              : null,
                           child: Center(
-                            child: Text(
-                              _getLocalizedMonthNames(context,
-                                  abbreviated: true)[index],
-                              style: isSelected
-                                  ? textTheme.labelLarge?.copyWith(
-                                      color: colorScheme.onPrimary,
-                                      fontWeight: FontWeight.bold,
-                                    )
-                                  : textTheme.labelLarge?.copyWith(
-                                      color: isEnabled
-                                          ? colorScheme.onSurface
-                                          : colorScheme.onSurface
-                                              .withOpacity(0.38),
-                                    ),
+                            child: Container(
+                              width: itemSize,
+                              height: itemSize,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _getLocalizedMonthNames(context,
+                                      abbreviated: true)[index],
+                                  style: isSelected
+                                      ? textTheme.labelLarge?.copyWith(
+                                          color: colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        )
+                                      : textTheme.labelLarge?.copyWith(
+                                          color: isEnabled
+                                              ? colorScheme.onSurface
+                                              : colorScheme.onSurface
+                                                  .withOpacity(0.38),
+                                        ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
               );

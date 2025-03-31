@@ -13,6 +13,7 @@ class DropdownViewSelector extends StatelessWidget {
     var controller = JazmineCalendar.of(context).controller;
     return PopupMenuButton<CalendarViewType>(
       initialValue: controller.currentView,
+      tooltip: '', // Remove default 'Show menu' tooltip
       onSelected: (newView) {
         controller.changeView(newView);
       },

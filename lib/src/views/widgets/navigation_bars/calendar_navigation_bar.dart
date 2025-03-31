@@ -167,6 +167,7 @@ class CalendarNavigationBar extends StatelessWidget {
                       firstDate: DateTime(1900),
                       lastDate: DateTime(2100),
                       onDateSelected: (date) => Navigator.of(context).pop(date),
+                      controller: controller,
                     ),
                   ),
                 ],
@@ -180,13 +181,52 @@ class CalendarNavigationBar extends StatelessWidget {
         controller.navigateToDate(picked);
       }
     } else {
-      // For other views, show the standard date picker
-      final DateTime? picked = await showDatePicker(
+      // For other views, show our custom date picker in a dialog
+      final DateTime? picked = await showDialog<DateTime>(
         context: context,
-        initialDate: controller.selectedDate,
-        firstDate: DateTime(1900),
-        lastDate: DateTime(2100),
+        builder: (BuildContext context) {
+          final theme = Theme.of(context);
+          return Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        CalendarStrings.selectDate(context),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close,
+                            color: theme.colorScheme.onSurface),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 400.0, // Reasonable height for date-only picker
+                    child: DualViewDatePicker(
+                      initialDate: controller.selectedDate,
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime(2100),
+                      onDateSelected: (date) => Navigator.of(context).pop(date),
+                      controller: controller,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
+
       if (picked != null) {
         controller.navigateToDate(picked);
       }

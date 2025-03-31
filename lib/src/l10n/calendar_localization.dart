@@ -8,6 +8,8 @@ import 'package:jazmine_calendar/src/l10n/strings_en.dart';
 import 'package:jazmine_calendar/src/l10n/strings_fr.dart';
 import 'package:jazmine_calendar/src/l10n/strings_de.dart';
 import 'package:jazmine_calendar/src/l10n/strings_es.dart';
+import 'package:jazmine_calendar/src/l10n/strings_hi.dart';
+import 'package:jazmine_calendar/src/l10n/strings_zh.dart';
 
 /// Class that provides localized strings for the Jazmine Calendar.
 class CalendarLocalization {
@@ -31,6 +33,8 @@ class CalendarLocalization {
     Locale('fr'), // French
     Locale('de'), // German
     Locale('es'), // Spanish
+    Locale('hi'), // Hindi
+    Locale('zh'), // Chinese
   ];
 
   /// Map of localized string getters
@@ -57,6 +61,12 @@ class CalendarLocalization {
         break;
       case 'es':
         _localizedStrings = spanishStrings;
+        break;
+      case 'hi':
+        _localizedStrings = hindiStrings;
+        break;
+      case 'zh':
+        _localizedStrings = chineseStrings;
         break;
       default:
         _localizedStrings = englishStrings;
@@ -91,6 +101,8 @@ class CalendarLocalization {
   // Navigation buttons
   String get today => translate('today');
   String get selectDate => translate('selectDate');
+  String get previousMonth => translate('previousMonth');
+  String get nextMonth => translate('nextMonth');
 
   // Calendar labels
   String get allDay => translate('allDay');
@@ -158,7 +170,7 @@ class _CalendarLocalizationDelegate
 
   @override
   bool isSupported(Locale locale) {
-    return ['en', 'fr', 'de', 'es'].contains(locale.languageCode);
+    return ['en', 'fr', 'de', 'es', 'hi', 'zh'].contains(locale.languageCode);
   }
 
   @override

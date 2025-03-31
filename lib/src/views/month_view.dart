@@ -58,7 +58,10 @@ class MonthView extends BaseCalendarView {
           dates: dates,
           controller: controller,
           headerDateFormat: DateFormat(
-              ''), // Empty since we handle date display in cellBuilder
+              '',
+              CalendarLocalization.of(context)
+                  .locale
+                  .languageCode), // Empty since we handle date display in cellBuilder
           numberOfColumns: configuration.daysPerWeek,
           numberOfRows: weeksCount,
           slotDuration: const Duration(days: 1),
@@ -144,7 +147,8 @@ class MonthView extends BaseCalendarView {
       date: date,
       controller: controller,
       showDate: configuration.showDateInCell,
-      formatDate: DateFormat(formatString),
+      formatDate: DateFormat(
+          formatString, CalendarLocalization.of(context).locale.languageCode),
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
@@ -187,7 +191,8 @@ class MonthView extends BaseCalendarView {
       date: date,
       controller: controller,
       showDate: configuration.showDateInCell,
-      formatDate: DateFormat(formatString),
+      formatDate: DateFormat(
+          formatString, CalendarLocalization.of(context).locale.languageCode),
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
@@ -210,7 +215,8 @@ class MonthView extends BaseCalendarView {
     double weekNumberWidth,
   ) {
     final controller = JazmineCalendar.of(context).controller;
-    final weekdayFormat = DateFormat(configuration.weekdayFormat);
+    final locale = CalendarLocalization.of(context).locale.languageCode;
+    final weekdayFormat = DateFormat(configuration.weekdayFormat, locale);
     final now = DateTime.now();
     final theme = Theme.of(context);
     final calendarTheme = theme.extension<JazmineCalendarTheme>();

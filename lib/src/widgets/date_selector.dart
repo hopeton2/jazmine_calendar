@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 
 class DateSelector extends StatelessWidget {
   final DateTime date;
@@ -9,7 +10,8 @@ class DateSelector extends StatelessWidget {
   final DateTime? firstDate;
   final DateTime? lastDate;
   final PopupMenuPosition position;
-  final String? caption;  // New caption property
+  final String? caption; // New caption property
+  final CalendarController? controller; // Add controller property
 
   const DateSelector({
     super.key,
@@ -20,7 +22,8 @@ class DateSelector extends StatelessWidget {
     this.firstDate,
     this.lastDate,
     this.position = PopupMenuPosition.under,
-    this.caption,  // Add caption to constructor
+    this.caption, // Add caption to constructor
+    this.controller, // Add controller to constructor
   });
 
   @override
@@ -29,17 +32,20 @@ class DateSelector extends StatelessWidget {
 
     return PopupMenuButton<DateTime>(
       position: position,
+      tooltip: '', // Remove default 'Show menu' tooltip
       onSelected: onDateSelected,
       itemBuilder: (context) => [
         PopupMenuItem(
           enabled: false, // Prevents menu from closing on calendar interaction
           child: SizedBox(
-            width: 300,
+            width: 400, // Fixed width to accommodate Chinese characters
+            height: 400, // Fixed height to show the calendar properly
             child: CalendarDatePicker(
               initialDate: date,
               firstDate: firstDate ?? DateTime(1900),
               lastDate: lastDate ?? DateTime(2100),
               onDateChanged: (date) {
+                // Close the popup menu and notify the parent
                 Navigator.pop(context, date);
               },
             ),
@@ -47,53 +53,32 @@ class DateSelector extends StatelessWidget {
         ),
       ],
       child: Builder(
-        builder: (context) => _DateSelectorButton(
-          date: date,
-          dateFormat: format,
-          isCompact: isCompact,
-          caption: caption,  // Pass caption to button
-          onPressed: () {
-            PopupMenuButtonState<DateTime> button = 
-                context.findAncestorStateOfType<PopupMenuButtonState<DateTime>>()!;
-            button.showButtonMenu();
-          },
-        ),
+        builder: (context) => isCompact
+            ? IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () {
+                  PopupMenuButtonState<DateTime> button =
+                      context.findAncestorStateOfType<
+                          PopupMenuButtonState<DateTime>>()!;
+                  button.showButtonMenu();
+                },
+              )
+            : TextButton(
+                onPressed: () {
+                  PopupMenuButtonState<DateTime> button =
+                      context.findAncestorStateOfType<
+                          PopupMenuButtonState<DateTime>>()!;
+                  button.showButtonMenu();
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(caption ?? format.format(date)),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
+              ),
       ),
     );
-  }
-}
-
-class _DateSelectorButton extends StatelessWidget {
-  final DateTime date;
-  final DateFormat dateFormat;
-  final bool isCompact;
-  final VoidCallback onPressed;
-  final String? caption;  // Add caption property
-
-  const _DateSelectorButton({
-    required this.date,
-    required this.dateFormat,
-    required this.isCompact,
-    required this.onPressed,
-    this.caption,  // Add caption to constructor
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return isCompact
-        ? IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: onPressed,
-          )
-        : TextButton(
-            onPressed: onPressed,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(caption ?? dateFormat.format(date)),  // Use caption if available
-                const Icon(Icons.arrow_drop_down),
-              ],
-            ),
-          );
   }
 }
