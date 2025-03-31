@@ -56,7 +56,7 @@ abstract class DateHelper {
     } else {
       for (int col = 0; col < cols; col++) {
         for (int row = 0; row < rows; row++) {
-          calendarDates.add(date.add(colInterval * col + rowInterval * row));
+          calendarDates.add(date.add(colInterval * col).add(rowInterval * row));
         }
       }
     }
@@ -89,6 +89,14 @@ abstract class DateHelper {
     final rows = const Duration(days: 1).inMinutes ~/ interval.inMinutes;
     return intervalDates(
         date, interval, const Duration(days: 1), cols, rows, Axis.vertical);
+  }
+
+  static List<DateTime> intervalDatesForTimelineDay(DateTime date) {
+    final interval = controller!.intervalNotifier.value;
+    const rows = 1;
+    final cols = const Duration(days: 1).inMinutes ~/ interval.inMinutes;
+    return intervalDates(
+        date, interval, interval, cols, rows, Axis.horizontal);
   }
 
   /// Returns a list of DateTime objects for the calendar month grid including leading/trailing days

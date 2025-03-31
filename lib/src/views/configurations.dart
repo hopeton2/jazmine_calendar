@@ -38,14 +38,27 @@ class WeekViewConfiguration extends DayViewConfiguration {
 }
 
 class TimelineConfiguration extends BaseViewConfiguration {
+  /// The time interval between slots
   final Duration interval;
-  final double timeAxisWidth;
+
+  /// Width of the resource header column
+  final double resourceHeaderWidth;
+
+  /// Height of the time header row
+  final double timeHeaderHeight;
+
+  /// Minimum width of each time slot
+  final double minTimeSlotWidth;
+
+  /// Whether to show the current time indicator
   final bool showCurrentTimeIndicator;
 
   const TimelineConfiguration({
     super.dateAlignment,
     this.interval = const Duration(minutes: 30),
-    this.timeAxisWidth = 60.0,
+    this.resourceHeaderWidth = 100.0,
+    this.timeHeaderHeight = 50.0,
+    this.minTimeSlotWidth = 60.0,
     this.showCurrentTimeIndicator = true,
   });
 }

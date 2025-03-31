@@ -59,12 +59,13 @@ class _CalendarGridItemState extends State<_CalendarGridItem>
 }
 
 class CalendarGrid extends StatefulWidget {
-
   final Duration slotDuration;
   final Duration intervalDuration;
   final Axis orientation;
   final int numberOfColumns;
   final int numberOfRows;
+  final double minCellWidth = 60;
+  final double minCellHeight = 40;
   final DateFormat headerDateFormat;
   final CalendarController controller;
   final Widget Function(BuildContext, DateTime, bool, double, double)?
@@ -93,11 +94,11 @@ class CalendarGrid extends StatefulWidget {
     this.columnHeaderHeight = 60.0,
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
-    this.isAllDay = false, 
+    this.isAllDay = false,
   });
-   
-   get startDate => dates.first;
-   get endDate => dates.last;
+
+  get startDate => dates.first;
+  get endDate => dates.last;
 
   /// Scrolls the grid to show the specified time
   static void scrollToTime(BuildContext context, DateTime time) {
@@ -122,7 +123,7 @@ class CalendarGridState extends State<CalendarGrid> {
       // Only apply initial scroll if it hasn't been done for day-based views
       if (widget.controller.currentView != CalendarViewType.month &&
           !_viewService
-          .hasInitialScrollBeenApplied(widget.controller.currentView)) {
+              .hasInitialScrollBeenApplied(widget.controller.currentView)) {
         if (widget.controller.scrollToCurrentTimeOnLoad) {
           _scrollToTime(DateTime.now(),
               animate: widget.controller.animateTimeScroll);
@@ -188,14 +189,10 @@ class CalendarGridState extends State<CalendarGrid> {
         final availableHeight =
             isVertical ? totalHeight : totalHeight - widget.columnHeaderHeight;
 
-        final slotWidth = isVertical
-            ? availableWidth / widget.numberOfColumns
-            : availableWidth / widget.numberOfRows;
-        final slotHeight = max(
-            40.0,
-            isVertical
-                ? availableHeight / widget.numberOfRows
-                : availableHeight / widget.numberOfColumns);
+        final slotWidth =
+            max(widget.minCellWidth, availableWidth / widget.numberOfColumns);
+        final slotHeight =
+            max(widget.minCellHeight, availableHeight / widget.numberOfRows);
 
         final itemCount =
             isVertical ? widget.numberOfRows : widget.numberOfColumns;
@@ -213,6 +210,7 @@ class CalendarGridState extends State<CalendarGrid> {
                   itemExtent: itemExtent,
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
+                      debugPrint('Building item $index of $itemCount');
                       return RepaintBoundary(
                         child: SizedBox(
                           width: isVertical ? slotWidth : null,
@@ -316,49 +314,48 @@ class CalendarGridState extends State<CalendarGrid> {
         (theme.brightness == Brightness.light
             ? Colors.grey.withOpacity(0.2)
             : Colors.grey.withOpacity(0.3));
-    final slotCount = isVertical ? widget.numberOfColumns : widget.numberOfRows;
-   // DateTime cellGroupStartDate = !widget.intervalDuration.isZero
-   //     ? widget.startDate
-   //     : widget.startDate.add(widget.slotDuration * index * slotCount);
+    var slotCount = widget.numberOfColumns;
+    if (slotCount == widget.dates.length) {
+      // If the number of slots matches the number of dates, we don't need to multiply the index
+      slotCount = 1; //-- let the default behavior to create a full row
+    }
+    final dateIndexMultiplier = slotCount == widget.dates.length ? 0 : index;
 
     return List.generate(slotCount, (slotIndex) {
-      int dateIndex = index * slotCount + slotIndex;
-      DateTime slotDate = widget.dates[dateIndex];
-  /*     if (widget.lDateDelegate != null) {
-        slotDate = widget.cellDateDelegate!(slotIndex * (index + 1));
-      } else {
-        slotDate = cellGroupStartDate
-            .add(widget.slotDuration * slotIndex)
-            .add(widget.intervalDuration * index);
-      } */
+      int dateIndex = dateIndexMultiplier * slotCount + slotIndex;
+      DateTime slotDate = widget.dates[slotCount == 1 ? index :dateIndex];
+
+      // Use a SizedBox with Expanded to ensure proper sizing in both orientations
       return Expanded(
-        child: widget.cellBuilder != null
-            ? widget.cellBuilder!(
-                context,
-                slotDate,
-                slotIndex,
-                widget.orientation,
-              )
-            : CalendarTimeSlot(
-                controller: widget.controller,
-                showDate: false,
-                date: slotDate,
-                formatDate: widget.headerDateFormat,
-                isAllDay: widget.isAllDay,
-                decoration: BoxDecoration(
-                  color: calendarTheme?.getSlotBackgroundColor(context),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: gridLineColor,
-                      width: gridLineWidth,
-                    ),
-                    right: BorderSide(
-                      color: gridLineColor,
-                      width: gridLineWidth,
+        child: SizedBox.expand(
+          child: widget.cellBuilder != null
+              ? widget.cellBuilder!(
+                  context,
+                  slotDate,
+                  slotIndex,
+                  widget.orientation,
+                )
+              : CalendarTimeSlot(
+                  controller: widget.controller,
+                  showDate: false,
+                  date: slotDate,
+                  formatDate: widget.headerDateFormat,
+                  isAllDay: widget.isAllDay,
+                  decoration: BoxDecoration(
+                    color: calendarTheme?.getSlotBackgroundColor(context),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: gridLineColor,
+                        width: gridLineWidth,
+                      ),
+                      right: BorderSide(
+                        color: gridLineColor,
+                        width: gridLineWidth,
+                      ),
                     ),
                   ),
                 ),
-              ),
+        ),
       );
     });
   }

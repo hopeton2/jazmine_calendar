@@ -75,42 +75,51 @@ class CalendarTimeSlot extends StatelessWidget {
     }
 
     return Container(
-      key: _key,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border(
-          right: BorderSide(
-            color: gridLineColor,
-            width: 0.5,
-          ),
-          bottom: BorderSide(
-            color: gridLineColor,
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => controller.selectDate(date),
-          hoverColor: calendarTheme?.getHoverColor(context),
-          child: Container(
-            padding: padding,
-            child: Column(
-              children: [
-                if (showDate) ...[
-                  Padding(
-                    padding: datePadding,
-                    child: _buildDateIndicator(
-                        context, isSelected, isToday, calendarTheme, theme),
-                  ),
-                ],
-              ],
+        key: _key,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border(
+            right: BorderSide(
+              color: gridLineColor,
+              width: 0.5,
+            ),
+            bottom: BorderSide(
+              color: gridLineColor,
+              width: 0.5,
             ),
           ),
         ),
-      ),
-    );
+        child: Material(
+          color: Colors.transparent,
+          // Use a ClipRect to ensure the InkWell effect is contained within the bounds
+          child: ClipRect(
+            child: InkWell(
+              // Make sure the InkWell takes up the entire available space
+              splashFactory: InkRipple.splashFactory,
+              onTap: () => controller.selectDate(date),
+              hoverColor: calendarTheme?.getHoverColor(context),
+              child: Container(
+                padding: padding,
+                // Use a Stack instead of Column to ensure the InkWell covers the entire area
+                child: Stack(
+                  children: [
+                    // Add a transparent overlay to ensure the InkWell covers the entire area
+                    Positioned.fill(
+                      child: Container(color: Colors.transparent),
+                    ),
+                    if (showDate) ...[
+                      Padding(
+                        padding: datePadding,
+                        child: _buildDateIndicator(
+                            context, isSelected, isToday, calendarTheme, theme),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ));
   }
 
   Widget _buildDateIndicator(

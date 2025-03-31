@@ -1,4 +1,5 @@
 export 'agenda_view.dart';
+export 'base_timeline_view.dart';
 export 'day_view.dart';
 export 'month_view.dart';
 export 'timeline_view.dart';

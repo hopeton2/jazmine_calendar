@@ -5,7 +5,6 @@ import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_grid.dart';
-import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/views/widgets/all_day_grid.dart';
 
 class BaseDayView extends BaseCalendarView {
@@ -36,7 +35,7 @@ class BaseDayView extends BaseCalendarView {
       builder: (context, interval, _) {
         return Column(
           children: [
-            _buildHeader(context, uniqueDays),
+            _buildDateHeader(context, uniqueDays),
             AllDayGrid(
               dates: uniqueDays,
               controller: controller,
@@ -64,7 +63,7 @@ class BaseDayView extends BaseCalendarView {
     );
   }
 
-  Widget _buildHeader(BuildContext context, List<DateTime> days) {
+  Widget _buildDateHeader(BuildContext context, List<DateTime> days) {
     return Container(
       height: 50,
       decoration: BoxDecoration(
