@@ -6,6 +6,7 @@ import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/l10n/calendar_localization.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
+import 'package:jazmine_calendar/src/utils/ui_helper.dart';
 import 'package:jazmine_calendar/src/views/base_calendar_view.dart';
 import 'package:jazmine_calendar/src/views/configurations.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
@@ -139,9 +140,18 @@ class MonthView extends BaseCalendarView {
         : calendarTheme?.getGridLineColor(context) ??
             Colors.grey.withOpacity(0.3);
 
-    final String formatString = isFirstDayOfMonth
-        ? configuration.firstDayOfMonthFormat
-        : configuration.monthDaysFormat;
+    // Determine the appropriate format based on device size
+    String formatString;
+    if (UIHelper.isSmallDevice(context) && isFirstDayOfMonth) {
+      // Small devices: Use more compact format for first day of month (e.g., "1/15" for January 15)
+      formatString = 'M/d';
+    } else if (isFirstDayOfMonth) {
+      // Regular devices: Use the format from settings for first day of month
+      formatString = configuration.firstDayOfMonthFormat;
+    } else {
+      // Regular day format for all devices
+      formatString = configuration.monthDaysFormat;
+    }
 
     return CalendarTimeSlot(
       date: date,
@@ -183,9 +193,18 @@ class MonthView extends BaseCalendarView {
         : calendarTheme?.getGridLineColor(context) ??
             Colors.grey.withOpacity(0.3);
 
-    final String formatString = isFirstTrailingDay
-        ? configuration.firstTrailingDaysFormat
-        : configuration.monthDaysFormat;
+    // Determine the appropriate format based on device size
+    String formatString;
+    if (UIHelper.isSmallDevice(context) && isFirstTrailingDay) {
+      // Small devices: Use more compact format for first trailing day (e.g., "2/1" for February 1)
+      formatString = 'M/d';
+    } else if (isFirstTrailingDay) {
+      // Regular devices: Use the format from settings for first trailing day
+      formatString = configuration.firstTrailingDaysFormat;
+    } else {
+      // Regular day format for all devices
+      formatString = configuration.monthDaysFormat;
+    }
 
     return CalendarTimeSlot(
       date: date,
@@ -216,7 +235,21 @@ class MonthView extends BaseCalendarView {
   ) {
     final controller = JazmineCalendar.of(context).controller;
     final locale = CalendarLocalization.of(context).locale.languageCode;
-    final weekdayFormat = DateFormat(configuration.weekdayFormat, locale);
+
+    // Determine the appropriate weekday format based on device size
+    String formatPattern;
+    if (UIHelper.isSmallDevice(context)) {
+      // Small devices: Show only first letter (e.g., "M" for Monday)
+      formatPattern = 'EEEEE';
+    } else if (UIHelper.isMediumDevice(context)) {
+      // Medium devices: Show abbreviation (e.g., "Mon")
+      formatPattern = 'E';
+    } else {
+      // Large devices: Use the format from settings
+      formatPattern = configuration.weekdayFormat;
+    }
+
+    final weekdayFormat = DateFormat(formatPattern, locale);
     final now = DateTime.now();
     final theme = Theme.of(context);
     final calendarTheme = theme.extension<JazmineCalendarTheme>();
