@@ -7,4 +7,5 @@ abstract class CalendarPersistence {
   Future<void> addEvent(CalendarEvent event);
   Future<void> updateEvent(CalendarEvent event);
   Future<void> deleteEvent(CalendarEvent event);
+  Future<List<CalendarEvent>> getEventsInRange(DateTime start, DateTime end);
 }

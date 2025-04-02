@@ -37,4 +37,15 @@ class InMemoryPersistence implements CalendarPersistence {
     _events.clear();
     _events.addAll(events);
   }
+
+  @override
+  Future<List<CalendarEvent>> getEventsInRange(
+      DateTime start, DateTime end) async {
+    return _events.where((event) {
+      // Check if the event overlaps with the given range
+      return (event.start.isBefore(end) && event.end.isAfter(start)) ||
+          (event.start.isAtSameMomentAs(start)) ||
+          (event.end.isAtSameMomentAs(end));
+    }).toList();
+  }
 }

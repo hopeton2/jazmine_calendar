@@ -47,19 +47,26 @@ class BaseDayView extends BaseCalendarView {
               borderColor: Colors.grey.withOpacity(0.2),
             ),
             Expanded(
-              child: CalendarGrid(
-                key: const PageStorageKey('day_view_scroll'),
-                dates: dates,
-                controller: controller,
-                headerDateFormat: DateFormat('HH:mm'),
-                numberOfColumns: uniqueDays.length,
-                numberOfRows:
-                    const Duration(hours: 24).inMinutes ~/ interval.inMinutes,
-                slotDuration: const Duration(days: 1),
-                intervalDuration: interval,
-                orientation: Axis.vertical,
-                rowHeaderWidth: configuration.timebarWidth,
-                headerBuilder: _buildTimebarHeader,
+              child: Stack( // Restore inner Stack
+                children: [
+                  CalendarGrid(
+                    key: const PageStorageKey('day_view_scroll'), // Restore key
+                    dates: dates,
+                    controller: controller,
+                    headerDateFormat: DateFormat('HH:mm'),
+                    numberOfColumns: uniqueDays.length,
+                    numberOfRows: const Duration(hours: 24).inMinutes ~/
+                        interval.inMinutes,
+                    slotDuration: const Duration(days: 1),
+                    intervalDuration: interval,
+                    orientation: Axis.vertical,
+                    rowHeaderWidth: configuration.timebarWidth,
+                    // Use default columnHeaderHeight from CalendarGrid
+                    headerBuilder: _buildTimebarHeader,
+                    showEvents: true, // Re-enable events in CalendarGrid
+                  ),
+                  // EventLayoutSurface will be re-added inside CalendarGrid
+                ],
               ),
             ),
           ],
@@ -118,19 +125,21 @@ class BaseDayView extends BaseCalendarView {
 
     // Format the time based on whether it's on the hour
     final String timeText;
-    if (time.minute == 0) {
+    final localTime = time.toLocal(); // Convert UTC time to local
+
+    if (localTime.minute == 0) {
       if (is24HourFormat) {
         // 24-hour format
-        timeText =
-            DateFormat('HH', localization.locale.languageCode).format(time);
+        timeText = DateFormat('HH', localization.locale.languageCode)
+            .format(localTime);
       } else {
         // 12-hour format with AM/PM
-        timeText =
-            DateFormat('h a', localization.locale.languageCode).format(time);
+        timeText = DateFormat('h a', localization.locale.languageCode)
+            .format(localTime);
       }
     } else {
       // Just show minutes for non-hour marks
-      timeText = ':${time.minute.toString().padLeft(2, '0')}';
+      timeText = ':${localTime.minute.toString().padLeft(2, '0')}';
     }
 
     return Container(

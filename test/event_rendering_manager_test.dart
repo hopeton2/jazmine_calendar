@@ -1,0 +1,217 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_rendering_manager.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/models/calendar_event.dart';
+
+void main() {
+  group('EventRenderingManager', () {
+    setUp(() {
+      // Reset the broker before each test
+      GridLayoutBroker().reset();
+    });
+
+    test('should throw error if broker is not ready', () {
+      final manager = EventRenderingManager();
+
+      expect(
+        () => manager.processEvents(
+          events: [],
+          minEventSize: 20,
+          minSecondarySize: 20,
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('should process events correctly', () {
+      final broker = GridLayoutBroker();
+      final now = DateTime(2023, 1, 1);
+
+      // Set up the broker
+      broker.updateGridLayout(
+        viewStart: now,
+        viewEnd: now.add(const Duration(days: 1)),
+        origin: const Offset(60, 40),
+        availableSpace: const Size(300, 600),
+        orientation: Axis.vertical,
+        divisions: 1,
+        cellWidth: 300,
+        cellHeight: 25,
+      );
+
+      final events = [
+        CalendarEvent(
+          id: '1',
+          title: 'Morning Event',
+          start: now.add(const Duration(hours: 9)),
+          end: now.add(const Duration(hours: 10)),
+        ),
+        CalendarEvent(
+          id: '2',
+          title: 'Afternoon Event',
+          start: now.add(const Duration(hours: 13)),
+          end: now.add(const Duration(hours: 15)),
+        ),
+      ];
+
+      final manager = EventRenderingManager();
+      final layoutInfos = manager.processEvents(
+        events: events,
+        minEventSize: 20,
+        minSecondarySize: 20,
+      );
+
+      expect(layoutInfos.length, 2);
+
+      // Find events by ID
+      final event1 = layoutInfos.firstWhere((e) => e.event.id == '1');
+      final event2 = layoutInfos.firstWhere((e) => e.event.id == '2');
+
+      // Check primary dimensions (from measurement)
+      expect(event1.orientation, Axis.vertical);
+      expect(event1.division, 0);
+      expect(event1.start, closeTo(40 + (9 / 24) * 600, 1));
+      expect(event1.primarySize, closeTo((1 / 24) * 600, 1));
+
+      expect(event2.orientation, Axis.vertical);
+      expect(event2.division, 0);
+      expect(event2.start, closeTo(40 + (13 / 24) * 600, 1));
+      expect(event2.primarySize, closeTo((2 / 24) * 600, 1));
+
+      // Check secondary dimensions (from packing)
+      expect(event1.secondaryStart, 0);
+      expect(event1.secondarySize, 1.0);
+
+      expect(event2.secondaryStart, 0);
+      expect(event2.secondarySize, 1.0);
+    });
+
+    test('should use cache for repeated calls with same parameters', () {
+      final broker = GridLayoutBroker();
+      final now = DateTime(2023, 1, 1);
+
+      // Set up the broker
+      broker.updateGridLayout(
+        viewStart: now,
+        viewEnd: now.add(const Duration(days: 1)),
+        origin: const Offset(60, 40),
+        availableSpace: const Size(300, 600),
+        orientation: Axis.vertical,
+        divisions: 1,
+        cellWidth: 300,
+        cellHeight: 25,
+      );
+
+      final events = [
+        CalendarEvent(
+          id: '1',
+          title: 'Test Event',
+          start: now.add(const Duration(hours: 9)),
+          end: now.add(const Duration(hours: 10)),
+        ),
+      ];
+
+      final manager = EventRenderingManager();
+
+      // First call should process events
+      final firstResult = manager.processEvents(
+        events: events,
+        minEventSize: 20,
+        minSecondarySize: 20,
+      );
+
+      // Modify the result to check if the second call returns the same instance
+      firstResult[0].secondaryStart = 0.5;
+
+      // Second call with same parameters should return cached result
+      final secondResult = manager.processEvents(
+        events: events,
+        minEventSize: 20,
+        minSecondarySize: 20,
+      );
+
+      // Should be the same instance
+      expect(identical(firstResult, secondResult), true);
+      expect(secondResult[0].secondaryStart, 0.5);
+
+      // Clear cache
+      manager.clearCache();
+
+      // Third call should process events again
+      final thirdResult = manager.processEvents(
+        events: events,
+        minEventSize: 20,
+        minSecondarySize: 20,
+      );
+
+      // Should be a different instance
+      expect(identical(firstResult, thirdResult), false);
+      expect(thirdResult[0].secondaryStart, 0);
+    });
+
+    test('should handle overlapping events', () {
+      final broker = GridLayoutBroker();
+      final now = DateTime(2023, 1, 1);
+
+      // Set up the broker
+      broker.updateGridLayout(
+        viewStart: now,
+        viewEnd: now.add(const Duration(days: 1)),
+        origin: const Offset(60, 40),
+        availableSpace: const Size(300, 600),
+        orientation: Axis.vertical,
+        divisions: 1,
+        cellWidth: 300,
+        cellHeight: 25,
+      );
+
+      final events = [
+        CalendarEvent(
+          id: '1',
+          title: 'Event 1',
+          start: now.add(const Duration(hours: 9)),
+          end: now.add(const Duration(hours: 11)),
+        ),
+        CalendarEvent(
+          id: '2',
+          title: 'Event 2',
+          start: now.add(const Duration(hours: 10)),
+          end: now.add(const Duration(hours: 12)),
+        ),
+        CalendarEvent(
+          id: '3',
+          title: 'Event 3',
+          start: now.add(const Duration(hours: 13)),
+          end: now.add(const Duration(hours: 15)),
+        ),
+      ];
+
+      final manager = EventRenderingManager();
+      final layoutInfos = manager.processEvents(
+        events: events,
+        minEventSize: 20,
+        minSecondarySize: 20,
+      );
+
+      expect(layoutInfos.length, 3);
+
+      // Find events by ID
+      final event1 = layoutInfos.firstWhere((e) => e.event.id == '1');
+      final event2 = layoutInfos.firstWhere((e) => e.event.id == '2');
+      final event3 = layoutInfos.firstWhere((e) => e.event.id == '3');
+
+      // Event 1 and Event 2 overlap, so they should be in different lanes
+      expect(event1.secondaryStart, 0);
+      expect(event1.secondarySize, 0.5);
+
+      expect(event2.secondaryStart, 0.5);
+      expect(event2.secondarySize, 0.5);
+
+      // Event 3 doesn't overlap with others, but the packing algorithm
+      // might still assign it a lane size based on the total number of lanes
+      expect(event3.secondaryStart, 0);
+      expect(event3.secondarySize, 0.5);
+    });
+  });
+}

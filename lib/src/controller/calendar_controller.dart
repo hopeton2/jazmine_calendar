@@ -11,10 +11,16 @@ import 'package:jazmine_calendar/src/services/time_service.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
 
 typedef EventCallback = Future<void> Function(CalendarEvent event);
+typedef EventPositionCallback = Future<void> Function(
+    CalendarEvent event, Offset position);
 typedef EventTimeCallback = Future<void> Function(
     CalendarEvent event, DateTime newStart, DateTime newEnd);
 
 class CalendarController extends ChangeNotifier {
+  /// Flag to indicate if events have changed
+  bool _eventsChanged = false;
+  bool get eventsChanged => _eventsChanged;
+
   final NavigationService _navigationService;
   final TimeService _timeService;
   Timer? _timer;
@@ -24,6 +30,9 @@ class CalendarController extends ChangeNotifier {
   final bool _scrollToCurrentTimeOnLoad;
   bool _animateTimeScroll; // Changed to non-final to allow modification
   EventCallback? _onEventCreated; // Changed to non-final to allow modification
+  EventCallback? _onEventTap; // Callback for event tap
+  EventCallback? _onEventDoubleTap; // Callback for event double tap
+  EventPositionCallback? _onEventLongPress; // Callback for event long press
   EventTimeCallback?
       _onEventRescheduled; // Changed to non-final to allow modification
   EventTimeCallback?
@@ -85,6 +94,9 @@ class CalendarController extends ChangeNotifier {
     bool scrollToCurrentTimeOnLoad = true,
     bool animateTimeScroll = true,
     EventCallback? onEventCreated,
+    EventCallback? onEventTap,
+    EventCallback? onEventDoubleTap,
+    EventPositionCallback? onEventLongPress,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
@@ -103,6 +115,9 @@ class CalendarController extends ChangeNotifier {
       scrollToCurrentTimeOnLoad: scrollToCurrentTimeOnLoad,
       animateTimeScroll: animateTimeScroll,
       onEventCreated: onEventCreated,
+      onEventTap: onEventTap,
+      onEventDoubleTap: onEventDoubleTap,
+      onEventLongPress: onEventLongPress,
       onEventRescheduled: onEventRescheduled,
       onEventResized: onEventResized,
       interval: interval,
@@ -119,6 +134,9 @@ class CalendarController extends ChangeNotifier {
     bool scrollToCurrentTimeOnLoad = true,
     bool animateTimeScroll = true,
     EventCallback? onEventCreated,
+    EventCallback? onEventTap,
+    EventCallback? onEventDoubleTap,
+    EventPositionCallback? onEventLongPress,
     EventTimeCallback? onEventRescheduled,
     EventTimeCallback? onEventResized,
     Duration interval = const Duration(minutes: 30),
@@ -132,6 +150,9 @@ class CalendarController extends ChangeNotifier {
         _scrollToCurrentTimeOnLoad = scrollToCurrentTimeOnLoad,
         _animateTimeScroll = animateTimeScroll,
         _onEventCreated = onEventCreated,
+        _onEventTap = onEventTap,
+        _onEventDoubleTap = onEventDoubleTap,
+        _onEventLongPress = onEventLongPress,
         _onEventRescheduled = onEventRescheduled,
         _onEventResized = onEventResized,
         _persistence = persistence ?? InMemoryPersistence() {
@@ -174,6 +195,9 @@ class CalendarController extends ChangeNotifier {
   List<String> get visibleTimeZones => List.unmodifiable(_visibleTimeZones);
   bool get showFloatingActionButton => _showFloatingActionButton;
   EventCallback? get onEventCreated => _onEventCreated;
+  EventCallback? get onEventTap => _onEventTap;
+  EventCallback? get onEventDoubleTap => _onEventDoubleTap;
+  EventPositionCallback? get onEventLongPress => _onEventLongPress;
   EventTimeCallback? get onEventRescheduled => _onEventRescheduled;
   EventTimeCallback? get onEventResized => _onEventResized;
   int? get targetHour => _targetHour;
@@ -209,6 +233,18 @@ class CalendarController extends ChangeNotifier {
 
   void setOnEventCreated(EventCallback? callback) {
     _onEventCreated = callback;
+  }
+
+  void setOnEventTap(EventCallback? callback) {
+    _onEventTap = callback;
+  }
+
+  void setOnEventDoubleTap(EventCallback? callback) {
+    _onEventDoubleTap = callback;
+  }
+
+  void setOnEventLongPress(EventPositionCallback? callback) {
+    _onEventLongPress = callback;
   }
 
   void setOnEventRescheduled(EventTimeCallback? callback) {
@@ -304,12 +340,16 @@ class CalendarController extends ChangeNotifier {
       _isLoading = true;
       await _persistence.addEvent(event);
       _cachedEvents = null;
+      _eventsChanged = true;
 
       if (_onEventCreated != null) {
         await _onEventCreated!(event);
       }
       _isLoading = false;
     });
+
+    notifyListeners();
+    _eventsChanged = false;
   }
 
   Future<void> updateEvent(CalendarEvent event) async {
@@ -317,8 +357,11 @@ class CalendarController extends ChangeNotifier {
       _isLoading = true;
       await _persistence.updateEvent(event);
       _cachedEvents = null;
+      _eventsChanged = true;
       _isLoading = false;
     });
+    notifyListeners();
+    _eventsChanged = false;
   }
 
   Future<void> deleteEvent(CalendarEvent event) async {
@@ -430,6 +473,16 @@ class CalendarController extends ChangeNotifier {
   );
 
   // Expose unmodifiable start times list
+
+  /// Get events for a specific date range
+  Future<List<CalendarEvent>> getEventsForDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final events = await _persistence.getEventsInRange(start, end);
+    return events;
+  }
+
   List<TimeOfDay> get defaultStartTimes => List.unmodifiable(_startTimes);
 
   // Get start time for a specific day

@@ -103,4 +103,21 @@ class SharedPreferencesPersistence implements CalendarPersistence {
   void invalidateCache() {
     _cachedEvents = null;
   }
+
+  @override
+  Future<List<CalendarEvent>> getEventsInRange(
+      DateTime start, DateTime end) async {
+    try {
+      final events = await loadEvents();
+      return events.where((event) {
+        // Check if the event overlaps with the given range
+        return (event.start.isBefore(end) && event.end.isAfter(start)) ||
+            (event.start.isAtSameMomentAs(start)) ||
+            (event.end.isAtSameMomentAs(end));
+      }).toList();
+    } catch (e) {
+      print('Error getting events in range: $e');
+      return [];
+    }
+  }
 }

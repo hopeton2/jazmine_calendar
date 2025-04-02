@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_layout_surface.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/utils/typedefs.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 import 'package:jazmine_calendar/src/views/widgets/current_time_indicator.dart';
 import 'package:jazmine_calendar/src/theme/jazmine_calendar_theme.dart';
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Added import
 
 class _CalendarGridItem extends StatefulWidget {
   final int index;
@@ -76,6 +80,7 @@ class CalendarGrid extends StatefulWidget {
   final bool showCurrentTimeIndicator;
   final double gridLineWidth;
   final bool isAllDay;
+  final bool showEvents;
   final List<DateTime> dates;
 
   const CalendarGrid({
@@ -95,6 +100,7 @@ class CalendarGrid extends StatefulWidget {
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
     this.isAllDay = false,
+    this.showEvents = true,
   });
 
   get startDate => dates.first;
@@ -119,29 +125,21 @@ class CalendarGridState extends State<CalendarGrid> {
     super.initState();
     _scrollController = ScrollController();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Only apply initial scroll if it hasn't been done for day-based views
-      if (widget.controller.currentView != CalendarViewType.month &&
-          !_viewService
-              .hasInitialScrollBeenApplied(widget.controller.currentView)) {
-        if (widget.controller.scrollToCurrentTimeOnLoad) {
-          _scrollToTime(DateTime.now(),
-              animate: widget.controller.animateTimeScroll);
-        } else {
-          final defaultTime =
-              widget.controller.getStartTimeForDay(widget.startDate);
-          final scrollTime = DateTime(
-            widget.startDate.year,
-            widget.startDate.month,
-            widget.startDate.day,
-            defaultTime.hour,
-            defaultTime.minute,
-          );
-          _scrollToTime(scrollTime,
-              animate: widget.controller.animateTimeScroll);
-        }
-      }
-    });
+    // Initial scroll logic moved to build method after layout is known
+  }
+
+  @override
+  void didUpdateWidget(CalendarGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Update broker if relevant properties changed
+    // Broker update logic moved to build method's LayoutBuilder
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Broker update logic moved to build method's LayoutBuilder
   }
 
   @override
@@ -149,6 +147,42 @@ class CalendarGridState extends State<CalendarGrid> {
     _viewService.markInitialScrollApplied(widget.controller.currentView);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _updateGridLayoutBroker(BoxConstraints constraints, Offset origin,
+      double slotWidth, double slotHeight) { // Add slotWidth, slotHeight params
+    // Use constraints provided by LayoutBuilder and calculated slot dimensions
+
+    // Calculate view start and end times
+    // Ensure viewStart and viewEnd are in UTC for consistent calculations
+    final viewStart = widget.dates.first.toUtc();
+    // Use dayEnds extension and convert to UTC
+    final viewEnd = widget.dates.last.dayEnds.toUtc();
+
+    // Calculate origin and available space
+    // Origin is the top-left corner of the actual grid area, offset by headers.
+    final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
+    // Available space is derived from constraints minus header dimensions.
+    final availableSpace = Size(constraints.maxWidth - widget.rowHeaderWidth,
+        constraints.maxHeight - widget.columnHeaderHeight);
+
+    // Use the passed slot dimensions (which account for min sizes) as the cell dimensions
+    final cellWidth = slotWidth;
+    final cellHeight = slotHeight;
+
+    // Update the broker
+    GridLayoutBroker().updateGridLayout(
+      viewStart: viewStart, // Now in UTC
+      viewEnd: viewEnd, // Now in UTC
+      origin: origin,
+      availableSpace: availableSpace,
+      orientation: widget.orientation,
+      divisions: widget.dates.length,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+    );
+    // Removed debug print
+    // Removed debug print
   }
 
   void _scrollToTime(DateTime time, {bool? animate}) {
@@ -180,22 +214,58 @@ class CalendarGridState extends State<CalendarGrid> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Calculate sizes needed for both broker and layout *first*
         final isVertical = widget.orientation == Axis.vertical;
         final totalWidth = constraints.maxWidth;
         final totalHeight = constraints.maxHeight;
-
         final availableWidth =
             isVertical ? totalWidth - widget.rowHeaderWidth : totalWidth;
         final availableHeight =
             isVertical ? totalHeight : totalHeight - widget.columnHeaderHeight;
-
+        // Calculate the actual slot dimensions used by the Sliver list
         final slotWidth =
             max(widget.minCellWidth, availableWidth / widget.numberOfColumns);
         final slotHeight =
             max(widget.minCellHeight, availableHeight / widget.numberOfRows);
 
+        // Calculate origin based on header sizes
+        final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
+
+        // Update the broker *before* building the rest of the UI, passing the actual slot dimensions
+        _updateGridLayoutBroker(constraints, origin, slotWidth, slotHeight);
+
+        // Perform initial scroll *after* layout is known and broker is updated
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              widget.controller.currentView != CalendarViewType.month &&
+              !_viewService
+                  .hasInitialScrollBeenApplied(widget.controller.currentView)) {
+            if (widget.controller.scrollToCurrentTimeOnLoad) {
+              _scrollToTime(DateTime.now(),
+                  animate: widget.controller.animateTimeScroll);
+            } else {
+              final defaultTime =
+                  widget.controller.getStartTimeForDay(widget.startDate);
+              final scrollTime = DateTime(
+                widget.startDate.year,
+                widget.startDate.month,
+                widget.startDate.day,
+                defaultTime.hour,
+                defaultTime.minute,
+              );
+              _scrollToTime(scrollTime,
+                  animate: widget.controller.animateTimeScroll);
+            }
+            // Mark scroll as applied *after* attempting it
+            _viewService
+                .markInitialScrollApplied(widget.controller.currentView);
+          }
+        });
+        // Sizes already calculated above
+
         final itemCount =
             isVertical ? widget.numberOfRows : widget.numberOfColumns;
+        // Use the pre-calculated slot dimensions for the itemExtent
         final itemExtent = isVertical ? slotHeight : slotWidth;
 
         return Stack(
@@ -251,6 +321,40 @@ class CalendarGridState extends State<CalendarGrid> {
                 intervalPixels: isVertical ? slotHeight : slotWidth,
                 slotWidth: slotWidth,
               ),
+
+            // Add direct event rendering
+            // Position the EventLayoutSurface correctly within the Stack,
+            // offset by the headers and sized to the available content area.
+            // Add direct event rendering
+            // Position the EventLayoutSurface correctly within the Stack,
+            // offset by the headers and sized to the available content area.
+            // Position the EventLayoutSurface correctly within the Stack,
+            // offset by the headers and sized to the available content area.
+            if (widget.showEvents)
+              Positioned(
+                left: origin.dx, // Use calculated origin.dx
+                top: 0, // Position surface at the top of the Stack
+                width: availableWidth, // Use calculated available width
+                height: availableHeight, // Use calculated available height
+                child: RepaintBoundary(
+                  child: ClipRect( // Clip to the bounds of the available space
+                    child: EventLayoutSurface(
+                      controller: widget.controller,
+                      scrollController: _scrollController,
+                      renderStyle: EventRenderStyle(
+                        defaultEventColor: Theme.of(context).primaryColor,
+                        titleStyle:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ) ??
+                                const TextStyle(color: Colors.white),
+                      ),
+                      // Background color added inside EventLayoutSurface's build method
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -261,9 +365,10 @@ class CalendarGridState extends State<CalendarGrid> {
       int index, bool isVertical, double slotWidth, double slotHeight) {
     final cellsOfHeaderCount =
         isVertical ? widget.numberOfColumns : widget.numberOfRows;
-    final headerDate = widget.intervalDuration.isZero
-        ? widget.startDate.add(widget.slotDuration * index * cellsOfHeaderCount)
-        : widget.startDate.add(widget.intervalDuration * index);
+    // Calculate headerDate based on the UTC viewStart from the broker
+    final headerDate = GridLayoutBroker()
+        .viewStart
+        .add(widget.intervalDuration * index); // Access singleton
 
     if (widget.headerBuilder != null) {
       return widget.headerBuilder!(
@@ -299,7 +404,8 @@ class CalendarGridState extends State<CalendarGrid> {
         ),
       ),
       child: Text(
-        widget.headerDateFormat.format(headerDate),
+        // Convert headerDate (UTC) to local time before formatting for display
+        widget.headerDateFormat.format(headerDate.toLocal()),
         style: calendarTheme?.getTimeTextStyle(context),
       ),
     );
@@ -323,7 +429,7 @@ class CalendarGridState extends State<CalendarGrid> {
 
     return List.generate(slotCount, (slotIndex) {
       int dateIndex = dateIndexMultiplier * slotCount + slotIndex;
-      DateTime slotDate = widget.dates[slotCount == 1 ? index :dateIndex];
+      DateTime slotDate = widget.dates[slotCount == 1 ? index : dateIndex];
 
       // Use a SizedBox with Expanded to ensure proper sizing in both orientations
       return Expanded(

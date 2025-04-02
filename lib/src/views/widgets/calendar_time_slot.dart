@@ -81,11 +81,11 @@ class CalendarTimeSlot extends StatelessWidget {
           border: Border(
             right: BorderSide(
               color: gridLineColor,
-              width: 0.5,
+              width: 1.0, // Use full pixel border
             ),
             bottom: BorderSide(
               color: gridLineColor,
-              width: 0.5,
+              width: 1.0, // Use full pixel border
             ),
           ),
         ),

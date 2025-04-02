@@ -43,55 +43,24 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _lastAction = '';
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      body: Column(
-        children: [
-          if (_lastAction.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: colorScheme.surfaceContainerHighest,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _lastAction,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _lastAction = ''),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: FutureBuilder<CalendarController>(
-              future: CalendarController.create(
-                // Pass the locale to the controller to set the first day of week
-                locale: Localizations.localeOf(context),
-              ),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                return JazmineCalendar(
-                  controller: snapshot.data,
-                  showNavigationBar: true,
-                  showViewSelector: true,
-                  navigationBarStyle: NavigationBarStyle.compact,
-                );
-              },
-            ),
-          ),
-        ],
+      body: JazmineCalendar(
+        showNavigationBar: true,
+        showViewSelector: true,
+        navigationBarStyle: NavigationBarStyle.compact,
+        controller: CalendarController(
+          initialView: CalendarViewType.day,
+          initialDate: DateTime.now(),
+          scrollToCurrentTimeOnLoad: false, // Disable auto-scrolling
+          interval: const Duration(minutes: 60),
+        ),
       ),
     );
   }
