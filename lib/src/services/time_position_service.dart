@@ -1,34 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 
 /// Service for calculating time positions in the calendar grid
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Import for dayStarts
 
 class TimePositionService {
   // Helper to get interval size in pixels
-  static double _getIntervalPixels(GridLayoutBroker broker) {
-    // CellHeight/Width already represent the size of a 60-minute interval in the broker setup
-    return broker.orientation == Axis.vertical
-        ? broker.cellHeight
-        : broker.cellWidth;
+  static double _getIntervalPixels(GridLayoutInfo gridInfo) {
+    // CellHeight/Width already represent the size of a 60-minute interval in the gridInfo setup
+    return gridInfo.orientation == Axis.vertical
+        ? gridInfo.cellHeight
+        : gridInfo.cellWidth;
   }
 
-  // Helper to get interval duration (assuming 60 mins based on broker cell setup)
+  // Helper to get interval duration (assuming 60 mins based on gridInfo cell setup)
   static const Duration _intervalDuration = Duration(minutes: 60);
 
   // Note: Old calculateTimePosition and calculateSizeForDuration methods are removed
-  // as they are replaced by the broker versions using the new interval logic.
+  // as they are replaced by the gridInfo versions using the new interval logic.
 
-  /// Calculate position using the GridLayoutBroker
-  /// Calculate position using the GridLayoutBroker based on intervals
+  /// Calculate position using the GridLayoutInfo based on intervals
   static double calculatePositionWithBroker({
     required DateTime time,
-    required GridLayoutBroker broker,
+    required GridLayoutInfo gridInfo, // Use gridInfo instance
     double? scrollOffset, // Keep scrollOffset for EventRenderer
   }) {
-    if (!broker.isReady) {
-      throw StateError('Grid layout information is not available');
-    }
+    // No isReady check needed as gridInfo instance implies readiness
 
     // Convert the event time (which is likely UTC) to local time
     final localTime = time.toLocal();
@@ -41,7 +38,7 @@ class TimePositionService {
     final clampedMinutes = minutesSinceMidnight;
 
     // Calculate position based on intervals
-    final intervalPixels = _getIntervalPixels(broker);
+    final intervalPixels = _getIntervalPixels(gridInfo);
     // Ensure we don't divide by zero if interval is zero
     final position = _intervalDuration.inMinutes == 0
         ? 0.0
@@ -56,15 +53,14 @@ class TimePositionService {
     return finalPosition;
   }
 
-  /// Calculate size using the GridLayoutBroker based on intervals
+  /// Calculate size using the GridLayoutInfo based on intervals
   static double calculateSizeWithBroker({
     required Duration duration,
-    required GridLayoutBroker broker,
+    required GridLayoutInfo gridInfo, // Use gridInfo instance
   }) {
-    if (!broker.isReady) {
-      throw StateError('Grid layout information is not available');
-    }
-    final intervalPixels = _getIntervalPixels(broker);
+    // No isReady check needed as gridInfo instance implies readiness
+
+    final intervalPixels = _getIntervalPixels(gridInfo);
     // Ensure we don't divide by zero if interval is zero
     final size = _intervalDuration.inMinutes == 0
         ? 0.0

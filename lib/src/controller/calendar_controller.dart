@@ -349,7 +349,7 @@ class CalendarController extends ChangeNotifier {
     });
 
     notifyListeners();
-    _eventsChanged = false;
+    _eventsChanged = false; // Reset flag after notification
   }
 
   Future<void> updateEvent(CalendarEvent event) async {
@@ -386,6 +386,27 @@ class CalendarController extends ChangeNotifier {
     } finally {
       _isLoading = false;
     }
+  }
+
+  /// Adds multiple events efficiently.
+  Future<void> addEvents(List<CalendarEvent> events) async {
+    await _batchUpdate(() async {
+      _isLoading = true;
+      for (final event in events) {
+        // Consider adding checks or specific logic per event if needed
+        await _persistence.addEvent(event);
+        if (_onEventCreated != null) {
+          // Note: Calling onEventCreated for each might be slow for large batches
+           await _onEventCreated!(event);
+        }
+      }
+      _cachedEvents = null; // Invalidate cache
+      _eventsChanged = true;
+      _isLoading = false;
+    });
+    // Single notification after batch update
+    notifyListeners();
+    _eventsChanged = false;
   }
 
   Future<void> clearEvents() async {

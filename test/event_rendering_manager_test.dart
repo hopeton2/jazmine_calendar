@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_rendering_manager.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
 
 void main() {
   group('EventRenderingManager', () {
     setUp(() {
-      // Reset the broker before each test
-      GridLayoutBroker().reset();
+      // Reset the gridInfo before each test
+      GridLayoutInfo().reset();
     });
 
-    test('should throw error if broker is not ready', () {
+    test('should throw error if gridInfo is not ready', () {
       final manager = EventRenderingManager();
 
+      final gridInfo =
+          GridLayoutInfo(); // Need a gridInfo, even if not updated
       expect(
         () => manager.processEvents(
           events: [],
           minEventSize: 20,
           minSecondarySize: 20,
+          gridInfo: gridInfo, // Pass gridInfo instance
         ),
         throwsStateError,
       );
     });
 
     test('should process events correctly', () {
-      final broker = GridLayoutBroker();
+      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
 
-      // Set up the broker
-      broker.updateGridLayout(
+      // Set up the gridInfo
+      gridInfo.updateGridLayout(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -60,6 +63,7 @@ void main() {
         events: events,
         minEventSize: 20,
         minSecondarySize: 20,
+        gridInfo: gridInfo, // Pass gridInfo instance
       );
 
       expect(layoutInfos.length, 2);
@@ -88,11 +92,11 @@ void main() {
     });
 
     test('should use cache for repeated calls with same parameters', () {
-      final broker = GridLayoutBroker();
+      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
 
-      // Set up the broker
-      broker.updateGridLayout(
+      // Set up the gridInfo
+      gridInfo.updateGridLayout(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -119,6 +123,7 @@ void main() {
         events: events,
         minEventSize: 20,
         minSecondarySize: 20,
+        gridInfo: gridInfo, // Pass gridInfo instance
       );
 
       // Modify the result to check if the second call returns the same instance
@@ -129,6 +134,7 @@ void main() {
         events: events,
         minEventSize: 20,
         minSecondarySize: 20,
+        gridInfo: gridInfo, // Pass gridInfo instance
       );
 
       // Should be the same instance
@@ -143,6 +149,7 @@ void main() {
         events: events,
         minEventSize: 20,
         minSecondarySize: 20,
+        gridInfo: gridInfo, // Pass gridInfo instance
       );
 
       // Should be a different instance
@@ -151,11 +158,11 @@ void main() {
     });
 
     test('should handle overlapping events', () {
-      final broker = GridLayoutBroker();
+      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
 
-      // Set up the broker
-      broker.updateGridLayout(
+      // Set up the gridInfo
+      gridInfo.updateGridLayout(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -192,6 +199,7 @@ void main() {
         events: events,
         minEventSize: 20,
         minSecondarySize: 20,
+        gridInfo: gridInfo, // Pass gridInfo instance
       );
 
       expect(layoutInfos.length, 3);

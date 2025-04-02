@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
 
 /// A widget that draws horizontal lines at specific positions

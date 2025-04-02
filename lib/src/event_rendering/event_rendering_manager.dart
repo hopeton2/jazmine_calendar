@@ -2,21 +2,19 @@ import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_service.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_packing_service.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart'; // Added import
 
 /// Manager for coordinating event layout and rendering
 class EventRenderingManager {
-  // Singleton pattern
-  static final EventRenderingManager _instance =
-      EventRenderingManager._internal();
-  factory EventRenderingManager() => _instance;
-  EventRenderingManager._internal();
+  // Removed Singleton pattern
+  EventRenderingManager(); // Public constructor
 
   // Services
   final EventLayoutService _layoutService = EventLayoutService();
   final EventPackingService _packingService = EventPackingService();
-  final GridLayoutBroker _broker = GridLayoutBroker();
+  // Removed singleton broker field reference
 
   // Cache for processed events
   final Map<String, List<EventLayoutInfo>> _processedEventsCache = {};
@@ -26,13 +24,13 @@ class EventRenderingManager {
     required List<CalendarEvent> events,
     required double minEventSize,
     required double minSecondarySize,
+    required GridLayoutInfo gridInfo, // Renamed class
   }) {
-    if (!_broker.isReady) {
-      throw StateError('Grid layout information is not available');
-    }
+    // No isReady check needed
 
     // Generate cache key
-    final cacheKey = _generateCacheKey(events, minEventSize, minSecondarySize);
+    final cacheKey = _generateCacheKey(events, minEventSize, minSecondarySize,
+        gridInfo); // Pass broker to cache key
 
     // Return cached results if available
     if (_processedEventsCache.containsKey(cacheKey)) {
@@ -47,14 +45,16 @@ class EventRenderingManager {
     // First pass: Measure events
     final layoutInfos = _layoutService.measureEvents(
       events: events,
-      broker: _broker,
+      gridInfo: gridInfo, // Pass the broker instance received as parameter
       minEventSize: minEventSize,
     );
 
     // Second pass: Pack events
+    // Pass a default style for now. TODO: Refactor if specific style needed here.
     final packedEvents = _packingService.packEvents(
       events: layoutInfos,
       minSecondarySize: minSecondarySize,
+      style: const EventRenderStyle(),
     );
 
     // Cache the results
@@ -73,14 +73,15 @@ class EventRenderingManager {
     List<CalendarEvent> events,
     double minEventSize,
     double minSecondarySize,
+    GridLayoutInfo broker, // Renamed class
   ) {
-    // Include broker state in the key
-    final brokerKey = '${_broker.viewStart.toIso8601String()}_'
-        '${_broker.viewEnd.toIso8601String()}_'
-        '${_broker.orientation}_'
-        '${_broker.divisions}_'
-        '${_broker.origin}_'
-        '${_broker.availableSpace}';
+    // Include broker state in the key using the passed instance
+    final brokerKey = '${broker.viewStart.toIso8601String()}_'
+        '${broker.viewEnd.toIso8601String()}_'
+        '${broker.orientation}_'
+        '${broker.divisions}_'
+        '${broker.origin}_'
+        '${broker.availableSpace}';
 
     // Include event IDs and start/end times in the key
     final eventKey = events
@@ -91,35 +92,31 @@ class EventRenderingManager {
     return '$brokerKey|$eventKey|$minEventSize|$minSecondarySize';
   }
 
-  /// Check if the broker is ready
-  bool get isBrokerReady => _broker.isReady;
-
-  /// Get the current broker state
-  GridLayoutBroker get broker => _broker;
+  // Removed broker related getters
 
   /// Fetch and process events from the controller
   Future<List<EventLayoutInfo>> fetchAndProcessEvents({
     required CalendarController controller,
     required double minEventSize,
     required double minSecondarySize,
+    required GridLayoutInfo broker, // Renamed class
   }) async {
     // TEMPORARY DEBUG - Remove after debugging
     print(
         'DEBUG: fetchAndProcessEvents called at ${DateTime.now().toIso8601String()} - Stack trace:\n${StackTrace.current}');
-    if (!_broker.isReady) {
-      return [];
-    }
+    // No isReady check needed
 
     try {
-      // Get events for the visible range
+      // Get events for the visible range using the passed broker
       final events = await controller.getEventsForDateRange(
-          _broker.viewStart, _broker.viewEnd);
+          broker.viewStart, broker.viewEnd);
 
       // Process events
       final packedEvents = processEvents(
         events: events,
         minEventSize: minEventSize,
         minSecondarySize: minSecondarySize,
+        gridInfo: broker, // Pass broker instance
       );
 
       return packedEvents;

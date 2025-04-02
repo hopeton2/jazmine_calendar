@@ -32,10 +32,15 @@ class EventLayoutInfo {
   /// Height of a single cell/division (needed for scaling secondary axis)
   final double cellHeight;
 
-  /// The available space for the grid content (excluding headers)
-  final Size availableSpace;
+  // Removed availableSpace field
 
   // Removed origin field
+
+  /// The initial lane index assigned during packing (0-based). Internal use for packing.
+  int laneIndex = 0;
+
+  /// The number of columns this event spans. Calculated during packing.
+  int columnSpan = 1;
 
   /// Convenience getter for the top position
   double get top {
@@ -43,20 +48,24 @@ class EventLayoutInfo {
     // For horizontal, primary axis is X (start), secondary is Y.
     return orientation == Axis.vertical
         ? start
-        : (secondaryStart * availableSpace.height); // Scale relative secondaryStart by available height
+        : (secondaryStart * cellHeight); // Scale relative secondaryStart by cell height
   }
 
   /// Convenience getter for the left position
   double get left {
+    // For vertical: Offset by division, then add packed position within division
+    // For horizontal: Use the primary axis start position
     return orientation == Axis.vertical
-        ? (secondaryStart * availableSpace.width) // Scale relative secondaryStart by available width
-        : start; // Absolute position from TimePositionService
+        ? (division * cellWidth) + (secondaryStart * cellWidth)
+        : start;
   }
 
   /// Convenience getter for the width
   double get width {
+     // For vertical: Packed size relative to cell width
+     // For horizontal: Use the primary axis size
      return orientation == Axis.vertical
-        ? (secondarySize * availableSpace.width) // Scale by available width
+        ? (secondarySize * cellWidth)
         : primarySize;
   }
 
@@ -64,7 +73,7 @@ class EventLayoutInfo {
   double get height {
     return orientation == Axis.vertical
         ? primarySize
-        : (secondarySize * availableSpace.height); // Scale by available height
+        : (secondarySize * cellHeight); // Scale relative secondarySize by cell height
   }
 
   /// The final rectangle for rendering
@@ -80,7 +89,7 @@ class EventLayoutInfo {
     required this.cellWidth,
     required this.cellHeight,
     // Removed origin parameter
-    required this.availableSpace, // Added availableSpace parameter
+    // Removed availableSpace parameter
   });
 
   /// Checks if this event overlaps with another in the primary dimension
@@ -97,6 +106,6 @@ class EventLayoutInfo {
 
   @override
   String toString() {
-    return 'EventLayoutInfo(event: ${event.title}, division: $division, available: $availableSpace, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight)';
+    return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight)';
   }
 }

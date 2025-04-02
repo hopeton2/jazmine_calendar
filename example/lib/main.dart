@@ -1,6 +1,8 @@
+import 'dart:math'; // Import for Random
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Import for dayStarts/dayEnds
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,9 +45,77 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late CalendarController _calendarController; // Store controller instance
+
   @override
   void initState() {
     super.initState();
+    _generateAndAddEvents();
+  }
+
+  void _generateAndAddEvents() {
+     // Initialize controller
+     _calendarController = CalendarController(
+        initialView: CalendarViewType.day,
+        initialDate: DateTime.now(),
+        scrollToCurrentTimeOnLoad: false,
+        interval: const Duration(minutes: 60),
+      );
+
+    // Generate random events (similar logic from ViewModel)
+    final random = Random();
+    final List<CalendarEvent> mockEvents = [];
+    // Generate events around the initial date for better visibility
+    // Use DateTime.now() as the base for generating event dates
+    final initialDate = DateTime.now().toUtc().dayStarts;
+    final int eventCount = 15 + random.nextInt(16); // 15 to 30 events
+
+    const List<Color> eventColors = [
+      Colors.red, Colors.blue, Colors.green, Colors.orange, Colors.purple,
+      Colors.teal, Colors.pink, Colors.indigo, Colors.amber, Colors.cyan,
+    ];
+
+    for (int i = 0; i < eventCount; i++) {
+      // Generate events within a +/- 3 day range of the initial date
+      final dayOffset = random.nextInt(7) - 3; // -3 to +3 days
+      final eventDate = initialDate.add(Duration(days: dayOffset));
+
+      final startHour = random.nextInt(24);
+      final startMinute = random.nextInt(4) * 15;
+      final durationMinutes = (2 + random.nextInt(191)) * 15; // 30m to 48h
+
+      DateTime startTime = eventDate.add(Duration(hours: startHour, minutes: startMinute));
+      DateTime endTime = startTime.add(Duration(minutes: durationMinutes));
+      bool isAllDayEvent = random.nextDouble() < 0.15;
+
+      if (isAllDayEvent) {
+        startTime = startTime.dayStarts;
+        int allDayDurationDays = 1 + random.nextInt(2);
+        endTime = startTime.add(Duration(days: allDayDurationDays));
+      } else {
+        // Clamp timed events to avoid excessive multi-day rendering for this example
+        if (endTime.difference(startTime).inDays > 1) {
+           endTime = startTime.dayEnds; // Limit timed events to max 1 day for simplicity here
+        }
+         // Ensure minimum duration
+         if (endTime.isBefore(startTime.add(const Duration(minutes: 15)))) {
+             endTime = startTime.add(const Duration(minutes: 15));
+         }
+      }
+
+      mockEvents.add(CalendarEvent(
+        id: 'mock_$i',
+        title: 'Event ${i + 1}${isAllDayEvent ? " (All Day)" : ""}',
+        start: startTime,
+        end: endTime,
+        isAllDay: isAllDayEvent,
+        color: eventColors[random.nextInt(eventColors.length)],
+      ));
+    }
+
+    // Add generated events to the controller
+    // Assuming an addEvents method exists on CalendarController
+    _calendarController.addEvents(mockEvents);
   }
 
   @override
@@ -55,12 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
         showNavigationBar: true,
         showViewSelector: true,
         navigationBarStyle: NavigationBarStyle.compact,
-        controller: CalendarController(
-          initialView: CalendarViewType.day,
-          initialDate: DateTime.now(),
-          scrollToCurrentTimeOnLoad: false, // Disable auto-scrolling
-          interval: const Duration(minutes: 60),
-        ),
+        controller: _calendarController, // Use the initialized controller
       ),
     );
   }

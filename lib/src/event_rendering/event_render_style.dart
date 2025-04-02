@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart'; // Import enums
 
 /// Style configuration for event rendering
 class EventRenderStyle {
@@ -39,6 +40,25 @@ class EventRenderStyle {
   /// Horizontal spacing between packed events in pixels.
   final double horizontalSpacing;
 
+  /// Margin on the right side of the event area in pixels.
+  final double rightMargin;
+
+  /// Whether to allow events to span multiple columns if space is available.
+  // final bool allowColumnSpanning; // Removed in favor of spanningMode
+
+  /// Defines the column spanning behavior for overlapping events.
+  final EventSpanningMode spanningMode;
+
+  /// Width of the indicator line shown on the left for vertical events.
+  final double verticalIndicatorWidth;
+
+  /// Color of the indicator line shown on the left for vertical events.
+  /// If null, the event's primary color is used.
+  final Color? verticalIndicatorColor;
+
+  /// Specific padding for all-day (horizontal) events. If null, uses `contentPadding`.
+  final EdgeInsets? allDayContentPadding;
+
   /// Creates a new EventRenderStyle
   const EventRenderStyle({
     this.cornerRadius = 4.0,
@@ -63,7 +83,12 @@ class EventRenderStyle {
     this.showLocation = true,
     this.resizeHandleSize = 6.0,
     this.resizeHandleColor = Colors.white,
-    this.horizontalSpacing = 3.0, // Default spacing
+    this.horizontalSpacing = 3.0,
+    this.rightMargin = 10.0,
+    this.spanningMode = EventSpanningMode.strict,
+    this.verticalIndicatorWidth = 2.0, // Default width
+    this.verticalIndicatorColor, // Default null (use event color)
+    this.allDayContentPadding = const EdgeInsets.only(top: 5, bottom: 20, left: 4, right: 4), // Specific padding
   });
 
   /// Get the color for an event
@@ -91,6 +116,11 @@ class EventRenderStyle {
     double? resizeHandleSize,
     Color? resizeHandleColor,
     double? horizontalSpacing,
+    double? rightMargin,
+    EventSpanningMode? spanningMode,
+    double? verticalIndicatorWidth,
+    Color? verticalIndicatorColor,
+    EdgeInsets? allDayContentPadding,
   }) {
     return EventRenderStyle(
       cornerRadius: cornerRadius ?? this.cornerRadius,
@@ -105,6 +135,11 @@ class EventRenderStyle {
       resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
       horizontalSpacing: horizontalSpacing ?? this.horizontalSpacing,
+      rightMargin: rightMargin ?? this.rightMargin,
+      spanningMode: spanningMode ?? this.spanningMode,
+      verticalIndicatorWidth: verticalIndicatorWidth ?? this.verticalIndicatorWidth,
+      verticalIndicatorColor: verticalIndicatorColor ?? this.verticalIndicatorColor,
+      allDayContentPadding: allDayContentPadding ?? this.allDayContentPadding,
     );
   }
 }

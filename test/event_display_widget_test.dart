@@ -4,12 +4,12 @@ import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_display_widget.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 
 void main() {
   group('EventDisplayWidget', () {
     late CalendarController controller;
-    late GridLayoutBroker broker;
+    late GridLayoutInfo broker;
 
     setUp(() {
       // Create controller
@@ -21,7 +21,7 @@ void main() {
       final now = DateTime(2023, 1, 1, 9, 0);
 
       // Set up broker
-      broker = GridLayoutBroker();
+      broker = GridLayoutInfo();
       broker.updateGridLayout(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
@@ -44,6 +44,7 @@ void main() {
               height: 800,
               child: EventDisplayWidget(
                 controller: controller,
+                broker: broker, // Pass the broker instance
               ),
             ),
           ),
@@ -80,6 +81,7 @@ void main() {
               child: EventDisplayWidget(
                 controller: controller,
                 renderStyle: customStyle,
+                broker: broker, // Pass the broker instance
               ),
             ),
           ),

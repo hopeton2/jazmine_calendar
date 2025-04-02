@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart'; // Renamed import
 
 void main() {
-  group('GridLayoutBroker', () {
+  group('GridLayoutInfo', () { // Renamed group
     test('should store and provide grid layout information', () {
-      final broker = GridLayoutBroker();
+      final broker = GridLayoutInfo(); // Renamed class
       broker.reset(); // Start with a clean state
 
-      // Initially not ready
-      expect(broker.isReady, false);
+      // Check initial null state via getters throwing StateError
+      expect(() => broker.viewStart, throwsStateError);
 
       // Update with test data
       final now = DateTime.now();
@@ -24,8 +24,8 @@ void main() {
         cellHeight: 20,
       );
 
-      // Now should be ready
-      expect(broker.isReady, true);
+      // Check that getters now work after update
+      expect(broker.viewStart, now); // Example check
 
       // Check stored values
       expect(broker.viewStart, now);
@@ -59,11 +59,11 @@ void main() {
 
   test('GridLayoutBroker can be manually updated', () {
     // Reset broker
-    final broker = GridLayoutBroker();
+    final broker = GridLayoutInfo(); // Renamed class
     broker.reset();
 
-    // Initially not ready
-    expect(broker.isReady, false);
+    // Check that getters throw again after reset
+    expect(() => broker.viewStart, throwsStateError);
 
     // Manually update the broker
     final now = DateTime.now();
@@ -79,7 +79,6 @@ void main() {
     );
 
     // Verify broker was updated
-    expect(broker.isReady, true);
     expect(broker.origin, const Offset(60, 40));
     expect(broker.orientation, Axis.vertical);
     expect(broker.divisions, 3);

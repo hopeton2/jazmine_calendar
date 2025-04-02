@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_service.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_packing_service.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart'; // Renamed import
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart'; // Added import
 
 void main() {
   group('EventLayoutInfo', () {
@@ -27,7 +28,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       layoutInfo.secondaryStart = 20;
@@ -59,7 +60,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       layoutInfo.secondaryStart = 20;
@@ -103,7 +104,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       final layout2 = EventLayoutInfo(
@@ -115,7 +116,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       final layout3 = EventLayoutInfo(
@@ -127,7 +128,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       final layout4 = EventLayoutInfo(
@@ -139,7 +140,7 @@ void main() {
         cellWidth: 100.0,
         cellHeight: 50.0,
         // Removed origin argument
-        availableSpace: Size(100, 100), // Added availableSpace
+        // Removed availableSpace parameter
       );
 
       expect(layout1.overlapsWith(layout2), true);
@@ -152,7 +153,7 @@ void main() {
 
   group('EventLayoutService', () {
     test('should measure events correctly for vertical orientation', () {
-      final broker = GridLayoutBroker();
+      final broker = GridLayoutInfo(); // Renamed class
       final now = DateTime(2023, 1, 1);
 
       broker.updateGridLayout(
@@ -184,7 +185,7 @@ void main() {
       final service = EventLayoutService();
       final layoutInfos = service.measureEvents(
         events: events,
-        broker: broker,
+        gridInfo: broker, // Pass broker instance
         minEventSize: 20,
       );
 
@@ -195,20 +196,32 @@ void main() {
       expect(layoutInfos[0].orientation, Axis.vertical);
       expect(layoutInfos[0].division, 0);
       // Expect position relative to content area (0,0) based on local time interval calculation
-      expect(layoutInfos[0].start, closeTo(225, 1)); // (9 * 60 mins / 60 min_interval) * 25 pixels_per_interval
-      expect(layoutInfos[0].primarySize, closeTo(25, 1)); // (60 min_duration / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[0].start,
+          closeTo(225,
+              1)); // (9 * 60 mins / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[0].primarySize,
+          closeTo(25,
+              1)); // (60 min_duration / 60 min_interval) * 25 pixels_per_interval
 
       // Afternoon event (1-3 PM)
       expect(layoutInfos[1].event.id, '2');
       expect(layoutInfos[1].orientation, Axis.vertical);
       expect(layoutInfos[1].division, 0);
       // Expect position relative to content area (0,0) based on local time interval calculation
-      expect(layoutInfos[1].start, closeTo(325, 1)); // (13 * 60 mins / 60 min_interval) * 25 pixels_per_interval
-      expect(layoutInfos[1].primarySize, closeTo(50, 1)); // (120 min_duration / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[1].start,
+          closeTo(325,
+              1)); // (13 * 60 mins / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[1].primarySize,
+          closeTo(50,
+              1)); // (120 min_duration / 60 min_interval) * 25 pixels_per_interval
     });
 
     test('should measure events correctly for horizontal orientation', () {
-      final broker = GridLayoutBroker();
+      final broker = GridLayoutInfo(); // Renamed class (Already updated)
       final now = DateTime(2023, 1, 1);
 
       broker.updateGridLayout(
@@ -240,7 +253,7 @@ void main() {
       final service = EventLayoutService();
       final layoutInfos = service.measureEvents(
         events: events,
-        broker: broker,
+        gridInfo: broker, // Pass broker instance
         minEventSize: 20,
       );
 
@@ -251,16 +264,28 @@ void main() {
       expect(layoutInfos[0].orientation, Axis.horizontal);
       expect(layoutInfos[0].division, 0);
       // Expect position relative to content area (0,0) based on local time interval calculation
-      expect(layoutInfos[0].start, closeTo(225, 1)); // (9 * 60 mins / 60 min_interval) * 25 pixels_per_interval
-      expect(layoutInfos[0].primarySize, closeTo(25, 1)); // (60 min_duration / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[0].start,
+          closeTo(225,
+              1)); // (9 * 60 mins / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[0].primarySize,
+          closeTo(25,
+              1)); // (60 min_duration / 60 min_interval) * 25 pixels_per_interval
 
       // Afternoon event (1-3 PM)
       expect(layoutInfos[1].event.id, '2');
       expect(layoutInfos[1].orientation, Axis.horizontal);
       expect(layoutInfos[1].division, 0);
       // Expect position relative to content area (0,0) based on local time interval calculation
-      expect(layoutInfos[1].start, closeTo(325, 1)); // (13 * 60 mins / 60 min_interval) * 25 pixels_per_interval
-      expect(layoutInfos[1].primarySize, closeTo(50, 1)); // (120 min_duration / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[1].start,
+          closeTo(325,
+              1)); // (13 * 60 mins / 60 min_interval) * 25 pixels_per_interval
+      expect(
+          layoutInfos[1].primarySize,
+          closeTo(50,
+              1)); // (120 min_duration / 60 min_interval) * 25 pixels_per_interval
     });
   });
 
@@ -297,7 +322,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[1],
@@ -308,7 +333,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[2],
@@ -319,7 +344,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
       ];
 
@@ -327,6 +352,7 @@ void main() {
       final packedEvents = service.packEvents(
         events: layoutInfos,
         minSecondarySize: 20,
+        style: const EventRenderStyle(), // Added default style
       );
 
       expect(packedEvents.length, 3);
@@ -380,7 +406,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[1],
@@ -391,7 +417,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[2],
@@ -402,7 +428,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
       ];
 
@@ -410,6 +436,7 @@ void main() {
       final packedEvents = service.packEvents(
         events: layoutInfos,
         minSecondarySize: 20,
+        style: const EventRenderStyle(), // Added default style
       );
 
       expect(packedEvents.length, 3);
@@ -463,7 +490,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[1],
@@ -474,7 +501,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
         EventLayoutInfo(
           event: events[2],
@@ -485,7 +512,7 @@ void main() {
           cellWidth: 100.0,
           cellHeight: 50.0,
           // Removed origin argument
-          availableSpace: Size(100, 100), // Added availableSpace
+          // Removed availableSpace parameter
         ),
       ];
 
@@ -493,6 +520,7 @@ void main() {
       final packedEvents = service.packEvents(
         events: layoutInfos,
         minSecondarySize: 20,
+        style: const EventRenderStyle(), // Added default style
       );
 
       expect(packedEvents.length, 3);

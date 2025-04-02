@@ -1,6 +1,7 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
+import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart'; // Import enums
 
 /// Service for packing events to avoid overlaps
 class EventPackingService {
@@ -11,6 +12,7 @@ class EventPackingService {
   List<EventLayoutInfo> packEvents({
     required List<EventLayoutInfo> events,
     required double minSecondarySize,
+    required EventRenderStyle style, // Add style parameter
   }) {
     if (events.isEmpty) return [];
 
@@ -38,13 +40,31 @@ class EventPackingService {
         return b.primarySize.compareTo(a.primarySize);
       });
 
-      // Pack events within this division
-      final packedDivisionEvents = _packEventsInDivision(
-        divisionEvents,
-        minSecondarySize,
-      );
-
-      packedEvents.addAll(packedDivisionEvents);
+      // Check orientation of the first event (all should be the same within a division)
+      if (divisionEvents.isNotEmpty &&
+          divisionEvents.first.orientation == Axis.horizontal) {
+        // --- Horizontal (All-Day) Stacking Logic ---
+        // Simple stacking: assign vertical position based on index
+        // TODO: Implement proper overlap detection for vertical stacking if needed
+        final double fixedRelativeHeight = 0.25; // Example: Allow up to 4 stacked events visible
+        for (int i = 0; i < divisionEvents.length; i++) {
+          final event = divisionEvents[i];
+          event.secondaryStart = i * fixedRelativeHeight;
+          event.secondarySize = fixedRelativeHeight;
+          event.columnSpan = 1; // No horizontal spanning for all-day
+          event.laneIndex = i; // Use index as lane/row index
+        }
+        packedEvents.addAll(divisionEvents); // Add the modified events
+      } else if (divisionEvents.isNotEmpty) {
+        // --- Vertical (Timed) Packing Logic ---
+        final packedDivisionEvents = _packEventsInDivision(
+          divisionEvents,
+          minSecondarySize,
+          style, // Pass style
+        );
+        packedEvents.addAll(packedDivisionEvents);
+      }
+      // Else (divisionEvents is empty): do nothing
     }
 
     return packedEvents;
@@ -54,6 +74,7 @@ class EventPackingService {
   List<EventLayoutInfo> _packEventsInDivision(
     List<EventLayoutInfo> events,
     double minSecondarySize,
+    EventRenderStyle style, // Add style parameter
   ) {
     // Track lanes of events
     final List<List<EventLayoutInfo>> lanes = [];
@@ -64,6 +85,7 @@ class EventPackingService {
       for (int i = 0; i < lanes.length; i++) {
         if (_canPlaceInLane(event, lanes[i])) {
           lanes[i].add(event);
+          event.laneIndex = i; // Store the initial lane index
           placed = true;
           break;
         }
@@ -79,24 +101,28 @@ class EventPackingService {
     // We use a relative size (0.0 to 1.0) that will be scaled by the container later
     // Add spacing between events and ensure a 10-pixel margin at the end
 
-    // Constants for spacing between events
-    const double horizontalSpacingPixels =
-        3.0; // 3-pixel spacing between events
+    // Get spacing from style (it's already in pixels)
+    final double horizontalSpacingPixels = style.horizontalSpacing;
 
-    // Note: The 10-pixel right margin for the container is handled at the container level,
-    // not in the packing service. We're only concerned with spacing between events here.
+    // Convert pixel spacing to relative value based on available width
+    // Assuming the '1.0' availableWidth represents the full width of the division
+    // We need the actual pixel width of the division to do this conversion accurately.
+    // Let's use the cellWidth from the first event as an approximation for now.
+    // TODO: Find a better way to get the division's total pixel width if needed.
+    final double divisionPixelWidth = events.isNotEmpty ? events.first.cellWidth : 1.0; // Use cellWidth as proxy
+    final double horizontalSpacing = divisionPixelWidth > 0 ? horizontalSpacingPixels / divisionPixelWidth : 0;
 
-    // Convert pixel values to relative values (will be converted back in the renderer)
-    // We'll use a reference width of 300 pixels for the conversion
-    const double referenceWidth = 300.0;
-    final double horizontalSpacing = horizontalSpacingPixels / referenceWidth;
+    // Calculate relative right margin
+    final double rightMarginPixels = style.rightMargin;
+    final double relativeRightMargin = divisionPixelWidth > 0 ? rightMarginPixels / divisionPixelWidth : 0;
 
-    // Use the full available width (the container margin is handled elsewhere)
-    final availableWidth = 1.0;
+    // Adjust available width to account for the right margin
+    final availableWidth = 1.0 - relativeRightMargin;
 
     // Calculate lane size with spacing
-    final laneSize = (availableWidth / lanes.length) -
-        (horizontalSpacing * (lanes.length - 1) / lanes.length);
+    // Calculate lane size based on the adjusted available width and spacing
+    final laneSize = lanes.isEmpty ? availableWidth : // Avoid division by zero if no lanes
+        (availableWidth / lanes.length) - (horizontalSpacing * (lanes.length - 1) / lanes.length);
 
     // Assign secondary position and size to each event
     for (int i = 0; i < lanes.length; i++) {
@@ -121,8 +147,67 @@ class EventPackingService {
       }
     }
 
-    // Flatten and return
-    return lanes.expand((lane) => lane).toList();
+    // Calculate initial secondary dimensions (before potential spanning)
+    for (int i = 0; i < lanes.length; i++) {
+      for (final event in lanes[i]) {
+         event.laneIndex = i; // Store initial lane index
+         final startPosition = i * (laneSize + horizontalSpacing);
+         if (event.orientation == Axis.vertical) {
+           event.secondaryStart = startPosition;
+           event.secondarySize = laneSize;
+         } else {
+           event.secondaryStart = startPosition;
+           event.secondarySize = laneSize;
+         }
+      }
+    }
+
+    // Conditionally apply column spanning based on the mode
+    if (style.spanningMode != null) { // Check if spanningMode is set
+      final numLanes = lanes.length;
+      for (final event in events) {
+        int span = 1;
+        if (style.spanningMode == EventSpanningMode.strict) {
+          // Strict: Span only if the entire column is free
+          for (int j = event.laneIndex + 1; j < numLanes; j++) {
+            bool collisionInLaneJ = lanes[j].any((otherEvent) => event.overlapsWith(otherEvent));
+            if (!collisionInLaneJ) {
+              span++;
+            } else {
+              break;
+            }
+          }
+        } else if (style.spanningMode == EventSpanningMode.compact) {
+          // Compact: Span if the specific event doesn't collide in the next column
+          // Check against events originally placed in the target lane 'j'
+           for (int j = event.laneIndex + 1; j < numLanes; j++) {
+             bool collisionWithLaneJEvent = lanes[j].any((otherEvent) => otherEvent.laneIndex == j && event.overlapsWith(otherEvent));
+             if (!collisionWithLaneJEvent) {
+                span++;
+             } else {
+                break;
+             }
+           }
+        }
+        event.columnSpan = span;
+
+        // Recalculate secondarySize based on span if span > 1
+        if (event.columnSpan > 1) {
+          final totalSpanSize = (event.columnSpan * laneSize) + ((event.columnSpan - 1) * horizontalSpacing);
+          if (event.orientation == Axis.vertical) {
+            event.secondarySize = totalSpanSize;
+          } else {
+            event.secondarySize = totalSpanSize;
+          }
+        }
+        // secondaryStart remains based on the initial laneIndex calculation above
+      }
+    }
+
+
+    // Flatten and return (already done by iterating through 'events')
+    // return lanes.expand((lane) => lane).toList();
+    return events; // Return the modified events list directly
   }
 
   /// Checks if an event can be placed in a lane without overlapping

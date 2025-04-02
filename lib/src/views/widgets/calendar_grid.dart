@@ -6,7 +6,7 @@ import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_surface.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
-import 'package:jazmine_calendar/src/event_rendering/grid_layout_broker.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/utils/typedefs.dart';
@@ -119,11 +119,13 @@ class CalendarGrid extends StatefulWidget {
 class CalendarGridState extends State<CalendarGrid> {
   late ScrollController _scrollController;
   final _viewService = CalendarViewService();
+  late final GridLayoutInfo _gridInfo; // Local broker instance
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _gridInfo = GridLayoutInfo(); // Initialize local broker
 
     // Initial scroll logic moved to build method after layout is known
   }
@@ -170,8 +172,8 @@ class CalendarGridState extends State<CalendarGrid> {
     final cellWidth = slotWidth;
     final cellHeight = slotHeight;
 
-    // Update the broker
-    GridLayoutBroker().updateGridLayout(
+    // Update the local broker instance
+    _gridInfo.updateGridLayout(
       viewStart: viewStart, // Now in UTC
       viewEnd: viewEnd, // Now in UTC
       origin: origin,
@@ -270,6 +272,7 @@ class CalendarGridState extends State<CalendarGrid> {
 
         return Stack(
           children: [
+            // 1. Scrollable Grid Content
             CustomScrollView(
               key: PageStorageKey(CalendarViewService()
                   .getScrollStorageKey(widget.controller.currentView)),
@@ -280,7 +283,7 @@ class CalendarGridState extends State<CalendarGrid> {
                   itemExtent: itemExtent,
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      debugPrint('Building item $index of $itemCount');
+                      // debugPrint('Building item $index of $itemCount'); // Keep for debugging if needed
                       return RepaintBoundary(
                         child: SizedBox(
                           width: isVertical ? slotWidth : null,
@@ -298,12 +301,43 @@ class CalendarGridState extends State<CalendarGrid> {
                       );
                     },
                     childCount: itemCount,
-                    addAutomaticKeepAlives: false,
-                    addRepaintBoundaries: true,
+                    addAutomaticKeepAlives: false, // Consider performance implications
+                    addRepaintBoundaries: true, // Consider performance implications
                   ),
                 ),
               ],
             ),
+
+            // 2. Event Rendering Surface (drawn below time indicator)
+            if (widget.showEvents)
+              Positioned(
+                left: origin.dx,
+                top: 0, // Aligned with ScrollView top
+                width: availableWidth,
+                height: availableHeight,
+                child: RepaintBoundary(
+                  child: ClipRect(
+                    child: EventLayoutSurface(
+                      controller: widget.controller,
+                      scrollController: _scrollController,
+                      gridInfo: _gridInfo, // Pass local broker instance
+                      isAllDay: widget.isAllDay,
+                      visibleDates: widget.dates,
+                      renderStyle: EventRenderStyle( // Example style - consider passing from config
+                        defaultEventColor: Theme.of(context).primaryColor,
+                        titleStyle:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ) ??
+                                const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // 3. Current Time Indicator (drawn last, on top)
             if (widget.showCurrentTimeIndicator)
               CurrentTimeIndicator(
                 scrollController: _scrollController,
@@ -317,43 +351,9 @@ class CalendarGridState extends State<CalendarGrid> {
                 startDate: widget.startDate,
                 endDate: widget.endDate,
                 controller: widget.controller,
-                autoScroll: true,
+                autoScroll: true, // Consider making this configurable
                 intervalPixels: isVertical ? slotHeight : slotWidth,
                 slotWidth: slotWidth,
-              ),
-
-            // Add direct event rendering
-            // Position the EventLayoutSurface correctly within the Stack,
-            // offset by the headers and sized to the available content area.
-            // Add direct event rendering
-            // Position the EventLayoutSurface correctly within the Stack,
-            // offset by the headers and sized to the available content area.
-            // Position the EventLayoutSurface correctly within the Stack,
-            // offset by the headers and sized to the available content area.
-            if (widget.showEvents)
-              Positioned(
-                left: origin.dx, // Use calculated origin.dx
-                top: 0, // Position surface at the top of the Stack
-                width: availableWidth, // Use calculated available width
-                height: availableHeight, // Use calculated available height
-                child: RepaintBoundary(
-                  child: ClipRect( // Clip to the bounds of the available space
-                    child: EventLayoutSurface(
-                      controller: widget.controller,
-                      scrollController: _scrollController,
-                      renderStyle: EventRenderStyle(
-                        defaultEventColor: Theme.of(context).primaryColor,
-                        titleStyle:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ) ??
-                                const TextStyle(color: Colors.white),
-                      ),
-                      // Background color added inside EventLayoutSurface's build method
-                    ),
-                  ),
-                ),
               ),
           ],
         );
@@ -365,10 +365,8 @@ class CalendarGridState extends State<CalendarGrid> {
       int index, bool isVertical, double slotWidth, double slotHeight) {
     final cellsOfHeaderCount =
         isVertical ? widget.numberOfColumns : widget.numberOfRows;
-    // Calculate headerDate based on the UTC viewStart from the broker
-    final headerDate = GridLayoutBroker()
-        .viewStart
-        .add(widget.intervalDuration * index); // Access singleton
+    // Calculate headerDate based on the UTC viewStart from the local broker
+    final headerDate = _gridInfo.viewStart.add(widget.intervalDuration * index);
 
     if (widget.headerBuilder != null) {
       return widget.headerBuilder!(

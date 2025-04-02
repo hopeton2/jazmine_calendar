@@ -3,6 +3,7 @@ import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_surface_viewmodel.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_renderer.dart';
+import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 
 /// Widget that renders calendar events using a CustomPainter
 class EventLayoutSurface extends StatefulWidget {
@@ -21,6 +22,15 @@ class EventLayoutSurface extends StatefulWidget {
   /// Scroll controller for the grid
   final ScrollController? scrollController;
 
+  /// Indicates if this surface is for the all-day event section.
+  final bool isAllDay;
+
+  /// The specific dates visible in the parent grid.
+  final List<DateTime> visibleDates;
+
+
+  final GridLayoutInfo gridInfo;
+
   /// Creates a new EventLayoutSurface
   const EventLayoutSurface({
     super.key,
@@ -29,6 +39,9 @@ class EventLayoutSurface extends StatefulWidget {
     this.minEventSize = 20.0,
     this.minSecondarySize = 20.0,
     this.scrollController,
+    this.isAllDay = false, // Default to false for the main grid
+    required this.visibleDates,
+    required this.gridInfo, // Add orientation parameter
   });
 
   @override
@@ -49,6 +62,10 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       controller: widget.controller,
       minEventSize: widget.minEventSize,
       minSecondarySize: widget.minSecondarySize,
+      isAllDay: widget.isAllDay, // Pass from widget
+      visibleDates: widget.visibleDates,
+      gridInfo: widget.gridInfo, // Pass from widget
+// Pass orientation to ViewModel
     );
 
     // Listen for changes in the ViewModel
@@ -135,8 +152,9 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
             style: widget.renderStyle,
             selectedEventId: _viewModel.selectedEventId,
             draggedEventId: _viewModel.draggedEventId,
-            resizedEventId: _viewModel.resizedEventId,
-            activeResizeHandle: _viewModel.activeResizeHandle,
+            resizedEventId: _viewModel.resizedEventId, // Restore parameter
+            activeResizeHandle:
+                _viewModel.activeResizeHandle, // Restore parameter
             scrollOffset:
                 _scrollOffset, // Pass the scroll offset to the renderer
           ),
@@ -148,22 +166,22 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
 
   /// Handle tap events
   void _handleTap(TapUpDetails details) {
-    _viewModel.handleTap(details.localPosition);
+    _viewModel.handleTap(details.localPosition, _scrollOffset);
   }
 
   /// Handle double tap events
   void _handleDoubleTap(TapDownDetails details) {
-    _viewModel.handleDoubleTap(details.localPosition);
+    _viewModel.handleDoubleTap(details.localPosition, _scrollOffset);
   }
 
   /// Handle long press events
   void _handleLongPress(LongPressStartDetails details) {
-    _viewModel.handleLongPress(details.localPosition);
+    _viewModel.handleLongPress(details.localPosition, _scrollOffset);
   }
 
   /// Handle pan start for drag and resize
   void _handlePanStart(DragStartDetails details) {
-    _viewModel.handlePanStart(details.localPosition);
+    _viewModel.handlePanStart(details.localPosition, _scrollOffset);
   }
 
   /// Handle pan update for drag and resize
