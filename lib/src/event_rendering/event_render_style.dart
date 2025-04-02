@@ -86,9 +86,10 @@ class EventRenderStyle {
     this.horizontalSpacing = 3.0,
     this.rightMargin = 10.0,
     this.spanningMode = EventSpanningMode.strict,
-    this.verticalIndicatorWidth = 2.0, // Default width
+    this.verticalIndicatorWidth = 0.0, // Set to 0 to remove the indicator
     this.verticalIndicatorColor, // Default null (use event color)
-    this.allDayContentPadding = const EdgeInsets.only(top: 5, bottom: 20, left: 4, right: 4), // Specific padding
+    this.allDayContentPadding = const EdgeInsets.only(
+        top: 5, bottom: 20, left: 4, right: 4), // Specific padding
   });
 
   /// Get the color for an event
@@ -137,8 +138,10 @@ class EventRenderStyle {
       horizontalSpacing: horizontalSpacing ?? this.horizontalSpacing,
       rightMargin: rightMargin ?? this.rightMargin,
       spanningMode: spanningMode ?? this.spanningMode,
-      verticalIndicatorWidth: verticalIndicatorWidth ?? this.verticalIndicatorWidth,
-      verticalIndicatorColor: verticalIndicatorColor ?? this.verticalIndicatorColor,
+      verticalIndicatorWidth:
+          verticalIndicatorWidth ?? this.verticalIndicatorWidth,
+      verticalIndicatorColor:
+          verticalIndicatorColor ?? this.verticalIndicatorColor,
       allDayContentPadding: allDayContentPadding ?? this.allDayContentPadding,
     );
   }

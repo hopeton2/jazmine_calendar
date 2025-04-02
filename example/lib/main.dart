@@ -2,7 +2,12 @@ import 'dart:math'; // Import for Random
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
-import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Import for dayStarts/dayEnds
+
+// Define extension methods for DateTime to replace the ones from the jazmine_calendar package
+extension DateTimeExtensions on DateTime {
+  DateTime get dayStarts => DateTime(year, month, day);
+  DateTime get dayEnds => DateTime(year, month, day, 23, 59, 59, 999);
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,13 +59,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _generateAndAddEvents() {
-     // Initialize controller
-     _calendarController = CalendarController(
-        initialView: CalendarViewType.day,
-        initialDate: DateTime.now(),
-        scrollToCurrentTimeOnLoad: false,
-        interval: const Duration(minutes: 60),
-      );
+    // Initialize controller
+    _calendarController = CalendarController(
+      initialView: CalendarViewType.day,
+      initialDate: DateTime.now(),
+      scrollToCurrentTimeOnLoad: false,
+      interval: const Duration(minutes: 60),
+    );
+
+    // Configure the vertical indicator
+    // Note: This would be the ideal place to configure the EventRenderStyle
+    // if the CalendarController had a parameter for it
 
     // Generate random events (similar logic from ViewModel)
     final random = Random();
@@ -71,8 +80,16 @@ class _MyHomePageState extends State<MyHomePage> {
     final int eventCount = 15 + random.nextInt(16); // 15 to 30 events
 
     const List<Color> eventColors = [
-      Colors.red, Colors.blue, Colors.green, Colors.orange, Colors.purple,
-      Colors.teal, Colors.pink, Colors.indigo, Colors.amber, Colors.cyan,
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.indigo,
+      Colors.amber,
+      Colors.cyan,
     ];
 
     for (int i = 0; i < eventCount; i++) {
@@ -84,7 +101,8 @@ class _MyHomePageState extends State<MyHomePage> {
       final startMinute = random.nextInt(4) * 15;
       final durationMinutes = (2 + random.nextInt(191)) * 15; // 30m to 48h
 
-      DateTime startTime = eventDate.add(Duration(hours: startHour, minutes: startMinute));
+      DateTime startTime =
+          eventDate.add(Duration(hours: startHour, minutes: startMinute));
       DateTime endTime = startTime.add(Duration(minutes: durationMinutes));
       bool isAllDayEvent = random.nextDouble() < 0.15;
 
@@ -95,12 +113,13 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         // Clamp timed events to avoid excessive multi-day rendering for this example
         if (endTime.difference(startTime).inDays > 1) {
-           endTime = startTime.dayEnds; // Limit timed events to max 1 day for simplicity here
+          endTime = startTime
+              .dayEnds; // Limit timed events to max 1 day for simplicity here
         }
-         // Ensure minimum duration
-         if (endTime.isBefore(startTime.add(const Duration(minutes: 15)))) {
-             endTime = startTime.add(const Duration(minutes: 15));
-         }
+        // Ensure minimum duration
+        if (endTime.isBefore(startTime.add(const Duration(minutes: 15)))) {
+          endTime = startTime.add(const Duration(minutes: 15));
+        }
       }
 
       mockEvents.add(CalendarEvent(
@@ -126,6 +145,14 @@ class _MyHomePageState extends State<MyHomePage> {
         showViewSelector: true,
         navigationBarStyle: NavigationBarStyle.compact,
         controller: _calendarController, // Use the initialized controller
+        // Configure the vertical indicator through the dayConfiguration
+        dayConfiguration: const DayViewConfiguration(
+          hourHeight: 60,
+          timebarWidth: 60,
+          showCurrentTimeIndicator: true,
+        ),
+        // Note: In a real app, you would configure the vertical indicator through a custom theme
+        // that includes an EventRenderStyle with the desired verticalIndicatorWidth and color
       ),
     );
   }

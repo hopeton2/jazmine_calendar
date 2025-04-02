@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_surface_viewmodel.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_renderer.dart';
 import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
+import 'package:jazmine_calendar/src/enums/enums.dart';
 
 /// Widget that renders calendar events using a CustomPainter
 class EventLayoutSurface extends StatefulWidget {
@@ -27,7 +29,6 @@ class EventLayoutSurface extends StatefulWidget {
 
   /// The specific dates visible in the parent grid.
   final List<DateTime> visibleDates;
-
 
   final GridLayoutInfo gridInfo;
 
@@ -134,31 +135,92 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
     setState(() {});
   }
 
+  // Track current mouse cursor
+  MouseCursor _currentCursor = SystemMouseCursors.basic;
+
+  /// Update cursor based on what's under the mouse pointer
+  void _updateCursorOnHover(PointerHoverEvent event) {
+    // Get the event renderer from the CustomPaint
+    final renderer = EventRenderer(
+      events: _viewModel.events,
+      style: widget.renderStyle,
+      selectedEventId: _viewModel.selectedEventId,
+      draggedEventId: _viewModel.draggedEventId,
+      resizedEventId: _viewModel.resizedEventId,
+      activeResizeHandle: _viewModel.activeResizeHandle,
+      scrollOffset: _scrollOffset,
+    );
+
+    // Check if we're hovering over a resize handle
+    final resizeHandleHit = renderer.findResizeHandleAt(event.localPosition);
+
+    if (resizeHandleHit != null) {
+      // Set cursor based on the orientation and handle type
+      if (resizeHandleHit.event.orientation == Axis.vertical) {
+        // Vertical orientation: top/bottom handles
+        if (resizeHandleHit.handle == ResizeHandle.top ||
+            resizeHandleHit.handle == ResizeHandle.bottom) {
+          setState(() {
+            _currentCursor = SystemMouseCursors.resizeUpDown;
+          });
+          return;
+        }
+      } else {
+        // Horizontal orientation: left/right handles
+        if (resizeHandleHit.handle == ResizeHandle.left ||
+            resizeHandleHit.handle == ResizeHandle.right) {
+          setState(() {
+            _currentCursor = SystemMouseCursors.resizeLeftRight;
+          });
+          return;
+        }
+      }
+    }
+
+    // Check if we're hovering over an event (for dragging)
+    final eventHit = renderer.findEventAt(event.localPosition);
+    if (eventHit != null) {
+      setState(() {
+        _currentCursor = SystemMouseCursors.grab;
+      });
+      return;
+    }
+
+    // Default cursor
+    setState(() {
+      _currentCursor = SystemMouseCursors.basic;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapUp: _handleTap,
-      onDoubleTapDown: _handleDoubleTap,
-      onLongPressStart: _handleLongPress,
-      onPanStart: _handlePanStart,
-      onPanUpdate: _handlePanUpdate,
-      onPanEnd: _handlePanEnd,
-      child: Container(
-        // Add right margin of 10 pixels
-        margin: const EdgeInsets.only(right: 10.0),
-        child: CustomPaint(
-          painter: EventRenderer(
-            events: _viewModel.events,
-            style: widget.renderStyle,
-            selectedEventId: _viewModel.selectedEventId,
-            draggedEventId: _viewModel.draggedEventId,
-            resizedEventId: _viewModel.resizedEventId, // Restore parameter
-            activeResizeHandle:
-                _viewModel.activeResizeHandle, // Restore parameter
-            scrollOffset:
-                _scrollOffset, // Pass the scroll offset to the renderer
+    return MouseRegion(
+      onHover: _updateCursorOnHover,
+      cursor: _currentCursor,
+      child: GestureDetector(
+        onTapUp: _handleTap,
+        onDoubleTapDown: _handleDoubleTap,
+        onLongPressStart: _handleLongPress,
+        onPanStart: _handlePanStart,
+        onPanUpdate: _handlePanUpdate,
+        onPanEnd: _handlePanEnd,
+        child: Container(
+          // Add right margin of 10 pixels
+          margin: const EdgeInsets.only(right: 10.0),
+          child: CustomPaint(
+            painter: EventRenderer(
+              events: _viewModel.events,
+              style: widget.renderStyle,
+              selectedEventId: _viewModel.selectedEventId,
+              draggedEventId: _viewModel.draggedEventId,
+              resizedEventId: _viewModel.resizedEventId, // Restore parameter
+              activeResizeHandle:
+                  _viewModel.activeResizeHandle, // Restore parameter
+              scrollOffset:
+                  _scrollOffset, // Pass the scroll offset to the renderer
+            ),
+            size: Size.infinite,
           ),
-          size: Size.infinite,
         ),
       ),
     );
