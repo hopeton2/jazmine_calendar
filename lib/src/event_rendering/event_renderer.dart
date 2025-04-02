@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 
@@ -129,51 +130,57 @@ class EventRenderer extends CustomPainter {
     final event = layout.event;
     final contentRect = rect.deflate(style.contentPadding.left);
 
-    // Draw a simple title text
-    final paint = Paint()
-      ..color = style.titleStyle.color ?? Colors.white
-      ..style = PaintingStyle.fill;
-
-    // Draw a simple rectangle for the title
     // Determine the correct top starting point based on orientation
-    final contentTop = layout.orientation == Axis.vertical ? rect.top : contentRect.top;
+    final contentTop = layout.orientation == Axis.vertical
+        ? rect.top + 5
+        : contentRect.top + 5;
 
-    canvas.drawRect(
-      Rect.fromLTWH(
-        contentRect.left, // Still use contentRect for horizontal padding/width
-        contentTop,       // Use calculated contentTop (ignores top padding in vertical)
-        contentRect.width * 0.8,
-        15,
+    // Create text painters for title and time
+    final titleTextSpan = TextSpan(
+      text: event.title,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
       ),
-      paint,
     );
 
-    // Draw a simple rectangle for the time if not all-day and there's enough space
-    if (!event.isAllDay && contentRect.height > 30) {
-      canvas.drawRect(
-        Rect.fromLTWH(
-          contentRect.left,
-          contentTop + 20, // Use calculated contentTop + offset
-          contentRect.width * 0.6,
-          10,
+    final titlePainter = TextPainter(
+      text: titleTextSpan,
+      textDirection: ui.TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '...',
+    );
+
+    titlePainter.layout(maxWidth: contentRect.width);
+    titlePainter.paint(canvas, Offset(contentRect.left + 5, contentTop));
+
+    // Draw time if there's enough space
+    if (contentRect.height > 30) {
+      // Format the time
+      final startTime =
+          '${event.start.hour}:${event.start.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${event.end.hour}:${event.end.minute.toString().padLeft(2, '0')}';
+      final timeText = event.isAllDay ? 'All Day' : '$startTime - $endTime';
+
+      final timeTextSpan = TextSpan(
+        text: timeText,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.8),
+          fontSize: 10,
         ),
-        Paint()
-          ..color = style.timeStyle.color ?? Colors.white.withOpacity(0.7)
-          ..style = PaintingStyle.fill,
       );
-    } else if (event.isAllDay && contentRect.height > 30) {
-      // For all-day events, draw a different indicator
-      canvas.drawRect(
-        Rect.fromLTWH(
-          contentRect.left,
-          contentTop + 20, // Use calculated contentTop + offset
-          contentRect.width * 0.4,
-          10,
-        ),
-        Paint()
-          ..color = style.timeStyle.color ?? Colors.white.withOpacity(0.7)
-          ..style = PaintingStyle.fill,
+
+      final timePainter = TextPainter(
+        text: timeTextSpan,
+        textDirection: ui.TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '...',
       );
+
+      timePainter.layout(maxWidth: contentRect.width);
+      timePainter.paint(canvas, Offset(contentRect.left + 5, contentTop + 18));
     }
   }
 

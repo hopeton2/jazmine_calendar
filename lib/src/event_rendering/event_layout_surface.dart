@@ -127,7 +127,8 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       onPanUpdate: _handlePanUpdate,
       onPanEnd: _handlePanEnd,
       child: Container(
-        // Removed debug background color
+        // Add right margin of 10 pixels
+        margin: const EdgeInsets.only(right: 10.0),
         child: CustomPaint(
           painter: EventRenderer(
             events: _viewModel.events,
@@ -136,7 +137,8 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
             draggedEventId: _viewModel.draggedEventId,
             resizedEventId: _viewModel.resizedEventId,
             activeResizeHandle: _viewModel.activeResizeHandle,
-            scrollOffset: _scrollOffset, // Pass the scroll offset to the renderer
+            scrollOffset:
+                _scrollOffset, // Pass the scroll offset to the renderer
           ),
           size: Size.infinite,
         ),

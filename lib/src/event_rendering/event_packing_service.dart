@@ -77,18 +77,45 @@ class EventPackingService {
 
     // Calculate secondary dimension size based on number of lanes
     // We use a relative size (0.0 to 1.0) that will be scaled by the container later
-    final laneSize = 1.0 / lanes.length;
+    // Add spacing between events and ensure a 10-pixel margin at the end
+
+    // Constants for spacing between events
+    const double horizontalSpacingPixels =
+        3.0; // 3-pixel spacing between events
+
+    // Note: The 10-pixel right margin for the container is handled at the container level,
+    // not in the packing service. We're only concerned with spacing between events here.
+
+    // Convert pixel values to relative values (will be converted back in the renderer)
+    // We'll use a reference width of 300 pixels for the conversion
+    const double referenceWidth = 300.0;
+    final double horizontalSpacing = horizontalSpacingPixels / referenceWidth;
+
+    // Use the full available width (the container margin is handled elsewhere)
+    final availableWidth = 1.0;
+
+    // Calculate lane size with spacing
+    final laneSize = (availableWidth / lanes.length) -
+        (horizontalSpacing * (lanes.length - 1) / lanes.length);
 
     // Assign secondary position and size to each event
     for (int i = 0; i < lanes.length; i++) {
       for (final event in lanes[i]) {
         if (event.orientation == Axis.vertical) {
           // For vertical orientation: left and width
-          event.secondaryStart = i * laneSize;
+          // Calculate position with spacing
+          final position = i * (laneSize + horizontalSpacing);
+
+          // Set position and size
+          event.secondaryStart = position;
           event.secondarySize = laneSize;
         } else {
           // For horizontal orientation: top and height
-          event.secondaryStart = i * laneSize;
+          // Calculate position with spacing
+          final position = i * (laneSize + horizontalSpacing);
+
+          // Set position and size
+          event.secondaryStart = position;
           event.secondarySize = laneSize;
         }
       }

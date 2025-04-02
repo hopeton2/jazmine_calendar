@@ -98,27 +98,57 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       if (!_broker.isReady) {
         await _waitForBroker(); // Ensure broker is ready before accessing viewStart
       }
-      final viewStartDate = _broker.viewStart.dayStarts; // Get the start date of the view (UTC)
+      final viewStartDate =
+          _broker.viewStart.dayStarts; // Get the start date of the view (UTC)
 
-      // Create mock events
+      // Create mock events with overlaps to test packing
       final mockEvents = [
+        // Group 1: Overlapping events in the morning
         CalendarEvent(
           id: '1',
-          title: 'Test Event (5 AM - 9 AM UTC)',
-          start: viewStartDate.add(const Duration(hours: 5)), // 5:00 UTC
-          end: viewStartDate.add(const Duration(hours: 9)),   // 9:00 UTC
+          title: 'Meeting (8 AM - 10 AM)',
+          start: viewStartDate.add(const Duration(hours: 8)),
+          end: viewStartDate.add(const Duration(hours: 10)),
           color: Colors.red,
         ),
-        // Add second event: 11:00 UTC for 2.5 hours
         CalendarEvent(
           id: '2',
-          title: 'Test Event 2 (11 AM - 1:30 PM UTC)',
-          start: viewStartDate.add(const Duration(hours: 11)), // 11:00 UTC
-          end: viewStartDate.add(const Duration(hours: 13, minutes: 30)), // 13:30 UTC
+          title: 'Call (9 AM - 11 AM)',
+          start: viewStartDate.add(const Duration(hours: 9)),
+          end: viewStartDate.add(const Duration(hours: 11)),
           color: Colors.blue,
         ),
-      ];
+        CalendarEvent(
+          id: '3',
+          title: 'Workshop (9:30 AM - 12 PM)',
+          start: viewStartDate.add(const Duration(hours: 9, minutes: 30)),
+          end: viewStartDate.add(const Duration(hours: 12)),
+          color: Colors.green,
+        ),
 
+        // Group 2: Overlapping events in the afternoon
+        CalendarEvent(
+          id: '4',
+          title: 'Lunch (12 PM - 1 PM)',
+          start: viewStartDate.add(const Duration(hours: 12)),
+          end: viewStartDate.add(const Duration(hours: 13)),
+          color: Colors.orange,
+        ),
+        CalendarEvent(
+          id: '5',
+          title: 'Planning (1 PM - 3 PM)',
+          start: viewStartDate.add(const Duration(hours: 13)),
+          end: viewStartDate.add(const Duration(hours: 15)),
+          color: Colors.purple,
+        ),
+        CalendarEvent(
+          id: '6',
+          title: 'Review (2 PM - 4 PM)',
+          start: viewStartDate.add(const Duration(hours: 14)),
+          end: viewStartDate.add(const Duration(hours: 16)),
+          color: Colors.teal,
+        ),
+      ];
 
       // Ensure the broker is ready (already waited, but double-check)
       if (!_broker.isReady) {

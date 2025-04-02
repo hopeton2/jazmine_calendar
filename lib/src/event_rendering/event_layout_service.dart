@@ -40,7 +40,8 @@ class EventLayoutService {
       final start = TimePositionService.calculatePositionWithBroker(
         time: clampedStart, // Use the clamped start time for position
         broker: broker,
-        scrollOffset: 0.0, // Explicitly pass 0.0, though service ignores it for relative calc
+        scrollOffset:
+            0.0, // Explicitly pass 0.0, though service ignores it for relative calc
       );
 
       // Calculate the size based on the visible duration
@@ -61,8 +62,7 @@ class EventLayoutService {
         primarySize: effectiveSize,
         cellWidth: broker.cellWidth,
         cellHeight: broker.cellHeight,
-        // Removed origin argument
-        availableSpace: broker.availableSpace, // Pass availableSpace from broker
+        availableSpace: broker.availableSpace,
       ));
     }
 

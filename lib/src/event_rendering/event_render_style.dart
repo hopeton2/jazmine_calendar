@@ -36,6 +36,9 @@ class EventRenderStyle {
   /// Resize handle color
   final Color resizeHandleColor;
 
+  /// Horizontal spacing between packed events in pixels.
+  final double horizontalSpacing;
+
   /// Creates a new EventRenderStyle
   const EventRenderStyle({
     this.cornerRadius = 4.0,
@@ -60,6 +63,7 @@ class EventRenderStyle {
     this.showLocation = true,
     this.resizeHandleSize = 6.0,
     this.resizeHandleColor = Colors.white,
+    this.horizontalSpacing = 3.0, // Default spacing
   });
 
   /// Get the color for an event
@@ -86,6 +90,7 @@ class EventRenderStyle {
     bool? showLocation,
     double? resizeHandleSize,
     Color? resizeHandleColor,
+    double? horizontalSpacing,
   }) {
     return EventRenderStyle(
       cornerRadius: cornerRadius ?? this.cornerRadius,
@@ -99,6 +104,7 @@ class EventRenderStyle {
       showLocation: showLocation ?? this.showLocation,
       resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
+      horizontalSpacing: horizontalSpacing ?? this.horizontalSpacing,
     );
   }
 }
