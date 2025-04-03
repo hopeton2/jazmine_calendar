@@ -125,13 +125,41 @@ class EventRenderer extends CustomPainter {
       );
     }
 
-    final rrect = RRect.fromRectAndRadius(
+    // Determine the border radius based on whether the event extends beyond the view
+    Radius cornerRadius = Radius.circular(style.cornerRadius);
+    BorderRadius borderRadius = BorderRadius.all(cornerRadius);
+
+    if (layout.orientation == Axis.horizontal) { // Only adjust for horizontal (all-day) events
+      if (layout.startsBeforeView && layout.endsAfterView) {
+        // Flat on both sides
+        borderRadius = BorderRadius.zero;
+      } else if (layout.startsBeforeView) {
+        // Flat on left side
+        borderRadius = BorderRadius.only(
+          topRight: cornerRadius,
+          bottomRight: cornerRadius,
+        );
+      } else if (layout.endsAfterView) {
+        // Flat on right side
+        borderRadius = BorderRadius.only(
+          topLeft: cornerRadius,
+          bottomLeft: cornerRadius,
+        );
+      }
+      // else: fully within view, use default full borderRadius
+    }
+
+    final rrect = RRect.fromRectAndCorners(
       backgroundRect,
-      Radius.circular(style.cornerRadius),
+      topLeft: borderRadius.topLeft,
+      topRight: borderRadius.topRight,
+      bottomLeft: borderRadius.bottomLeft,
+      bottomRight: borderRadius.bottomRight,
     );
     canvas.drawRRect(rrect, backgroundPaint);
 
     if (isSelected) {
+      // Use the same potentially adjusted borderRadius for the border
       canvas.drawRRect(rrect, borderPaint);
     }
 

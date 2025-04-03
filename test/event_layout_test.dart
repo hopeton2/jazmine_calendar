@@ -353,6 +353,7 @@ void main() {
         events: layoutInfos,
         minSecondarySize: 20,
         style: const EventRenderStyle(), // Added default style
+        visibleDates: [], // Pass empty list for test
       );
 
       expect(packedEvents.length, 3);
@@ -437,6 +438,7 @@ void main() {
         events: layoutInfos,
         minSecondarySize: 20,
         style: const EventRenderStyle(), // Added default style
+        visibleDates: [], // Pass empty list for test
       );
 
       expect(packedEvents.length, 3);
@@ -521,6 +523,7 @@ void main() {
         events: layoutInfos,
         minSecondarySize: 20,
         style: const EventRenderStyle(), // Added default style
+        visibleDates: [], // Pass empty list for test
       );
 
       expect(packedEvents.length, 3);

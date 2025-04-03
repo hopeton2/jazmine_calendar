@@ -42,38 +42,48 @@ class EventLayoutInfo {
   /// The number of columns this event spans. Calculated during packing.
   int columnSpan = 1;
 
+  /// Indicates if the original event starts before the first visible date in the current view.
+  bool startsBeforeView = false;
+
+  /// Indicates if the original event ends after the last visible date in the current view.
+  bool endsAfterView = false;
+
   /// Convenience getter for the top position
   double get top {
     // For vertical, primary axis is Y (start), secondary is X.
     // For horizontal, primary axis is X (start), secondary is Y.
     return orientation == Axis.vertical
         ? start
-        : (secondaryStart * cellHeight); // Scale relative secondaryStart by cell height
+        : secondaryStart; // Use pixel value directly for horizontal
   }
 
   /// Convenience getter for the left position
   double get left {
     // For vertical: Offset by division, then add packed position within division
     // For horizontal: Use the primary axis start position
+    // For vertical: Offset by division, then add packed position within division
+    // For horizontal: Offset by division
     return orientation == Axis.vertical
-        ? (division * cellWidth) + (secondaryStart * cellWidth)
-        : start;
+        ? (division * cellWidth) + (secondaryStart * cellWidth) // secondaryStart is relative lane position
+        : (division * cellWidth); // Position based on starting column
   }
 
   /// Convenience getter for the width
   double get width {
      // For vertical: Packed size relative to cell width
      // For horizontal: Use the primary axis size
+     // For vertical: Packed size relative to cell width
+     // For horizontal: Use columnSpan * cellWidth
      return orientation == Axis.vertical
-        ? (secondarySize * cellWidth)
-        : primarySize;
+        ? (secondarySize * cellWidth) // Relative width scaled by cell
+        : (columnSpan * cellWidth); // Absolute width based on span
   }
 
   /// Convenience getter for the height
   double get height {
     return orientation == Axis.vertical
         ? primarySize
-        : (secondarySize * cellHeight); // Scale relative secondarySize by cell height
+        : secondarySize; // Use pixel value directly for horizontal
   }
 
   /// The final rectangle for rendering
@@ -106,6 +116,6 @@ class EventLayoutInfo {
 
   @override
   String toString() {
-    return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight)';
+    return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight, startsBefore: $startsBeforeView, endsAfter: $endsAfterView)';
   }
 }

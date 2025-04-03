@@ -165,33 +165,14 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
         return;
       }
 
-      // 2. Filter by visible dates
-      final visibleDayStarts = visibleDates.map((d) => d.dayStarts).toSet();
-      final filteredEvents = relevantTypeEvents.where((event) {
-        DateTime current = event.start.dayStarts;
-        bool startsBeforeOrDuring =
-            !event.start.isAfter(visibleDates.last.dayEnds);
-        bool endsDuringOrAfter =
-            !event.end.isBefore(visibleDates.first.dayStarts);
-        if (!startsBeforeOrDuring || !endsDuringOrAfter) return false;
-        while (current.isBefore(event.end)) {
-          if (visibleDayStarts.contains(current)) return true;
-          current = current.add(const Duration(days: 1));
-        }
-        if (event.end.isAfter(event.start) &&
-            event.end.millisecondsSinceEpoch % Duration.millisecondsPerDay ==
-                0) {
-          if (visibleDayStarts.contains(
-              event.end.subtract(const Duration(milliseconds: 1)).dayStarts))
-            return true;
-        }
-        return false;
-      }).toList();
+      // 2. Filter by visible dates (REMOVED - measureEvents handles clipping to view)
+      // The measureEvents service will correctly calculate segments only within the gridInfo's view range.
+      final filteredEvents = relevantTypeEvents; // Use events already filtered by type
 
       if (filteredEvents.isEmpty) {
-        _events = [];
-        return;
-      }
+         _events = [];
+         return;
+       }
 
       // 3. Measure the filtered events using the gridInfo instance
       final measuredLayouts = _layoutService.measureEvents(
@@ -205,6 +186,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
         events: measuredLayouts,
         minSecondarySize: minSecondarySize,
         style: renderStyle, // Use the stored renderStyle
+        visibleDates: visibleDates, // Pass visibleDates
       );
 
       _events = packedLayouts;

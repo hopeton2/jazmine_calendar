@@ -37,7 +37,7 @@ class AllDayGrid extends StatelessWidget {
             slotDuration: const Duration(days: 1),
             intervalDuration: const Duration(days: 1),
             orientation: Axis.horizontal,
-            rowHeaderWidth: headerWidth,
+            rowHeaderWidth: 0,
             columnHeaderHeight: 0.0,
             showCurrentTimeIndicator: false,
             isAllDay: true,

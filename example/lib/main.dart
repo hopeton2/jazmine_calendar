@@ -2,6 +2,7 @@ import 'dart:math'; // Import for Random
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:jazmine_calendar/jazmine_calendar.dart';
+import 'package:intl/intl.dart'; // Import for DateFormat
 
 // Define extension methods for DateTime to replace the ones from the jazmine_calendar package
 extension DateTimeExtensions on DateTime {
@@ -104,27 +105,19 @@ class _MyHomePageState extends State<MyHomePage> {
       DateTime startTime =
           eventDate.add(Duration(hours: startHour, minutes: startMinute));
       DateTime endTime = startTime.add(Duration(minutes: durationMinutes));
-      bool isAllDayEvent = random.nextDouble() < 0.15;
+      // --- Force All-Day Events ---
+      const bool isAllDayEvent = true; // Always create all-day events
 
-      if (isAllDayEvent) {
-        startTime = startTime.dayStarts;
-        int allDayDurationDays = 1 + random.nextInt(2);
-        endTime = startTime.add(Duration(days: allDayDurationDays));
-      } else {
-        // Clamp timed events to avoid excessive multi-day rendering for this example
-        if (endTime.difference(startTime).inDays > 1) {
-          endTime = startTime
-              .dayEnds; // Limit timed events to max 1 day for simplicity here
-        }
-        // Ensure minimum duration
-        if (endTime.isBefore(startTime.add(const Duration(minutes: 15)))) {
-          endTime = startTime.add(const Duration(minutes: 15));
-        }
-      }
+      startTime = startTime.dayStarts; // Start at the beginning of the day
+      // Allow slightly longer duration, e.g., 1 to 4 days
+      int allDayDurationDays = 1 + random.nextInt(4);
+      endTime = startTime.add(Duration(days: allDayDurationDays));
+      // Removed the 'else' block for timed events
 
       mockEvents.add(CalendarEvent(
         id: 'mock_$i',
-        title: 'Event ${i + 1}${isAllDayEvent ? " (All Day)" : ""}',
+        // Format title with date range
+        title: 'Event ${i + 1} (${DateFormat.yMd().format(startTime)} - ${DateFormat.yMd().format(endTime.subtract(const Duration(microseconds: 1)))})', // Subtract microsecond to show correct end date
         start: startTime,
         end: endTime,
         isAllDay: isAllDayEvent,

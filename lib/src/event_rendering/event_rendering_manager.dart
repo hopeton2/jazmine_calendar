@@ -51,10 +51,22 @@ class EventRenderingManager {
 
     // Second pass: Pack events
     // Pass a default style for now. TODO: Refactor if specific style needed here.
+    // Approximate visibleDates from gridInfo for packing service
+    final List<DateTime> managerVisibleDates = [];
+    // Removed isReady check, assume gridInfo is valid here
+    DateTime currentDate = gridInfo.viewStart.toLocal(); // Assuming gridInfo dates are UTC
+    // Ensure viewEnd is included if it's exactly the end date
+    final loopEndDate = gridInfo.viewEnd.toLocal().add(const Duration(microseconds: 1));
+    while (currentDate.isBefore(loopEndDate)) {
+      managerVisibleDates.add(currentDate);
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+
     final packedEvents = _packingService.packEvents(
       events: layoutInfos,
       minSecondarySize: minSecondarySize,
-      style: const EventRenderStyle(),
+      style: const EventRenderStyle(), // Keep default style for now
+      visibleDates: managerVisibleDates, // Pass approximated visibleDates
     );
 
     // Cache the results

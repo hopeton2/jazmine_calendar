@@ -166,7 +166,8 @@ class CalendarGridState extends State<CalendarGrid> {
     // Origin is the top-left corner of the actual grid area, offset by headers.
     final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
     // Available space is derived from constraints minus header dimensions.
-    final availableSpace = Size(constraints.maxWidth - widget.rowHeaderWidth -5,
+    final availableSpace = Size(
+        constraints.maxWidth - widget.rowHeaderWidth - 5,
         constraints.maxHeight - widget.columnHeaderHeight);
 
     // Use the passed slot dimensions (which account for min sizes) as the cell dimensions
@@ -315,11 +316,22 @@ class CalendarGridState extends State<CalendarGrid> {
             if (widget.showEvents)
               Positioned(
                 left: origin.dx,
-                top: origin.dy, // Aligned with ScrollView top
+                // Apply top margin only for all-day events
+                top: widget.isAllDay ? origin.dy + 5.0 : origin.dy,
                 width: availableWidth,
-                height: availableHeight,
+                // Adjust height for horizontal orientation to reserve space at the bottom
+                height: widget.orientation == Axis.horizontal
+                    ? (availableHeight - 30.0).clamp(0.0, double.infinity) // Subtract 30px reserved space
+                    : availableHeight,
                 child: RepaintBoundary(
                   child: ClipRect(
+                    // Wrap with Padding for all-day events (alternative approach, keeping Positioned adjustment for now)
+                    // child: widget.isAllDay
+                    //     ? Padding(
+                    //         padding: const EdgeInsets.only(top: 5.0),
+                    //         child: EventLayoutSurface(...),
+                    //       )
+                    //     : EventLayoutSurface(...),
                     child: EventLayoutSurface(
                       controller: widget.controller,
                       scrollController: _scrollController,

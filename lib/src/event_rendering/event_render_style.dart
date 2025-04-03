@@ -83,7 +83,7 @@ class EventRenderStyle {
     this.showLocation = true,
     this.resizeHandleSize = 6.0,
     this.resizeHandleColor = Colors.white,
-    this.horizontalSpacing = 3.0,
+    this.horizontalSpacing = 2.0, // Changed default from 3.0 to 2.0
     this.rightMargin = 10.0,
     this.spanningMode = EventSpanningMode.strict,
     this.verticalIndicatorWidth = 0.0, // Set to 0 to remove the indicator
