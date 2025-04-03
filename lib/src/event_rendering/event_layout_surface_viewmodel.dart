@@ -26,8 +26,8 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   final EventRenderingManager _renderingManager = EventRenderingManager();
 
   // Removed singleton gridInfo getter
-  /// gridInfo instance for this surface
-  final GridLayoutInfo gridInfo;
+  /// gridInfo instance for this surface - Made non-final
+  late GridLayoutInfo _gridInfo;
 
   /// Minimum event size
   final double minEventSize;
@@ -42,6 +42,9 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   final List<DateTime> visibleDates;
 
   // Removed orientation field (will get from gridInfo instance)
+
+  /// Event rendering style used for packing calculations
+  final EventRenderStyle renderStyle;
 
   /// List of processed events
   List<EventLayoutInfo> _events = [];
@@ -76,19 +79,21 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   /// Constructor
   EventLayoutSurfaceViewModel({
     required this.controller,
-    required this.gridInfo, // Add gridInfo parameter
+    required GridLayoutInfo gridInfo, // Renamed for initialization
     this.minEventSize = 20.0,
     this.minSecondarySize = 20.0,
     required this.isAllDay,
     required this.visibleDates,
+    required this.renderStyle, // Add renderStyle parameter
     // Removed orientation parameter
   }) {
+    _gridInfo = gridInfo; // Initialize _gridInfo
     // Listen for controller updates to refetch events
     controller.addListener(_handleControllerUpdate);
 
     // Initial fetch and process
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchAndProcessEvents();
+       _fetchAndProcessEvents();
     });
   }
 
@@ -102,6 +107,10 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   /// Handle controller updates by refetching and processing events
   void _handleControllerUpdate() {
     // Refetch events when the controller notifies of changes
+    // Don't fetch here initially, wait for gridInfo update or explicit call
+    // _fetchAndProcessEvents(); // Let the initial call in initState handle it
+    // We might need to reconsider the initial fetch logic slightly
+    // Let's keep the initial fetch in initState for now.
     _fetchAndProcessEvents();
   }
 
@@ -128,7 +137,8 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       final eventsFromController =
           await controller.getEventsForDateRange(rangeStart, rangeEnd);
       // Pass the gridInfo instance to _processEvents
-      await _processEvents(eventsFromController, gridInfo);
+      // Use the internal _gridInfo for processing
+      await _processEvents(eventsFromController, _gridInfo);
     } catch (e, s) {
       print('Error fetching/processing events: $e\n$s');
       _events = [];
@@ -186,7 +196,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       // 3. Measure the filtered events using the gridInfo instance
       final measuredLayouts = _layoutService.measureEvents(
         events: filteredEvents,
-        gridInfo: gridInfo, // Pass the gridInfo instance
+        gridInfo: gridInfo, // Use the passed gridInfo for this specific process run
         minEventSize: minEventSize,
       );
 
@@ -194,7 +204,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       final packedLayouts = _packingService.packEvents(
         events: measuredLayouts,
         minSecondarySize: minSecondarySize,
-        style: const EventRenderStyle(), // Use default style for now
+        style: renderStyle, // Use the stored renderStyle
       );
 
       _events = packedLayouts;
@@ -202,6 +212,16 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       print('Error processing events: $e\n$s');
       _events = [];
     }
+  }
+
+  /// Updates the grid info and triggers a re-fetch and process.
+  void updateGridInfo(GridLayoutInfo newGridInfo) {
+   // if (_gridInfo != newGridInfo) { // Avoid unnecessary updates
+      _gridInfo = newGridInfo;
+      // Re-fetch and process events with the new grid dimensions
+    //  _fetchAndProcessEvents();
+    //}
+    _fetchAndProcessEvents();
   }
 
   // Removed _waitForgridInfo method
@@ -323,7 +343,8 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     );
 
     // Re-process layout visually during drag
-    _updateLayoutForDragOrResize(updatedEventData, _draggedEventId!);
+    // Use the current _gridInfo for drag/resize updates
+    _updateLayoutForDragOrResize(updatedEventData, _draggedEventId!, _gridInfo);
   }
 
   /// Handle resize updates - Restored
@@ -360,12 +381,14 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     }
 
     // Re-process layout visually during resize
-    _updateLayoutForDragOrResize(updatedEventData, _resizedEventId!);
+    // Use the current _gridInfo for drag/resize updates
+    _updateLayoutForDragOrResize(updatedEventData, _resizedEventId!, _gridInfo);
   }
 
   /// Helper to re-process layout during drag/resize for visual feedback
-  void _updateLayoutForDragOrResize(
-      CalendarEvent updatedEventData, String targetEventId) {
+  void _updateLayoutForDragOrResize(CalendarEvent updatedEventData,
+      String targetEventId, GridLayoutInfo currentGridInfo) {
+    // Add currentGridInfo parameter
     // Create a temporary list with the updated event data
     final tempEvents = List<CalendarEvent>.from(_events
         .map((e) => e.event.id == targetEventId ? updatedEventData : e.event));
@@ -375,7 +398,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       events: tempEvents,
       minEventSize: minEventSize,
       minSecondarySize: minSecondarySize,
-      gridInfo: gridInfo, // Pass the gridInfo instance
+      gridInfo: currentGridInfo, // Use the passed gridInfo
     );
 
     // Update the state to show the dragged/resized position visually
@@ -450,6 +473,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   DateTime? _positionToDateTime(Offset position) {
     // Use the instance gridInfo
     // Delegate to the gridInfo instance's method
-    return gridInfo.getDateTimeForPosition(position);
+    // Use the internal _gridInfo
+    return _gridInfo.getDateTimeForPosition(position);
   }
 }

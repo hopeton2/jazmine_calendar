@@ -134,7 +134,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Add generated events to the controller
     // Assuming an addEvents method exists on CalendarController
-    _calendarController.addEvents(mockEvents);
+     _calendarController.addEvents(mockEvents);
   }
 
   @override

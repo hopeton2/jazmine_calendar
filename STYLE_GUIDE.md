@@ -24,6 +24,14 @@ This document outlines the coding style and best practices for Dart and Flutter 
 - Keep widget classes under 400 lines
 - Avoid widget bloat by extracting reusable components
 
+### SOLID Principles
+
+- **Single Responsibility Principle (SRP)**: A class should have only one reason to change.
+- **Open/Closed Principle (OCP)**: Software entities should be open for extension, but closed for modification.
+- **Liskov Substitution Principle (LSP)**: Subtypes must be substitutable for their base types.
+- **Interface Segregation Principle (ISP)**: Clients should not be forced to depend on interfaces they do not use.
+- **Dependency Inversion Principle (DIP)**: Depend upon abstractions, not concretions.
+
 ## API Design
 
 ### Public API Guidelines

@@ -15,7 +15,7 @@ class AllDayGrid extends StatelessWidget {
     super.key,
     required this.dates,
     required this.controller,
-    this.headerWidth = 60.0,
+    this.headerWidth = 0.0,
     this.allDayRegionHeight = 80.0,
     this.borderColor,
   });

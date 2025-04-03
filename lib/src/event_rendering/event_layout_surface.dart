@@ -66,7 +66,7 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       isAllDay: widget.isAllDay, // Pass from widget
       visibleDates: widget.visibleDates,
       gridInfo: widget.gridInfo, // Pass from widget
-// Pass orientation to ViewModel
+      renderStyle: widget.renderStyle, // Pass renderStyle from widget
     );
 
     // Listen for changes in the ViewModel
@@ -116,17 +116,20 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
 
     // Update scroll controller if it changed
     if (widget.scrollController != oldWidget.scrollController) {
-      if (oldWidget.scrollController != null) {
-        oldWidget.scrollController!.removeListener(_handleScroll);
-      }
-      if (widget.scrollController != null) {
-        widget.scrollController!.addListener(_handleScroll);
-        // Initialize with current scroll position if available
-        if (widget.scrollController!.hasClients) {
-          _scrollOffset = widget.scrollController!.position.pixels;
-        }
+      // Remove listener from old controller
+      oldWidget.scrollController?.removeListener(_handleScroll);
+      // Add listener to new controller and initialize offset
+      widget.scrollController?.addListener(_handleScroll);
+      if (widget.scrollController?.hasClients ?? false) {
+        _scrollOffset = widget.scrollController!.position.pixels;
+      } else {
+        _scrollOffset = 0.0; // Reset if no client
       }
     }
+
+    // Always pass the latest gridInfo to the ViewModel.
+    // The ViewModel uses Equatable internally to decide if a re-fetch/process is needed.
+    _viewModel.updateGridInfo(widget.gridInfo);
   }
 
   /// Handle updates from the ViewModel

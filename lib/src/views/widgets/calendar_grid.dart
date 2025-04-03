@@ -95,8 +95,8 @@ class CalendarGrid extends StatefulWidget {
     required this.numberOfRows,
     this.headerBuilder,
     this.cellBuilder,
-    this.rowHeaderWidth = 60.0,
-    this.columnHeaderHeight = 60.0,
+    this.rowHeaderWidth = 0.0,
+    this.columnHeaderHeight = 0.0,
     this.showCurrentTimeIndicator = true,
     this.gridLineWidth = 1.0,
     this.isAllDay = false,
@@ -151,8 +151,9 @@ class CalendarGridState extends State<CalendarGrid> {
     super.dispose();
   }
 
-  void _updateGridLayoutBroker(BoxConstraints constraints, Offset origin,
-      double slotWidth, double slotHeight) { // Add slotWidth, slotHeight params
+  void _updateGridLayoutInfo(BoxConstraints constraints, Offset origin,
+      double slotWidth, double slotHeight) {
+    // Add slotWidth, slotHeight params
     // Use constraints provided by LayoutBuilder and calculated slot dimensions
 
     // Calculate view start and end times
@@ -165,7 +166,7 @@ class CalendarGridState extends State<CalendarGrid> {
     // Origin is the top-left corner of the actual grid area, offset by headers.
     final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
     // Available space is derived from constraints minus header dimensions.
-    final availableSpace = Size(constraints.maxWidth - widget.rowHeaderWidth,
+    final availableSpace = Size(constraints.maxWidth - widget.rowHeaderWidth -5,
         constraints.maxHeight - widget.columnHeaderHeight);
 
     // Use the passed slot dimensions (which account for min sizes) as the cell dimensions
@@ -234,9 +235,9 @@ class CalendarGridState extends State<CalendarGrid> {
         final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
 
         // Update the broker *before* building the rest of the UI, passing the actual slot dimensions
-        _updateGridLayoutBroker(constraints, origin, slotWidth, slotHeight);
+        _updateGridLayoutInfo(constraints, origin, slotWidth, slotHeight);
 
-        // Perform initial scroll *after* layout is known and broker is updated
+        // Perform initial scroll *after* layout is known and gridoker is updated
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted &&
               widget.controller.currentView != CalendarViewType.month &&
@@ -301,8 +302,10 @@ class CalendarGridState extends State<CalendarGrid> {
                       );
                     },
                     childCount: itemCount,
-                    addAutomaticKeepAlives: false, // Consider performance implications
-                    addRepaintBoundaries: true, // Consider performance implications
+                    addAutomaticKeepAlives:
+                        false, // Consider performance implications
+                    addRepaintBoundaries:
+                        true, // Consider performance implications
                   ),
                 ),
               ],
@@ -312,7 +315,7 @@ class CalendarGridState extends State<CalendarGrid> {
             if (widget.showEvents)
               Positioned(
                 left: origin.dx,
-                top: 0, // Aligned with ScrollView top
+                top: origin.dy, // Aligned with ScrollView top
                 width: availableWidth,
                 height: availableHeight,
                 child: RepaintBoundary(
@@ -323,7 +326,8 @@ class CalendarGridState extends State<CalendarGrid> {
                       gridInfo: _gridInfo, // Pass local broker instance
                       isAllDay: widget.isAllDay,
                       visibleDates: widget.dates,
-                      renderStyle: EventRenderStyle( // Example style - consider passing from config
+                      renderStyle: EventRenderStyle(
+                        // Example style - consider passing from config
                         defaultEventColor: Theme.of(context).primaryColor,
                         titleStyle:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -1,7 +1,9 @@
+import 'package:equatable/equatable.dart'; // Import equatable
 import 'package:flutter/material.dart';
 
 /// Stores and provides grid layout information for a specific grid instance.
-class GridLayoutInfo { // Renamed from GridLayoutBroker
+/// Uses Equatable for value-based comparison.
+class GridLayoutInfo extends Equatable { // Extend Equatable
   // Removed Singleton pattern
 
   /// Creates a new instance of the broker.
@@ -51,7 +53,6 @@ class GridLayoutInfo { // Renamed from GridLayoutBroker
     if (_cellHeight == null) throw StateError('Grid layout information (cellHeight) is not available');
     return _cellHeight!;
   }
-  // isReady getter removed
 
   // This getter is replaced by the _isReady field
 
@@ -206,4 +207,20 @@ class GridLayoutInfo { // Renamed from GridLayoutBroker
     _cellHeight = null;
     // Removed resetting _isReady flag
   }
+
+  @override
+  List<Object?> get props => [
+        _viewStart,
+        _viewEnd,
+        _origin,
+        _availableSpace,
+        _orientation,
+        _divisions,
+        _cellWidth,
+        _cellHeight,
+      ];
+
+  // Optional: Add stringify for easier debugging if needed
+  // @override
+  // bool get stringify => true;
 }
