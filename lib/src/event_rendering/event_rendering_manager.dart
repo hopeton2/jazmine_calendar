@@ -5,6 +5,7 @@ import 'package:jazmine_calendar/src/event_rendering/event_packing_service.dart'
 import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/models/calendar_event.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart'; // Added import
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Import for date extensions
 
 /// Manager for coordinating event layout and rendering
 class EventRenderingManager {
@@ -14,7 +15,6 @@ class EventRenderingManager {
   // Services
   final EventLayoutService _layoutService = EventLayoutService();
   final EventPackingService _packingService = EventPackingService();
-  // Removed singleton broker field reference
 
   // Cache for processed events
   final Map<String, List<EventLayoutInfo>> _processedEventsCache = {};
@@ -24,13 +24,12 @@ class EventRenderingManager {
     required List<CalendarEvent> events,
     required double minEventSize,
     required double minSecondarySize,
-    required GridLayoutInfo gridInfo, // Renamed class
+    required GridLayoutInfo gridInfo,
+    int? maxVisibleAllDayEvents, // Added parameter back
   }) {
-    // No isReady check needed
 
-    // Generate cache key
-    final cacheKey = _generateCacheKey(events, minEventSize, minSecondarySize,
-        gridInfo); // Pass broker to cache key
+    // Generate cache key (consider adding maxVisibleAllDayEvents if it affects layout outcome)
+    final cacheKey = _generateCacheKey(events, minEventSize, minSecondarySize, gridInfo);
 
     // Return cached results if available
     if (_processedEventsCache.containsKey(cacheKey)) {
@@ -45,28 +44,28 @@ class EventRenderingManager {
     // First pass: Measure events
     final layoutInfos = _layoutService.measureEvents(
       events: events,
-      gridInfo: gridInfo, // Pass the broker instance received as parameter
+      gridInfo: gridInfo,
       minEventSize: minEventSize,
     );
 
     // Second pass: Pack events
-    // Pass a default style for now. TODO: Refactor if specific style needed here.
     // Approximate visibleDates from gridInfo for packing service
     final List<DateTime> managerVisibleDates = [];
-    // Removed isReady check, assume gridInfo is valid here
-    DateTime currentDate = gridInfo.viewStart.toLocal(); // Assuming gridInfo dates are UTC
-    // Ensure viewEnd is included if it's exactly the end date
-    final loopEndDate = gridInfo.viewEnd.toLocal().add(const Duration(microseconds: 1));
-    while (currentDate.isBefore(loopEndDate)) {
-      managerVisibleDates.add(currentDate);
-      currentDate = currentDate.add(const Duration(days: 1));
+    if (gridInfo.viewStart != null && gridInfo.viewEnd != null) { // Check for null safety
+      DateTime currentDate = gridInfo.viewStart!.toLocal();
+      final loopEndDate = gridInfo.viewEnd!.toLocal().add(const Duration(microseconds: 1));
+      while (currentDate.isBefore(loopEndDate)) {
+        managerVisibleDates.add(currentDate);
+        currentDate = currentDate.add(const Duration(days: 1));
+      }
     }
 
     final packedEvents = _packingService.packEvents(
       events: layoutInfos,
       minSecondarySize: minSecondarySize,
-      style: const EventRenderStyle(), // Keep default style for now
-      visibleDates: managerVisibleDates, // Pass approximated visibleDates
+      style: const EventRenderStyle(), // Use default style for manager processing
+      visibleDates: managerVisibleDates,
+      maxVisibleAllDayEvents: maxVisibleAllDayEvents, // Pass down
     );
 
     // Cache the results
@@ -85,11 +84,12 @@ class EventRenderingManager {
     List<CalendarEvent> events,
     double minEventSize,
     double minSecondarySize,
-    GridLayoutInfo broker, // Renamed class
+    GridLayoutInfo broker,
+    // Consider adding maxVisibleAllDayEvents to key if needed
   ) {
     // Include broker state in the key using the passed instance
-    final brokerKey = '${broker.viewStart.toIso8601String()}_'
-        '${broker.viewEnd.toIso8601String()}_'
+    final brokerKey = '${broker.viewStart?.toIso8601String() ?? 'null'}_' // Null safety
+        '${broker.viewEnd?.toIso8601String() ?? 'null'}_'
         '${broker.orientation}_'
         '${broker.divisions}_'
         '${broker.origin}_'
@@ -101,38 +101,45 @@ class EventRenderingManager {
             '${e.id}:${e.start.millisecondsSinceEpoch}:${e.end.millisecondsSinceEpoch}')
         .join(',');
 
-    return '$brokerKey|$eventKey|$minEventSize|$minSecondarySize';
+    // Add maxVisibleAllDayEvents to the key if it influences packing result
+    // final maxVisibleKey = maxVisibleAllDayEvents?.toString() ?? 'null';
+    // return '$brokerKey|$eventKey|$minEventSize|$minSecondarySize|$maxVisibleKey';
+    return '$brokerKey|$eventKey|$minEventSize|$minSecondarySize'; // Keep key simpler for now
   }
 
-  // Removed broker related getters
 
   /// Fetch and process events from the controller
   Future<List<EventLayoutInfo>> fetchAndProcessEvents({
     required CalendarController controller,
     required double minEventSize,
     required double minSecondarySize,
-    required GridLayoutInfo broker, // Renamed class
+    required GridLayoutInfo broker,
+    int? maxVisibleAllDayEvents, // Add parameter here as well
   }) async {
     // TEMPORARY DEBUG - Remove after debugging
-    print(
-        'DEBUG: fetchAndProcessEvents called at ${DateTime.now().toIso8601String()} - Stack trace:\n${StackTrace.current}');
-    // No isReady check needed
+    // print('DEBUG: fetchAndProcessEvents called at ${DateTime.now().toIso8601String()} - Stack trace:\n${StackTrace.current}');
 
     try {
       // Get events for the visible range using the passed broker
+      if (broker.viewStart == null || broker.viewEnd == null) {
+         print("Warning: fetchAndProcessEvents called with null viewStart or viewEnd in broker.");
+         return [];
+      }
       final events = await controller.getEventsForDateRange(
-          broker.viewStart, broker.viewEnd);
+          broker.viewStart!, broker.viewEnd!);
 
-      // Process events
+      // Process events, passing the parameter
       final packedEvents = processEvents(
         events: events,
         minEventSize: minEventSize,
         minSecondarySize: minSecondarySize,
-        gridInfo: broker, // Pass broker instance
+        gridInfo: broker,
+        maxVisibleAllDayEvents: maxVisibleAllDayEvents, // Pass parameter
       );
 
       return packedEvents;
-    } catch (e) {
+    } catch (e, s) {
+       print("Error in fetchAndProcessEvents: $e\n$s");
       return [];
     }
   }

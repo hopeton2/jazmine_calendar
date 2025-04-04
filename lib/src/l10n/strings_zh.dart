@@ -19,4 +19,5 @@ final Map<String, String> chineseStrings = {
   'dateLabel': '日期',
   'monthLabel': '月份',
   'weekLabel': '周',
+  'moreLabel': '更多', // Add Chinese label for "More"
 };

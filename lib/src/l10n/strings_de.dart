@@ -19,4 +19,5 @@ final Map<String, String> germanStrings = {
   'dateLabel': 'Datum',
   'monthLabel': 'Monat',
   'weekLabel': 'Woche',
+  'moreLabel': 'Mehr', // Add German label for "More"
 };

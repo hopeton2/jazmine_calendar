@@ -19,4 +19,5 @@ final Map<String, String> hindiStrings = {
   'dateLabel': 'तारीख',
   'monthLabel': 'महीना',
   'weekLabel': 'सप्ताह',
+  'moreLabel': 'और', // Add Hindi label for "More"
 };

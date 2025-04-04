@@ -6,6 +6,10 @@ import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_renderer.dart';
 import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
+import 'dart:math'; // For max in ViewModel calculation
+
+// Define callback type for overflow state
+typedef OverflowStateCallback = void Function(bool hasOverflow, int hiddenCount, int maxLaneIndex);
 
 /// Widget that renders calendar events using a CustomPainter
 class EventLayoutSurface extends StatefulWidget {
@@ -31,7 +35,10 @@ class EventLayoutSurface extends StatefulWidget {
   final List<DateTime> visibleDates;
 
   final GridLayoutInfo gridInfo;
-
+  final int? maxVisibleAllDayEvents; // Needed for ViewModel -> Packer
+  final OverflowStateCallback? onOverflowStateChanged; // New callback
+  final bool isCollapsed; // New parameter for filtering
+  final double? collapsedContentHeight; // New parameter for filtering
   /// Creates a new EventLayoutSurface
   const EventLayoutSurface({
     super.key,
@@ -40,9 +47,13 @@ class EventLayoutSurface extends StatefulWidget {
     this.minEventSize = 20.0,
     this.minSecondarySize = 20.0,
     this.scrollController,
-    this.isAllDay = false, // Default to false for the main grid
+    this.isAllDay = false,
     required this.visibleDates,
-    required this.gridInfo, // Add orientation parameter
+    required this.gridInfo,
+    this.maxVisibleAllDayEvents,
+    this.onOverflowStateChanged, // Add to constructor
+    this.isCollapsed = false, // Default to false
+    this.collapsedContentHeight,
   });
 
   @override
@@ -52,6 +63,8 @@ class EventLayoutSurface extends StatefulWidget {
 class EventLayoutSurfaceState extends State<EventLayoutSurface> {
   // ViewModel
   late EventLayoutSurfaceViewModel _viewModel;
+  // Public getter to expose the ViewModel (still needed for height calculation in parent)
+  EventLayoutSurfaceViewModel? get viewModelAccessor => _viewModel;
 
   // Track scroll offset for painting
   double _scrollOffset = 0.0;
@@ -63,10 +76,16 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       controller: widget.controller,
       minEventSize: widget.minEventSize,
       minSecondarySize: widget.minSecondarySize,
-      isAllDay: widget.isAllDay, // Pass from widget
+      isAllDay: widget.isAllDay,
       visibleDates: widget.visibleDates,
-      gridInfo: widget.gridInfo, // Pass from widget
-      renderStyle: widget.renderStyle, // Pass renderStyle from widget
+      gridInfo: widget.gridInfo,
+      renderStyle: widget.renderStyle,
+      maxVisibleAllDayEvents: widget.maxVisibleAllDayEvents, // Pass down
+      // Pass the callback to the ViewModel
+      onOverflowStateChanged: widget.onOverflowStateChanged,
+      // Pass new parameters to ViewModel
+      isCollapsed: widget.isCollapsed,
+      collapsedContentHeight: widget.collapsedContentHeight,
     );
 
     // Listen for changes in the ViewModel
@@ -75,22 +94,20 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
     // Listen to scroll events if a controller is provided
     if (widget.scrollController != null) {
       widget.scrollController!.addListener(_handleScroll);
-      // Initialize with current scroll position if available
       if (widget.scrollController!.hasClients) {
         _scrollOffset = widget.scrollController!.position.pixels;
       }
     }
+     // Initial calculation after first frame (ViewModel handles this now)
+     // WidgetsBinding.instance.addPostFrameCallback((_) => _notifyMaxLaneIndex());
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_handleViewModelUpdate);
-
-    // Remove scroll listener
     if (widget.scrollController != null) {
       widget.scrollController!.removeListener(_handleScroll);
     }
-
     _viewModel.dispose();
     super.dispose();
   }
@@ -100,12 +117,8 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
     if (widget.scrollController != null &&
         widget.scrollController!.hasClients) {
       final newOffset = widget.scrollController!.position.pixels;
-
-      // Only update if the offset has changed
       if (_scrollOffset != newOffset) {
-        setState(() {
-          _scrollOffset = newOffset;
-        });
+        setState(() { _scrollOffset = newOffset; });
       }
     }
   }
@@ -113,37 +126,38 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
   @override
   void didUpdateWidget(EventLayoutSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    // Update scroll controller if it changed
     if (widget.scrollController != oldWidget.scrollController) {
-      // Remove listener from old controller
       oldWidget.scrollController?.removeListener(_handleScroll);
-      // Add listener to new controller and initialize offset
       widget.scrollController?.addListener(_handleScroll);
-      if (widget.scrollController?.hasClients ?? false) {
-        _scrollOffset = widget.scrollController!.position.pixels;
-      } else {
-        _scrollOffset = 0.0; // Reset if no client
-      }
+      _scrollOffset = widget.scrollController?.hasClients ?? false
+          ? widget.scrollController!.position.pixels
+          : 0.0;
     }
-
-    // Always pass the latest gridInfo to the ViewModel.
-    // The ViewModel uses Equatable internally to decide if a re-fetch/process is needed.
+    // Update ViewModel with potentially new data
+    _viewModel.updateVisibleDates(widget.visibleDates); // Add this line
     _viewModel.updateGridInfo(widget.gridInfo);
+    _viewModel.updateMaxVisibleEvents(widget.maxVisibleAllDayEvents);
+    // Update the callback reference in the ViewModel if it changed
+    _viewModel.updateOverflowCallback(widget.onOverflowStateChanged);
+    // Update ViewModel with new collapsed state if it changed
+    _viewModel.updateCollapsedState(widget.isCollapsed, widget.collapsedContentHeight);
   }
 
   /// Handle updates from the ViewModel
   void _handleViewModelUpdate() {
     // Force a rebuild when the ViewModel changes
+    // The ViewModel itself will now trigger the callback after processing
     setState(() {});
   }
+
+  // Removed _notifyMaxLaneIndex helper method
+
 
   // Track current mouse cursor
   MouseCursor _currentCursor = SystemMouseCursors.basic;
 
   /// Update cursor based on what's under the mouse pointer
   void _updateCursorOnHover(PointerHoverEvent event) {
-    // Get the event renderer from the CustomPaint
     final renderer = EventRenderer(
       events: _viewModel.events,
       style: widget.renderStyle,
@@ -154,45 +168,25 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       scrollOffset: _scrollOffset,
     );
 
-    // Check if we're hovering over a resize handle
     final resizeHandleHit = renderer.findResizeHandleAt(event.localPosition);
-
     if (resizeHandleHit != null) {
-      // Set cursor based on the orientation and handle type
       if (resizeHandleHit.event.orientation == Axis.vertical) {
-        // Vertical orientation: top/bottom handles
-        if (resizeHandleHit.handle == ResizeHandle.top ||
-            resizeHandleHit.handle == ResizeHandle.bottom) {
-          setState(() {
-            _currentCursor = SystemMouseCursors.resizeUpDown;
-          });
-          return;
+        if (resizeHandleHit.handle == ResizeHandle.top || resizeHandleHit.handle == ResizeHandle.bottom) {
+          setState(() { _currentCursor = SystemMouseCursors.resizeUpDown; }); return;
         }
       } else {
-        // Horizontal orientation: left/right handles
-        if (resizeHandleHit.handle == ResizeHandle.left ||
-            resizeHandleHit.handle == ResizeHandle.right) {
-          setState(() {
-            _currentCursor = SystemMouseCursors.resizeLeftRight;
-          });
-          return;
+        if (resizeHandleHit.handle == ResizeHandle.left || resizeHandleHit.handle == ResizeHandle.right) {
+          setState(() { _currentCursor = SystemMouseCursors.resizeLeftRight; }); return;
         }
       }
     }
 
-    // Check if we're hovering over an event (for dragging)
     final eventHit = renderer.findEventAt(event.localPosition);
     if (eventHit != null) {
-      setState(() {
-        _currentCursor = SystemMouseCursors.grab;
-      });
-      return;
+      setState(() { _currentCursor = SystemMouseCursors.grab; }); return;
     }
 
-    // Default cursor
-    setState(() {
-      _currentCursor = SystemMouseCursors.basic;
-    });
+    setState(() { _currentCursor = SystemMouseCursors.basic; });
   }
 
   @override
@@ -208,7 +202,6 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
         onPanUpdate: _handlePanUpdate,
         onPanEnd: _handlePanEnd,
         child: Container(
-          // Add right margin of 10 pixels
           margin: const EdgeInsets.only(right: 10.0),
           child: CustomPaint(
             painter: EventRenderer(
@@ -216,11 +209,12 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
               style: widget.renderStyle,
               selectedEventId: _viewModel.selectedEventId,
               draggedEventId: _viewModel.draggedEventId,
-              resizedEventId: _viewModel.resizedEventId, // Restore parameter
-              activeResizeHandle:
-                  _viewModel.activeResizeHandle, // Restore parameter
-              scrollOffset:
-                  _scrollOffset, // Pass the scroll offset to the renderer
+              resizedEventId: _viewModel.resizedEventId,
+              activeResizeHandle: _viewModel.activeResizeHandle,
+              scrollOffset: _scrollOffset,
+              // Pass new parameters to Renderer
+              isCollapsed: widget.isCollapsed,
+              collapsedContentHeight: widget.collapsedContentHeight,
             ),
             size: Size.infinite,
           ),
@@ -231,9 +225,11 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
 
   /// Handle tap events
   void _handleTap(TapUpDetails details) {
+    // Regular event tap handling
     _viewModel.handleTap(details.localPosition, _scrollOffset);
   }
 
+  // ... other handlers remain the same ...
   /// Handle double tap events
   void _handleDoubleTap(TapDownDetails details) {
     _viewModel.handleDoubleTap(details.localPosition, _scrollOffset);

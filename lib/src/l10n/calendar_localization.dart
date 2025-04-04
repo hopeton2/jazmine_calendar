@@ -109,6 +109,7 @@ class CalendarLocalization {
   String get dateLabel => translate('dateLabel');
   String get monthLabel => translate('monthLabel');
   String get weekLabel => translate('weekLabel');
+  String get moreLabel => translate('moreLabel'); // Getter for the "More" label
 
   // Date formats
   String formatYearMonth(DateTime date) {

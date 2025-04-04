@@ -44,10 +44,14 @@ class EventLayoutInfo {
 
   /// Indicates if the original event starts before the first visible date in the current view.
   bool startsBeforeView = false;
+/// Indicates if the original event ends after the last visible date in the current view.
+bool endsAfterView = false;
 
-  /// Indicates if the original event ends after the last visible date in the current view.
-  bool endsAfterView = false;
+/// Indicates if this event is the last visible one in its column and there are more hidden below.
+bool hasMoreIndicator = false;
 
+/// The number of hidden events below this one in the same column.
+int hiddenEventCount = 0;
   /// Convenience getter for the top position
   double get top {
     // For vertical, primary axis is Y (start), secondary is X.
@@ -116,6 +120,6 @@ class EventLayoutInfo {
 
   @override
   String toString() {
-    return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight, startsBefore: $startsBeforeView, endsAfter: $endsAfterView)';
+    return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight, startsBefore: $startsBeforeView, endsAfter: $endsAfterView, hasMore: $hasMoreIndicator, hiddenCount: $hiddenEventCount)';
   }
 }

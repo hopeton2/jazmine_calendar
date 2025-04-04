@@ -1,0 +1,20 @@
+**Mermaid Diagram (Simplified Flow):**
+graph TD
+    subgraph Controller_Widget_Update
+        CU[Controller_Change_OR_Widget_Update]
+    end
+
+    subgraph EventLayoutSurfaceViewModel
+        CU --> RequestFetchDebounce[_requestFetchWithDebounce]
+        RequestFetchDebounce --> Cancel{Cancel_Existing_Timer?};
+        Cancel -- Yes --> CT[Timer_Cancelled];
+        Cancel -- No --> ST[Start_New_Timer_(50ms)];
+        CT --> ST;
+        ST -- Timer_Fires --> FPE[_fetchAndProcessEvents];
+        FPE --> Fetch[Fetch_&_Process_Data];
+        Fetch --> Notify[Notify_Listeners];
+    end
+
+    subgraph Dispose
+       ** D[ViewModel_Dispose] --> CancelDispose{Cancel_Existing_Timer?};
+    end

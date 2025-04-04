@@ -62,62 +62,46 @@ class _MyHomePageState extends State<MyHomePage> {
   void _generateAndAddEvents() {
     // Initialize controller
     _calendarController = CalendarController(
-      initialView: CalendarViewType.day,
+      // Start with Week view to better see multi-day events
+      initialView: CalendarViewType.week,
       initialDate: DateTime.now(),
       scrollToCurrentTimeOnLoad: false,
       interval: const Duration(minutes: 60),
     );
 
-    // Configure the vertical indicator
-    // Note: This would be the ideal place to configure the EventRenderStyle
-    // if the CalendarController had a parameter for it
-
-    // Generate random events (similar logic from ViewModel)
+    // Generate random events
     final random = Random();
     final List<CalendarEvent> mockEvents = [];
-    // Generate events around the initial date for better visibility
-    // Use DateTime.now() as the base for generating event dates
     final initialDate = DateTime.now().toUtc().dayStarts;
-    final int eventCount = 15 + random.nextInt(16); // 15 to 30 events
+    // Increase event count slightly more
+    final int eventCount = 30 + random.nextInt(21); // 30 to 50 events
 
     const List<Color> eventColors = [
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.pink,
-      Colors.indigo,
-      Colors.amber,
-      Colors.cyan,
+      Colors.red, Colors.blue, Colors.green, Colors.orange, Colors.purple,
+      Colors.teal, Colors.pink, Colors.indigo, Colors.amber, Colors.cyan,
     ];
 
     for (int i = 0; i < eventCount; i++) {
-      // Generate events within a +/- 3 day range of the initial date
-      final dayOffset = random.nextInt(7) - 3; // -3 to +3 days
+      // Generate events within a +/- 5 day range for better multi-day spread
+      final dayOffset = random.nextInt(11) - 5; // -5 to +5 days
       final eventDate = initialDate.add(Duration(days: dayOffset));
 
+      // Keep start time random for distribution, but force all-day later
       final startHour = random.nextInt(24);
       final startMinute = random.nextInt(4) * 15;
-      final durationMinutes = (2 + random.nextInt(191)) * 15; // 30m to 48h
+      DateTime startTime = eventDate.add(Duration(hours: startHour, minutes: startMinute));
 
-      DateTime startTime =
-          eventDate.add(Duration(hours: startHour, minutes: startMinute));
-      DateTime endTime = startTime.add(Duration(minutes: durationMinutes));
-      // --- Force All-Day Events ---
-      const bool isAllDayEvent = true; // Always create all-day events
-
-      startTime = startTime.dayStarts; // Start at the beginning of the day
-      // Allow slightly longer duration, e.g., 1 to 4 days
-      int allDayDurationDays = 1 + random.nextInt(4);
-      endTime = startTime.add(Duration(days: allDayDurationDays));
-      // Removed the 'else' block for timed events
+      // --- Force All-Day Events with Random Duration ---
+      const bool isAllDayEvent = true;
+      startTime = startTime.dayStarts; // Ensure it starts at the beginning of the day
+      // Random duration between 1 and 5 days (inclusive)
+      int allDayDurationDays = 1 + random.nextInt(5);
+      DateTime endTime = startTime.add(Duration(days: allDayDurationDays));
 
       mockEvents.add(CalendarEvent(
         id: 'mock_$i',
         // Format title with date range
-        title: 'Event ${i + 1} (${DateFormat.yMd().format(startTime)} - ${DateFormat.yMd().format(endTime.subtract(const Duration(microseconds: 1)))})', // Subtract microsecond to show correct end date
+        title: 'Event ${i + 1} (${DateFormat.yMd().format(startTime)} - ${DateFormat.yMd().format(endTime.subtract(const Duration(microseconds: 1)))})',
         start: startTime,
         end: endTime,
         isAllDay: isAllDayEvent,
@@ -126,7 +110,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     // Add generated events to the controller
-    // Assuming an addEvents method exists on CalendarController
      _calendarController.addEvents(mockEvents);
   }
 
@@ -138,14 +121,18 @@ class _MyHomePageState extends State<MyHomePage> {
         showViewSelector: true,
         navigationBarStyle: NavigationBarStyle.compact,
         controller: _calendarController, // Use the initialized controller
-        // Configure the vertical indicator through the dayConfiguration
         dayConfiguration: const DayViewConfiguration(
           hourHeight: 60,
           timebarWidth: 60,
           showCurrentTimeIndicator: true,
         ),
-        // Note: In a real app, you would configure the vertical indicator through a custom theme
-        // that includes an EventRenderStyle with the desired verticalIndicatorWidth and color
+        // Add configurations for other views if needed
+        // Ensure WeekViewConfiguration exists and uses appropriate parameters
+        // Relying on defaults or inherited values for timebar/hour height for now
+        weekConfiguration: const WeekViewConfiguration(
+           showCurrentTimeIndicator: true,
+        ),
+        // Removed workWeekConfiguration as it's likely not a separate parameter
       ),
     );
   }

@@ -19,4 +19,5 @@ final Map<String, String> englishStrings = {
   'dateLabel': 'Date',
   'monthLabel': 'Month',
   'weekLabel': 'Week',
+  'moreLabel': 'More', // Add label for the "More" button
 };

@@ -65,12 +65,12 @@ class EventRenderStyle {
     this.contentPadding = const EdgeInsets.all(4.0),
     this.titleStyle = const TextStyle(
       color: Colors.white,
-      fontSize: 12,
-      fontWeight: FontWeight.bold,
+      fontSize: 8, // Reduced from 9
+      fontWeight: FontWeight.normal, // Changed from bold
     ),
     this.timeStyle = const TextStyle(
       color: Colors.white,
-      fontSize: 10,
+      fontSize: 8, // Set to 8 (was 7)
     ),
     this.locationStyle = const TextStyle(
       color: Colors.white,
@@ -88,8 +88,9 @@ class EventRenderStyle {
     this.spanningMode = EventSpanningMode.strict,
     this.verticalIndicatorWidth = 0.0, // Set to 0 to remove the indicator
     this.verticalIndicatorColor, // Default null (use event color)
+    // Reduced vertical padding for all-day events to better fit content
     this.allDayContentPadding = const EdgeInsets.only(
-        top: 5, bottom: 20, left: 4, right: 4), // Specific padding
+        top: 2, bottom: 2, left: 4, right: 4),
   });
 
   /// Get the color for an event

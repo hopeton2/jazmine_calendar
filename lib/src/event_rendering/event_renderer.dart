@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'dart:math'; // Import for min function
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart'; // Ensure enums are imported for ResizeHandle
@@ -38,6 +39,9 @@ class EventRenderer extends CustomPainter {
 
   /// Scroll offset for vertical scrolling
   final double scrollOffset;
+  // Add parameters for filtering
+  final bool isCollapsed;
+  final double? collapsedContentHeight;
 
   /// Creates a new EventRenderer
   EventRenderer({
@@ -49,41 +53,73 @@ class EventRenderer extends CustomPainter {
     this.activeResizeHandle, // Restored
     this.timeFormat,
     this.scrollOffset = 0.0,
+    // Add to constructor
+    this.isCollapsed = false,
+    this.collapsedContentHeight,
   });
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final eventLayout in events) {
-      // Apply scroll offset to the event's position
-      final calculatedRect =
-          eventLayout.finalRect; // Rect relative to content area (0,0)
-      // Scroll offset only applies vertically for now
-      final topAdjust =
-          eventLayout.orientation == Axis.vertical ? scrollOffset : 0.0;
-      final leftAdjust = 0.0; // Assuming no horizontal scroll for now
+  // --- Drawing Helper Methods ---
 
-      final rect = Rect.fromLTWH(
-        calculatedRect.left - leftAdjust,
-        calculatedRect.top - topAdjust,
-        calculatedRect.width,
-        calculatedRect.height,
-      );
+  /// Draw the "+N more" indicator
+  void _drawMoreIndicator(Canvas canvas, EventLayoutInfo layout, Rect eventRect) {
+    // Ensure we have a positive count to display
+    if (layout.hiddenEventCount <= 0) return;
 
-      // Determine if this event is selected, being dragged, or being resized
-      final isSelected = selectedEventId == eventLayout.event.id;
-      final isDragged = draggedEventId == eventLayout.event.id;
-      final isResized = resizedEventId == eventLayout.event.id; // Restored
+    final text = "+${layout.hiddenEventCount}";
+    // Use a slightly smaller font size than the event time style
+    final textStyle = style.timeStyle.copyWith(
+      fontSize: 10, // Font size for indicator
+      color: style.timeStyle.color?.withOpacity(0.9) ?? Colors.white70,
+    );
 
-      // Draw the event with the adjusted rect
-      _drawEvent(
-        canvas,
-        eventLayout,
-        isSelected: isSelected,
-        isDragged: isDragged,
-        isResized: isResized, // Restored
-        rect: rect, // Pass the adjusted rect
-      );
-    }
+    final textSpan = TextSpan(text: text, style: textStyle);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: ui.TextDirection.ltr,
+      maxLines: 1,
+    );
+
+    textPainter.layout();
+
+    // Position at bottom-right, slightly inset
+    final double hPadding = 4.0; // Horizontal padding inside capsule
+    final double vPadding = 1.0; // Vertical padding inside capsule
+    final indicatorWidth = textPainter.width + hPadding * 2;
+    final indicatorHeight = textPainter.height + vPadding * 2;
+    final double margin = 2.0; // Margin from event edges
+
+    // Ensure indicator doesn't exceed event bounds (especially for narrow events)
+    final double availableWidth = eventRect.width - margin * 2;
+    final double finalIndicatorWidth = min(indicatorWidth, availableWidth);
+    final double availableHeight = eventRect.height - margin * 2;
+    final double finalIndicatorHeight = min(indicatorHeight, availableHeight);
+
+    // Don't draw if calculated size is non-positive
+    if (finalIndicatorWidth <= 0 || finalIndicatorHeight <= 0) return;
+
+    final indicatorRect = Rect.fromLTWH(
+      eventRect.right - finalIndicatorWidth - margin, // Position from right edge
+      eventRect.bottom - finalIndicatorHeight - margin, // Position from bottom edge
+      finalIndicatorWidth,
+      finalIndicatorHeight,
+    );
+
+    // Draw background capsule
+    final backgroundPaint = Paint()
+      ..color = Colors.black.withOpacity(0.5) // Slightly darker background
+      ..style = PaintingStyle.fill;
+    // Use radius proportional to height for a nice capsule shape
+    final rrect = RRect.fromRectAndRadius(indicatorRect, Radius.circular(finalIndicatorHeight / 2));
+    canvas.drawRRect(rrect, backgroundPaint);
+
+    // Draw text centered within the capsule
+    textPainter.paint(
+      canvas,
+      Offset(
+        indicatorRect.left + (finalIndicatorWidth - textPainter.width) / 2,
+        indicatorRect.top + (finalIndicatorHeight - textPainter.height) / 2,
+      ),
+    );
   }
 
   /// Draw a single event
@@ -95,6 +131,11 @@ class EventRenderer extends CustomPainter {
     bool isResized = false, // Restored
     required Rect rect, // Use the adjusted rect passed from paint method
   }) {
+    // Skip drawing events that were hidden by the packer (if packer sets size to 0)
+    // Note: Current packer assigns full height, relying on clipping.
+    // If packer logic changes to set size=0, this check becomes relevant.
+    // if (layout.secondarySize <= 0) return;
+
     final event = layout.event;
     final color = style.getColorForEvent(event);
     final backgroundPaint = Paint()
@@ -165,6 +206,11 @@ class EventRenderer extends CustomPainter {
 
     _drawEventContent(canvas, layout, backgroundRect); // Pass backgroundRect
 
+    // Draw "+N more" indicator if needed (only for horizontal events)
+    if (layout.orientation == Axis.horizontal && layout.hasMoreIndicator) {
+      _drawMoreIndicator(canvas, layout, rect); // Call the helper method
+    }
+
     // Draw resize handles if this event is selected or being resized - Restored condition
     if ((isSelected || isResized) && !event.isAllDay) {
       _drawResizeHandles(
@@ -188,9 +234,11 @@ class EventRenderer extends CustomPainter {
     // Deflate the backgroundRect using the chosen padding
     final contentRect = paddingToUse.deflateRect(rect);
 
-    // Calculate content top based on the potentially padded contentRect
-    final contentTop = contentRect.top;
+    // Calculate vertical offset to center the text block
+    final double verticalOffset = (contentRect.height - _calculateTextHeight(layout, contentRect.width)) / 2;
+    final double textTop = contentRect.top + verticalOffset;
     final contentLeft = contentRect.left;
+
 
     // Create text painters for title and time
     final titleTextSpan = TextSpan(
@@ -206,36 +254,58 @@ class EventRenderer extends CustomPainter {
     );
 
     titlePainter.layout(maxWidth: contentRect.width);
-    titlePainter.paint(
-        canvas, Offset(contentLeft, contentTop)); // Use contentLeft/Top
+    // Paint title centered vertically
+    titlePainter.paint(canvas, Offset(contentLeft, textTop));
+
 
     // Draw time if there's enough space and enabled in style
-    if (contentRect.height > (titlePainter.height + 4) && style.showTime) {
-      // Check available space
+    TextPainter? timePainter = _getTimePainter(layout, contentRect.width);
+    if (timePainter != null) {
+       // Paint time below title, also centered vertically within the block
+       timePainter.paint(
+           canvas, Offset(contentLeft, textTop + titlePainter.height + 2)); // Add spacing
+    }
+    // TODO: Add location drawing if style.showLocation is true and adjust centering
+  }
+
+  // Helper to calculate total text height for centering
+  double _calculateTextHeight(EventLayoutInfo layout, double maxWidth) {
+      final event = layout.event;
+      final titleTextSpan = TextSpan(text: event.title, style: style.titleStyle);
+      final titlePainter = TextPainter(text: titleTextSpan, textDirection: ui.TextDirection.ltr, maxLines: 1, ellipsis: '...');
+      titlePainter.layout(maxWidth: maxWidth);
+      double totalHeight = titlePainter.height;
+
+      TextPainter? timePainter = _getTimePainter(layout, maxWidth);
+      if (timePainter != null) {
+          totalHeight += timePainter.height + 2; // Add spacing
+      }
+      // Add location height if implemented
+      return totalHeight;
+  }
+
+  // Helper to create time painter (avoids duplication)
+  TextPainter? _getTimePainter(EventLayoutInfo layout, double maxWidth) {
+      final event = layout.event;
+      // Return null immediately if it's an all-day event or time shouldn't be shown
+      if (!style.showTime || event.isAllDay) return null;
+
+      // Only format time if it's not an all-day event
       final DateFormat timeFormatToUse = timeFormat ?? DateFormat.jm();
       final startTime = timeFormatToUse.format(event.start.toLocal());
       final endTime = timeFormatToUse.format(event.end.toLocal());
-      final timeText = event.isAllDay ? 'All Day' : '$startTime - $endTime';
-
-      final timeTextSpan = TextSpan(
-        text: timeText,
-        style: style.timeStyle,
-      );
-
+      final timeText = '$startTime - $endTime'; // Removed the 'All Day' condition
+      final timeTextSpan = TextSpan(text: timeText, style: style.timeStyle);
       final timePainter = TextPainter(
         text: timeTextSpan,
         textDirection: ui.TextDirection.ltr,
         maxLines: 1,
         ellipsis: '...',
       );
-
-      timePainter.layout(maxWidth: contentRect.width);
-      // Position time below title
-      timePainter.paint(
-          canvas, Offset(contentLeft, contentTop + titlePainter.height + 2));
-    }
-    // TODO: Add location drawing if style.showLocation is true
+      timePainter.layout(maxWidth: maxWidth);
+      return timePainter;
   }
+
 
   /// Draw resize handles for an event based on orientation - Restored full method
   void _drawResizeHandles(
@@ -246,8 +316,6 @@ class EventRenderer extends CustomPainter {
     final handleSize = style.resizeHandleSize;
 
     if (orientation == Axis.vertical) {
-      // TEMPORARY DEBUG: Confirm vertical block execution
-      debugPrint("DEBUG: Drawing VERTICAL handles (Top/Bottom) for event ${rect}");
       // Draw Top handle
       final topHandleRect = Rect.fromLTWH(
         rect.left + (rect.width - handleSize) / 2,
@@ -282,8 +350,6 @@ class EventRenderer extends CustomPainter {
         canvas.drawRect(bottomHandleRect, handlePaint);
       }
     } else {
-      // TEMPORARY DEBUG: Confirm horizontal block execution
-      debugPrint("DEBUG: Drawing HORIZONTAL handles (Left/Right) for event ${rect}");
       // Horizontal orientation
       // Draw Left handle
       final leftHandleRect = Rect.fromLTWH(
@@ -321,6 +387,73 @@ class EventRenderer extends CustomPainter {
     }
   }
 
+  // --- Overrides & Hit Testing ---
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final eventLayout in events) {
+      // Apply scroll offset to the event's position
+      final calculatedRect =
+          eventLayout.finalRect; // Rect relative to content area (0,0)
+      // Scroll offset only applies vertically for now
+      final topAdjust =
+          eventLayout.orientation == Axis.vertical ? scrollOffset : 0.0;
+      final leftAdjust = 0.0; // Assuming no horizontal scroll for now
+
+      Rect rect = Rect.fromLTWH(
+        calculatedRect.left - leftAdjust,
+        calculatedRect.top - topAdjust,
+        calculatedRect.width,
+        calculatedRect.height,
+      );
+
+      // Add horizontal margin for horizontal events
+      if (eventLayout.orientation == Axis.horizontal) {
+        const double horizontalMargin = 2.0; // 2 pixel margin
+        // Ensure width doesn't become negative
+        if (rect.width > horizontalMargin * 2) {
+          rect = Rect.fromLTWH(
+            rect.left + horizontalMargin,
+            rect.top,
+            rect.width - (horizontalMargin * 2),
+            rect.height,
+          );
+        }
+      }
+
+      // Skip drawing if height or width is zero or negative
+      if (rect.width <= 0 || rect.height <= 0) continue;
+
+      // --- Filtering logic for collapsed all-day events ---
+      if (eventLayout.orientation == Axis.horizontal && // Check if it's an all-day event
+          isCollapsed &&                             // Check if the grid is collapsed
+          collapsedContentHeight != null) {            // Check if we have a height limit
+          // Calculate the event's bottom edge relative to the start of the content area
+          final eventBottom = eventLayout.secondaryStart + eventLayout.secondarySize;
+          // If the event's bottom edge exceeds the allowed content height, skip drawing
+          if (eventBottom > collapsedContentHeight!) {
+             continue; // Skip this event
+          }
+      }
+      // --- End filtering logic ---
+
+      // Determine if this event is selected, being dragged, or being resized
+      final isSelected = selectedEventId == eventLayout.event.id;
+      final isDragged = draggedEventId == eventLayout.event.id;
+      final isResized = resizedEventId == eventLayout.event.id; // Restored
+
+      // Draw the event with the adjusted rect
+      _drawEvent(
+        canvas,
+        eventLayout,
+        isSelected: isSelected,
+        isDragged: isDragged,
+        isResized: isResized, // Restored
+        rect: rect, // Pass the adjusted rect
+      );
+    }
+  }
+
   @override
   bool shouldRepaint(covariant EventRenderer oldDelegate) {
     return oldDelegate.events != events ||
@@ -329,12 +462,18 @@ class EventRenderer extends CustomPainter {
         oldDelegate.draggedEventId != draggedEventId ||
         oldDelegate.resizedEventId != resizedEventId || // Restored
         oldDelegate.activeResizeHandle != activeResizeHandle || // Restored
-        oldDelegate.scrollOffset != scrollOffset;
+        oldDelegate.scrollOffset != scrollOffset ||
+        // Add new fields to shouldRepaint check
+        oldDelegate.isCollapsed != isCollapsed ||
+        oldDelegate.collapsedContentHeight != collapsedContentHeight;
   }
 
   /// Find the event at a specific position
   EventLayoutInfo? findEventAt(Offset position) {
     for (final event in events.reversed) {
+       // Skip events with no size (hidden by packer)
+       if (event.secondarySize <= 0) continue;
+
       // Adjust position based on scroll offset before checking bounds
       final Offset adjustedPosition;
       if (event.orientation == Axis.vertical) {
@@ -342,9 +481,10 @@ class EventRenderer extends CustomPainter {
       } else {
         // Horizontal
         adjustedPosition = Offset(position.dx + scrollOffset,
-            position.dy); // Assuming horizontal scroll
+            position.dy); // Assuming horizontal scroll for now
       }
 
+      // Use the calculated finalRect for hit testing
       if (event.finalRect.contains(adjustedPosition)) {
         return event;
       }
@@ -359,6 +499,8 @@ class EventRenderer extends CustomPainter {
 
     for (final eventLayout in events.reversed) {
       if (eventLayout.event.isAllDay) continue;
+      // Skip events with no size (hidden by packer)
+      if (eventLayout.secondarySize <= 0) continue;
 
       // Adjust position based on scroll offset before checking bounds
       final Offset adjustedPosition;
@@ -375,9 +517,7 @@ class EventRenderer extends CustomPainter {
         // Top handle (larger tappable area)
         final topHandleTapRect = Rect.fromLTWH(
           rect.left, // Check full width
-          rect.top -
-              (handleArea / 2) +
-              (handleSize / 2), // Center tappable area vertically
+          rect.top - (handleArea / 2) + (handleSize / 2), // Center tappable area vertically
           rect.width,
           handleArea,
         );
@@ -399,9 +539,7 @@ class EventRenderer extends CustomPainter {
         // Horizontal orientation
         // Left handle (larger tappable area)
         final leftHandleTapRect = Rect.fromLTWH(
-          rect.left -
-              (handleArea / 2) +
-              (handleSize / 2), // Center tappable area horizontally
+          rect.left - (handleArea / 2) + (handleSize / 2), // Center tappable area horizontally
           rect.top, // Check full height
           handleArea,
           rect.height,
@@ -424,4 +562,7 @@ class EventRenderer extends CustomPainter {
     }
     return null;
   }
-}
+
+  // Removed findMoreIndicatorHitbox method
+
+} // Closing brace for EventRenderer class

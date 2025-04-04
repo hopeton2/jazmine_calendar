@@ -11,12 +11,14 @@ class EventPackingService {
   // --- Helper Methods (Moved to top) ---
 
   /// Packs HORIZONTAL (all-day) events, handling spanning and vertical stacking.
-  List<EventLayoutInfo> _packHorizontalEvents(
+  /// Returns a tuple containing the list of processed layouts and the total number of lanes used.
+  ({List<EventLayoutInfo> layouts, int laneCount}) _packHorizontalEvents(
     List<EventLayoutInfo> horizontalLayouts,
     EventRenderStyle style,
-    List<DateTime> visibleDates, // Added visibleDates
+    List<DateTime> visibleDates,
+    int? maxVisibleAllDayEvents, // Added parameter back
   ) {
-    if (horizontalLayouts.isEmpty) return [];
+    if (horizontalLayouts.isEmpty) return (layouts: [], laneCount: 0);
 
     // Group layouts by original event ID
     final Map<String, List<EventLayoutInfo>> layoutsByEventId = {};
@@ -42,9 +44,7 @@ class EventPackingService {
       firstSegment.columnSpan = columnSpan;
 
       // Calculate edge flags using visibleDates
-      // Ensure visibleDates is not empty before accessing
       if (visibleDates.isNotEmpty) {
-        // Use helper extensions for start/end of day for robust comparison
         final firstVisible = visibleDates.first;
         final lastVisible = visibleDates.last;
         final viewStartDate = DateTime(firstVisible.year, firstVisible.month, firstVisible.day);
@@ -52,75 +52,113 @@ class EventPackingService {
         firstSegment.startsBeforeView = firstSegment.event.start.isBefore(viewStartDate);
         firstSegment.endsAfterView = firstSegment.event.end.isAfter(viewEndDate);
       } else {
-        // Default if visibleDates is empty (should ideally not happen)
         firstSegment.startsBeforeView = false;
         firstSegment.endsAfterView = false;
       }
+      // Reset indicator flags initially (will be set later if needed)
+      firstSegment.hasMoreIndicator = false;
+      firstSegment.hiddenEventCount = 0;
 
       primaryLayouts.add(firstSegment);
     }
 
     // --- Vertical Stacking Logic for Spanned Events ---
-
-    // Sort primary layouts for consistent stacking order (e.g., by start division, then event start time)
-    primaryLayouts.sort((a, b) {
+    primaryLayouts.sort((a, b) { // Sort for consistent stacking
       final divisionComparison = a.division.compareTo(b.division);
       if (divisionComparison != 0) return divisionComparison;
       return a.event.start.compareTo(b.event.start);
     });
 
-    // Lane assignment (similar to vertical packing, but assigning rows)
-    final List<List<EventLayoutInfo>> lanes = []; // Each inner list represents a horizontal row
+    final List<List<EventLayoutInfo>> lanes = []; // Lane assignment
     for (final event in primaryLayouts) {
       bool placed = false;
       for (int i = 0; i < lanes.length; i++) {
-        // Check for horizontal overlap within the lane, considering column spans
         bool overlapsInLane = lanes[i].any((existing) {
           final eventStartCol = event.division;
           final eventEndCol = event.division + event.columnSpan - 1;
           final existingStartCol = existing.division;
           final existingEndCol = existing.division + existing.columnSpan - 1;
-          // Check for overlap: max(start1, start2) <= min(end1, end2)
           return (eventStartCol > existingEndCol || eventEndCol < existingStartCol) == false;
         });
-
         if (!overlapsInLane) {
           lanes[i].add(event);
-          event.laneIndex = i; // Store the row index
+          event.laneIndex = i;
           placed = true;
           break;
         }
       }
       if (!placed) {
         lanes.add([event]);
-        event.laneIndex = lanes.length - 1; // New row index
+        event.laneIndex = lanes.length - 1;
       }
     }
 
-    // Calculate vertical position (secondaryStart) and height (secondarySize) in PIXELS
+    // --- Assign Positions and Heights ---
     final double fixedEventHeightPixels = 25.0;
-    final double verticalSpacingPixels = style.horizontalSpacing; // Vertical gap between events
+    final double verticalSpacingPixels = style.horizontalSpacing; // Vertical gap
 
-    // Assign pixel-based positions and fixed height for all lanes.
-    // Clipping based on available height (minus reserved space) will be handled
-    // by the ClipRect in the UI layer (CalendarGrid).
-    for (final lane in lanes) {
-      for (final event in lane) {
-        // secondaryStart is the top pixel offset from the container top
-        event.secondaryStart = event.laneIndex * (fixedEventHeightPixels + verticalSpacingPixels);
-        // secondarySize is the fixed pixel height
-        event.secondarySize = fixedEventHeightPixels;
-      }
+    // Assign pixel-based positions and fixed height for ALL lanes.
+    for (int i = 0; i < lanes.length; i++) {
+        final laneEvents = lanes[i];
+        for (final event in laneEvents) {
+            event.secondaryStart = i * (fixedEventHeightPixels + verticalSpacingPixels);
+            event.secondarySize = fixedEventHeightPixels; // Always assign full height
+        }
     }
 
-    return primaryLayouts; // Return the processed list with spans and vertical positions
+    // --- Calculate 'More' Indicators based on maxVisibleAllDayEvents ---
+    // This logic is now primarily for the on-event indicator if needed,
+    // but the AllDayGrid uses the callback for its button visibility.
+    final int maxLanes = maxVisibleAllDayEvents ?? 999; // Use parameter or default
+
+    if (lanes.length > maxLanes && maxLanes > 0) {
+        final lastVisibleLaneIndex = maxLanes - 1;
+        if (lastVisibleLaneIndex >= 0 && lastVisibleLaneIndex < lanes.length) {
+            final Map<int, int> hiddenCountsPerDivision = {};
+            // Count events in hidden lanes (lanes >= maxLanes)
+            for (int i = maxLanes; i < lanes.length; i++) {
+                 if (i < lanes.length) { // Safety check
+                     for (final hiddenEvent in lanes[i]) {
+                          for (int d = 0; d < hiddenEvent.columnSpan; d++) {
+                            final divisionIndex = hiddenEvent.division + d;
+                            hiddenCountsPerDivision[divisionIndex] = (hiddenCountsPerDivision[divisionIndex] ?? 0) + 1;
+                          }
+                     }
+                 }
+            }
+
+            // Assign indicators
+            for (final visibleEvent in lanes[lastVisibleLaneIndex]) {
+                 if (visibleEvent.secondarySize > 0) { // Check if actually visible
+                     int totalHiddenBelowInSpan = 0;
+                     bool indicatorNeeded = false;
+                     for (int d = 0; d < visibleEvent.columnSpan; d++) {
+                         final divisionIndex = visibleEvent.division + d;
+                         if (hiddenCountsPerDivision.containsKey(divisionIndex)) {
+                             totalHiddenBelowInSpan += hiddenCountsPerDivision[divisionIndex]!;
+                             indicatorNeeded = true;
+                         }
+                     }
+                     if (indicatorNeeded && totalHiddenBelowInSpan > 0) {
+                         visibleEvent.hasMoreIndicator = true;
+                         visibleEvent.hiddenEventCount = totalHiddenBelowInSpan;
+                     }
+                 }
+            }
+        }
+    }
+    // --- End Indicator Calculation ---
+
+    // Return the primary layouts
+    return (layouts: primaryLayouts, laneCount: lanes.length);
   }
+
 
   /// Packs VERTICAL events within a single division
   List<EventLayoutInfo> _packEventsInDivision(
     List<EventLayoutInfo> events,
     double minSecondarySize,
-    EventRenderStyle style, // Add style parameter
+    EventRenderStyle style,
   ) {
     // Track lanes of events
     final List<List<EventLayoutInfo>> lanes = [];
@@ -146,53 +184,22 @@ class EventPackingService {
     }
 
     // Calculate secondary dimension size based on number of lanes
-    // We use a relative size (0.0 to 1.0) that will be scaled by the container later
-    // Add spacing between events and ensure a 10-pixel margin at the end
-
-    // Get spacing from style (it's already in pixels)
     final double horizontalSpacingPixels = style.horizontalSpacing;
-
-    // Convert pixel spacing to relative value based on available width
-    // Assuming the '1.0' availableWidth represents the full width of the division
-    // We need the actual pixel width of the division to do this conversion accurately.
-    // Let's use the cellWidth from the first event as an approximation for now.
-    // TODO: Find a better way to get the division's total pixel width if needed.
-    final double divisionPixelWidth = events.isNotEmpty
-        ? events.first.cellWidth
-        : 1.0; // Use cellWidth as proxy
-    final double horizontalSpacing = divisionPixelWidth > 0
-        ? horizontalSpacingPixels / divisionPixelWidth
-        : 0;
-
-    // Calculate relative right margin
+    final double divisionPixelWidth = events.isNotEmpty ? events.first.cellWidth : 1.0;
+    final double horizontalSpacing = divisionPixelWidth > 0 ? horizontalSpacingPixels / divisionPixelWidth : 0;
     final double rightMarginPixels = style.rightMargin;
-    final double relativeRightMargin =
-        divisionPixelWidth > 0 ? rightMarginPixels / divisionPixelWidth : 0;
-
-    // Adjust available width to account for the right margin
+    final double relativeRightMargin = divisionPixelWidth > 0 ? rightMarginPixels / divisionPixelWidth : 0;
     final availableWidth = 1.0 - relativeRightMargin;
-
-    // Calculate lane size with spacing
-    // Calculate lane size based on the adjusted available width and spacing
-    final laneSize = lanes.isEmpty
-        ? availableWidth
-        : // Avoid division by zero if no lanes
-        (availableWidth / lanes.length) -
-            (horizontalSpacing * (lanes.length - 1) / lanes.length);
+    final laneSize = lanes.isEmpty ? availableWidth : (availableWidth / lanes.length) - (horizontalSpacing * (lanes.length - 1) / lanes.length);
 
     // Assign secondary position and size to each event
     for (int i = 0; i < lanes.length; i++) {
       for (final event in lanes[i]) {
         if (event.orientation == Axis.vertical) {
-          // For vertical orientation: left and width
-          // Calculate position with spacing
           final position = i * (laneSize + horizontalSpacing);
-
-          // Set position and size
           event.secondaryStart = position;
           event.secondarySize = laneSize;
-        } else {
-          // For horizontal orientation: top and height (Should not happen here, but defensive)
+        } else { // Defensive
           final position = i * (laneSize + horizontalSpacing);
           event.secondaryStart = position;
           event.secondarySize = laneSize;
@@ -200,63 +207,39 @@ class EventPackingService {
       }
     }
 
-    // Calculate initial secondary dimensions (before potential spanning)
-    // This loop seems redundant now as position/size is set above. Removing.
-    // for (int i = 0; i < lanes.length; i++) { ... }
-
     // Apply column spanning based on the mode
     final numLanes = lanes.length;
     for (final event in events) {
-        // Ensure laneIndex is assigned (should be done above)
         if (event.laneIndex < 0) {
            print("Error: Event ${event.event.id} has no lane index assigned.");
-           continue; // Skip spanning calculation if lane is unknown
+           continue;
         }
         int span = 1;
         if (style.spanningMode == EventSpanningMode.strict) {
-          // Strict: Span only if the entire column is free
           for (int j = event.laneIndex + 1; j < numLanes; j++) {
-            bool collisionInLaneJ =
-                lanes[j].any((otherEvent) => event.overlapsWith(otherEvent));
-            if (!collisionInLaneJ) {
-              span++;
-            } else {
-              break;
-            }
+            bool collisionInLaneJ = lanes[j].any((otherEvent) => event.overlapsWith(otherEvent));
+            if (!collisionInLaneJ) { span++; } else { break; }
           }
         } else if (style.spanningMode == EventSpanningMode.compact) {
-          // Compact: Span if the specific event doesn't collide in the next column
-          // Check against events originally placed in the target lane 'j'
           for (int j = event.laneIndex + 1; j < numLanes; j++) {
-            // Ensure lane j exists before accessing it
             if (j >= lanes.length) break;
-            bool collisionWithLaneJEvent = lanes[j].any((otherEvent) =>
-                otherEvent.laneIndex == j && event.overlapsWith(otherEvent));
-            if (!collisionWithLaneJEvent) {
-              span++;
-            } else {
-              break;
-            }
+            bool collisionWithLaneJEvent = lanes[j].any((otherEvent) => otherEvent.laneIndex == j && event.overlapsWith(otherEvent));
+            if (!collisionWithLaneJEvent) { span++; } else { break; }
           }
         }
         event.columnSpan = span;
 
-        // Recalculate secondarySize based on span if span > 1
         if (event.columnSpan > 1) {
-          final totalSpanSize = (event.columnSpan * laneSize) +
-              ((event.columnSpan - 1) * horizontalSpacing);
+          final totalSpanSize = (event.columnSpan * laneSize) + ((event.columnSpan - 1) * horizontalSpacing);
           if (event.orientation == Axis.vertical) {
             event.secondarySize = totalSpanSize;
-          } else {
-             // Should not happen here
+          } else { // Defensive
             event.secondarySize = totalSpanSize;
           }
         }
-        // secondaryStart remains based on the initial laneIndex calculation above
-      } // End of for loop (spanning calculation)
-    // Return the modified events list directly
+      }
     return events;
-  } // End of _packEventsInDivision
+  }
 
   /// Checks if an event can be placed in a lane without overlapping
   bool _canPlaceInLane(EventLayoutInfo event, List<EventLayoutInfo> lane) {
@@ -264,39 +247,27 @@ class EventPackingService {
   }
 
   // --- Main Public Method ---
-
-  /// Second pass: Pack events to avoid overlaps
-  ///
-  /// This determines the position and size along the secondary axis
-  /// (perpendicular to the time axis) for each event.
   List<EventLayoutInfo> packEvents({
     required List<EventLayoutInfo> events,
     required double minSecondarySize,
     required EventRenderStyle style,
-    required List<DateTime> visibleDates, // Added visibleDates
+    required List<DateTime> visibleDates,
+    int? maxVisibleAllDayEvents, // Added parameter back
   }) {
     if (events.isEmpty) return [];
-
-    // Pack events within each division
     final List<EventLayoutInfo> packedEvents = [];
-
-    // --- Packing Logic ---
-    // Separate processing for horizontal (all-day) and vertical (timed) events
-
-    // 1. Filter events by orientation
-    // Note: We process *all* measured events passed in, not grouped by division initially
     final horizontalEvents = events.where((e) => e.orientation == Axis.horizontal).toList();
     final verticalEvents = events.where((e) => e.orientation == Axis.vertical).toList();
 
-    // 2. Process Horizontal (All-Day) Events - Spanning and Stacking
     if (horizontalEvents.isNotEmpty) {
-      final packedHorizontal = _packHorizontalEvents(horizontalEvents, style, visibleDates); // Pass visibleDates
-      packedEvents.addAll(packedHorizontal);
+      // Call _packHorizontalEvents which now returns a record
+      final horizontalResult = _packHorizontalEvents(
+          horizontalEvents, style, visibleDates, maxVisibleAllDayEvents); // Pass parameter correctly
+      // Add only the layouts to the final list
+      packedEvents.addAll(horizontalResult.layouts);
     }
 
-    // 3. Process Vertical (Timed) Events - Group by division and pack
     if (verticalEvents.isNotEmpty) {
-      // Group vertical events by division
       final Map<int, List<EventLayoutInfo>> verticalEventsByDivision = {};
       for (final event in verticalEvents) {
         if (!verticalEventsByDivision.containsKey(event.division)) {
@@ -304,30 +275,18 @@ class EventPackingService {
         }
         verticalEventsByDivision[event.division]!.add(event);
       }
-
-      // Pack vertical events within each division
       for (final division in verticalEventsByDivision.keys) {
         final divisionEvents = verticalEventsByDivision[division]!;
-        // Sort vertical events (important for packing algorithm)
          divisionEvents.sort((a, b) {
            final startComparison = a.start.compareTo(b.start);
            if (startComparison != 0) return startComparison;
-           return b.primarySize.compareTo(a.primarySize); // Longer first if start is same
+           return b.primarySize.compareTo(a.primarySize);
          });
-
-        final packedDivisionEvents = _packEventsInDivision(
-          divisionEvents,
-          minSecondarySize,
-          style,
-        );
+        // Vertical packing doesn't use maxVisibleAllDayEvents
+        final packedDivisionEvents = _packEventsInDivision(divisionEvents, minSecondarySize, style);
         packedEvents.addAll(packedDivisionEvents);
       }
     }
-    // Return the final combined list of packed events
     return packedEvents;
   }
-
-  // Helper methods are now defined above packEvents
-// Removed extra closing brace that was here
-  // Helper methods are now defined above packEvents
-} // Closing brace for EventPackingService class
+}

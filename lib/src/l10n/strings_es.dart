@@ -19,6 +19,7 @@ final Map<String, String> spanishStrings = {
   'dateLabel': 'Fecha',
   'monthLabel': 'Mes',
   'weekLabel': 'Semana',
+  'moreLabel': 'Más', // Add Spanish label for "More"
 
   // Date format patterns
   'fullDateFormat': 'd \'de\' MMMM \'de\' y', // e.g., 15 de mayo de 2023
