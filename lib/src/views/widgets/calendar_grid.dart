@@ -162,9 +162,10 @@ class CalendarGridState extends State<CalendarGrid> {
       double slotWidth, double slotHeight) {
     final viewStart = widget.dates.first.toUtc();
     final viewEnd = widget.dates.last.dayEnds.toUtc();
-    final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
+    // Use the passed origin, not recalculate here
+    // final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
     final availableSpace = Size(
-        constraints.maxWidth - widget.rowHeaderWidth, // Remove the arbitrary -5 adjustment
+        constraints.maxWidth - widget.rowHeaderWidth, // Use correct width calculation
         constraints.maxHeight - widget.columnHeaderHeight);
     final cellWidth = slotWidth;
     final cellHeight = slotHeight;
@@ -172,7 +173,7 @@ class CalendarGridState extends State<CalendarGrid> {
     _gridInfo.updateGridLayout(
       viewStart: viewStart,
       viewEnd: viewEnd,
-      origin: origin,
+      origin: origin, // Use the origin passed from LayoutBuilder
       availableSpace: availableSpace,
       orientation: widget.orientation,
       divisions: widget.dates.length,
@@ -221,6 +222,7 @@ class CalendarGridState extends State<CalendarGrid> {
             max(widget.minCellWidth, availableWidth / widget.numberOfColumns);
         final slotHeight =
             max(widget.minCellHeight, availableHeight / widget.numberOfRows);
+        // Calculate origin based on headers
         final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
 
         _updateGridLayoutInfo(constraints, origin, slotWidth, slotHeight);
@@ -256,9 +258,9 @@ class CalendarGridState extends State<CalendarGrid> {
         final itemExtent = isVertical ? slotHeight : slotWidth;
 
         // Calculate the height for the Positioned EventLayoutSurface
-        // Reverted: Use full available height, clipping handles reserved space visually
         final double eventSurfaceHeight = availableHeight;
 
+        // Restore Stack without clipBehavior: Clip.none
         return Stack(
           children: [
             // 1. Scrollable Grid Content
@@ -306,7 +308,7 @@ class CalendarGridState extends State<CalendarGrid> {
                 width: availableWidth,
                 height: eventSurfaceHeight, // Use calculated height
                 child: RepaintBoundary(
-                  child: ClipRect(
+                  child: ClipRect( // Restore ClipRect
                     child: EventLayoutSurface(
                       key: widget.eventLayoutSurfaceKey, // Pass the key
                       controller: widget.controller,
@@ -314,14 +316,12 @@ class CalendarGridState extends State<CalendarGrid> {
                       gridInfo: _gridInfo,
                       isAllDay: widget.isAllDay,
                       visibleDates: widget.dates,
-                      renderStyle: EventRenderStyle(
-                        // Keep example style or pass from config
+                      renderStyle: EventRenderStyle( // TODO: Pass style from config/theme
                         defaultEventColor: Theme.of(context).primaryColor,
                         titleStyle:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: Colors.white,
-                                      fontWeight: FontWeight
-                                          .bold, // Revert font weight if needed
+                                      fontWeight: FontWeight.bold,
                                     ) ??
                                 const TextStyle(color: Colors.white),
                       ),
@@ -329,7 +329,6 @@ class CalendarGridState extends State<CalendarGrid> {
                           widget.maxVisibleAllDayEvents, // Pass down
                       onOverflowStateChanged:
                           widget.onOverflowStateChanged, // Pass callback down
-                      // Pass new parameters down
                       isCollapsed: widget.isCollapsed,
                       collapsedContentHeight: widget.collapsedContentHeight,
                     ),
@@ -363,8 +362,9 @@ class CalendarGridState extends State<CalendarGrid> {
 
   Widget _buildHeader(
       int index, bool isVertical, double slotWidth, double slotHeight) {
-    final cellsOfHeaderCount =
-        isVertical ? widget.numberOfColumns : widget.numberOfRows;
+    // Ensure gridInfo is initialized before accessing viewStart
+    if (_gridInfo.viewStart == null) return const SizedBox.shrink();
+
     final headerDate = _gridInfo.viewStart.add(widget.intervalDuration * index);
 
     if (widget.headerBuilder != null) {
@@ -417,37 +417,47 @@ class CalendarGridState extends State<CalendarGrid> {
             ? Colors.grey.withOpacity(0.2)
             : Colors.grey.withOpacity(0.3));
     var slotCount = widget.numberOfColumns;
-    if (slotCount == widget.dates.length) {
-      slotCount = 1;
-    }
-    final dateIndexMultiplier = slotCount == widget.dates.length ? 0 : index;
+    // This logic seems potentially problematic if numberOfColumns != dates.length
+    // Let's assume numberOfColumns represents the divisions for the current view axis
+    // if (slotCount == widget.dates.length) {
+    //   slotCount = 1;
+    // }
+    // final dateIndexMultiplier = slotCount == widget.dates.length ? 0 : index;
 
-    // TODO: Add logic to handle null dates or dates outside the given range
-    return List.generate(slotCount, (slotIndex) {
-      int dateIndex = dateIndexMultiplier * slotCount + slotIndex;
-      dateIndex = slotCount == 1 ? index : dateIndex;
+    // Simplified logic: Assume each cell corresponds to a date index if vertical
+    final int columnsToGenerate = isVertical ? widget.numberOfColumns : 1;
+
+
+    return List.generate(columnsToGenerate, (slotIndex) {
+      // Determine the date for this cell/column
+      int dateIndex = isVertical ? slotIndex : index; // If horizontal, index is the date index
       if (dateIndex >= widget.dates.length) {
-        dateIndex = widget.dates.length - 1;
+         // Handle potential index out of bounds if logic is complex
+         dateIndex = widget.dates.length - 1;
+         if (dateIndex < 0) return const Expanded(child: SizedBox.shrink()); // No dates
       }
       DateTime slotDate = widget.dates[dateIndex];
-      // Calculate the start time for this specific slot
-      // This assumes vertical orientation (Day/Week view time slots)
-      // For horizontal (Month view), this logic would need adjustment or disabling
-      final timeForRow = _gridInfo.viewStart.add(widget.intervalDuration * index);
-      final startTimeForSlot = DateTime(
-         slotDate.year,
-         slotDate.month,
-         slotDate.day,
-         timeForRow.hour,
-         timeForRow.minute
-      );
+
+      // Calculate the start time for this specific slot (relevant for vertical)
+      DateTime? startTimeForSlot;
+      if (isVertical && _gridInfo.viewStart != null) {
+          final timeForRow = _gridInfo.viewStart.add(widget.intervalDuration * index);
+          startTimeForSlot = DateTime(
+             slotDate.year,
+             slotDate.month,
+             slotDate.day,
+             timeForRow.hour,
+             timeForRow.minute
+          );
+      }
+
 
       // Build the actual cell content (either custom or default)
       final cellContent = widget.cellBuilder != null
           ? widget.cellBuilder!(
               context,
               slotDate, // Pass the date for the column/day
-              slotIndex,
+              slotIndex, // Pass the column index
               widget.orientation,
             )
           : Container( // Use a simple Container for the background if no cellBuilder
@@ -476,7 +486,7 @@ class CalendarGridState extends State<CalendarGrid> {
              } else {
                try { isDesktopOrWeb = Platform.isLinux || Platform.isMacOS || Platform.isWindows; } catch (e) { isDesktopOrWeb = false; }
              }
-             if (isDesktopOrWeb && widget.onTimeSlotCreateInteraction != null) {
+             if (isDesktopOrWeb && widget.onTimeSlotCreateInteraction != null && startTimeForSlot != null) {
                 print("Double tap detected at: $startTimeForSlot"); // Debug print
                 widget.onTimeSlotCreateInteraction!(startTimeForSlot);
              }
@@ -485,15 +495,11 @@ class CalendarGridState extends State<CalendarGrid> {
              bool isMobile = false;
              try { isMobile = Platform.isAndroid || Platform.isIOS; } catch (e) { isMobile = false; }
 
-             if (isMobile && widget.onTimeSlotCreateInteraction != null) {
+             if (isMobile && widget.onTimeSlotCreateInteraction != null && startTimeForSlot != null) {
                 print("Long press detected at: $startTimeForSlot"); // Debug print
                 widget.onTimeSlotCreateInteraction!(startTimeForSlot);
              }
           },
-          // Use a Listener to capture tap position if more precise time calculation is needed
-          // onTapDown: (details) {
-          //   // Calculate time based on details.localPosition.dy, slotHeight, intervalDuration etc.
-          // },
           child: SizedBox.expand(
             child: cellContent, // Place the actual cell content inside the detector
           ),

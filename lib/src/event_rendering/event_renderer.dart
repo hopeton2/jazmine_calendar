@@ -53,7 +53,6 @@ class EventRenderer extends CustomPainter {
   final Offset? dragOffset;
   // --- End new parameters ---
 
-
   /// Creates a new EventRenderer
   EventRenderer({
     required this.events,
@@ -423,7 +422,7 @@ class EventRenderer extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // --- Draw static events first ---
     for (final eventLayout in events) {
-      // Skip drawing the event currently being dragged
+      // Skip drawing the static version of the event currently being dragged.
       if (eventLayout.event.id == draggedEventId) {
         continue;
       }
@@ -487,14 +486,13 @@ class EventRenderer extends CustomPainter {
       );
     }
 
-    // --- Draw the dragged event separately ---
+    // --- Restore drawing the dragged event separately ---
     if (draggedEventId != null && currentDragPosition != null && dragOffset != null) {
       // Find the layout info for the dragged event
       final draggedEventLayout = events.firstWhereOrNull((e) => e.event.id == draggedEventId);
 
       if (draggedEventLayout != null) {
         // Calculate the raw top-left based on current drag position and initial offset
-        // currentDragPosition includes scroll offset, dragOffset was calculated with it too.
         final rawDragTopLeft = currentDragPosition! - dragOffset!;
 
         // Adjust the calculated top position by subtracting the current scroll offset
@@ -506,16 +504,17 @@ class EventRenderer extends CustomPainter {
         final dragRect = Rect.fromLTWH(
           adjustedLeft,
           adjustedTop,
-          draggedEventLayout.width,  // Use original width
-          draggedEventLayout.height, // Use original height
+          // Use the original calculated width/height from layoutInfo
+          draggedEventLayout.finalRect.width,
+          draggedEventLayout.finalRect.height,
         );
 
         // Draw the dragged event using the adjusted rectangle
         _drawEvent(
           canvas,
           draggedEventLayout,
-          isSelected: false,
-          isDragged: true,
+          isSelected: false, // Don't show selected border while dragging
+          isDragged: true,   // Apply drag styling (e.g., opacity)
           isResized: false,
           rect: dragRect,
         );
@@ -558,96 +557,83 @@ class EventRenderer extends CustomPainter {
                 draggedEventLayout.width,
                 draggedEventLayout.height,
             );
-            // Compare the adjusted pointer position with the dragged event's rect
-            if (dragRect.inflate(2.0).contains(adjustedPosition)) {
+            if (dragRect.contains(adjustedPosition)) {
                 return draggedEventLayout;
             }
         }
     }
 
-    // Check static events
-    for (final eventLayout in events.reversed) {
-       // Skip the event currently being dragged if it wasn't hit above
-       if (eventLayout.event.id == draggedEventId) continue;
-       // Skip events with no size (hidden by packer)
-       if (eventLayout.secondarySize <= 0 && eventLayout.primarySize <= 0) continue;
 
-       // Use the calculated finalRect (which is in unscrolled coordinates)
-       // Compare it with the adjusted pointer position.
-       if (eventLayout.finalRect.inflate(2.0).contains(adjustedPosition)) {
-         return eventLayout;
-       }
+    // Check other events in reverse order (topmost visually are last in list)
+    for (final eventLayout in events.reversed) {
+      // Skip the currently dragged event since we checked it above
+      if (eventLayout.event.id == draggedEventId) continue;
+
+      // Check if the adjusted position hits the event's calculated rect
+      if (eventLayout.finalRect.contains(adjustedPosition)) {
+        return eventLayout;
+      }
     }
     return null;
   }
 
-  /// Find the resize handle at a specific position
+  /// Find if a resize handle is hit at a specific position
   ResizeHandleHit? findResizeHandleAt(Offset position) {
+    // Adjust position for scroll offset
+    final Offset adjustedPosition = Offset(position.dx, position.dy + scrollOffset);
     final handleSize = style.resizeHandleSize;
-    final handleArea = handleSize * 2; // Increase tappable area slightly
+    final handleArea = handleSize * 2; // Increase tap area slightly
 
-    // Check selected event first for efficiency (handles are usually on selected)
-    final targetEventId = selectedEventId ?? resizedEventId; // Check selected or currently resized
-    if (targetEventId != null) {
-       final targetLayout = events.firstWhereOrNull((e) => e.event.id == targetEventId);
-       // Don't check handles if the target event is being dragged
-       if (targetLayout != null && targetLayout.event.id != draggedEventId) {
-          final hit = _checkHandlesForEvent(targetLayout, position, handleArea);
-          if (hit != null) return hit;
-       }
-    }
+    // Check only the selected event, or potentially the event being resized
+    final targetEventId = resizedEventId ?? selectedEventId;
+    if (targetEventId == null) return null;
 
-    // Check other events if no handle found on selected/resized (less common)
-    // This might be needed if selection changes rapidly or isn't perfectly synced
-    for (final eventLayout in events.reversed) {
-       if (eventLayout.event.id == targetEventId || eventLayout.event.id == draggedEventId) continue; // Already checked or being dragged
+    final eventLayout = events.firstWhereOrNull((e) => e.event.id == targetEventId);
+    if (eventLayout == null || eventLayout.event.isAllDay) return null; // No handles for all-day
 
-       // Skip events with no size
-       if (eventLayout.secondarySize <= 0 && eventLayout.primarySize <= 0) continue;
+    final rect = eventLayout.finalRect;
 
-       // Only check handles if the event *could* be selected (though less likely path)
-       // For simplicity, let's assume handles only appear on the selected/resized event.
-       // If interaction requires checking handles on non-selected items, add logic here.
-    }
-    return null;
-  }
+    if (eventLayout.orientation == Axis.vertical) {
+      // Top handle (check a larger area)
+      final topHandleRect = Rect.fromCenter(
+        center: Offset(rect.center.dx, rect.top + handleSize / 2),
+        width: rect.width, // Check full width
+        height: handleArea,
+      );
+      if (topHandleRect.contains(adjustedPosition)) {
+        return ResizeHandleHit(eventLayout, ResizeHandle.top);
+      }
 
-  /// Helper to check resize handles for a single event layout
-  ResizeHandleHit? _checkHandlesForEvent(EventLayoutInfo eventLayout, Offset position, double handleArea) {
-     // Adjust position based on scroll offset
-     final Offset adjustedPosition;
-     if (eventLayout.orientation == Axis.vertical) {
-       adjustedPosition = Offset(position.dx, position.dy + scrollOffset);
-     } else {
-       adjustedPosition = Offset(position.dx + 0.0, position.dy); // Assume horizontal scroll offset is 0
-     }
-
-     final rect = eventLayout.finalRect; // Use the static layout rect for handle positions
-     final handleSize = style.resizeHandleSize;
-
-     if (eventLayout.orientation == Axis.vertical) {
-       // Check Top handle
-       final topHandleRect = Rect.fromCenter(center: rect.topCenter, width: handleArea, height: handleArea);
-       if (topHandleRect.contains(adjustedPosition)) {
-         return ResizeHandleHit(eventLayout, ResizeHandle.top);
-       }
-       // Check Bottom handle
-       final bottomHandleRect = Rect.fromCenter(center: rect.bottomCenter, width: handleArea, height: handleArea);
-       if (bottomHandleRect.contains(adjustedPosition)) {
-         return ResizeHandleHit(eventLayout, ResizeHandle.bottom);
-       }
-     } else { // Horizontal
-       // Check Left handle
-       final leftHandleRect = Rect.fromCenter(center: rect.centerLeft, width: handleArea, height: handleArea);
+      // Bottom handle (check a larger area)
+      final bottomHandleRect = Rect.fromCenter(
+        center: Offset(rect.center.dx, rect.bottom - handleSize / 2),
+        width: rect.width, // Check full width
+        height: handleArea,
+      );
+      if (bottomHandleRect.contains(adjustedPosition)) {
+        return ResizeHandleHit(eventLayout, ResizeHandle.bottom);
+      }
+    } else { // Horizontal (All-day - currently no resize)
+       // Left handle
+       final leftHandleRect = Rect.fromCenter(
+         center: Offset(rect.left + handleSize / 2, rect.center.dy),
+         width: handleArea,
+         height: rect.height, // Check full height
+       );
        if (leftHandleRect.contains(adjustedPosition)) {
          return ResizeHandleHit(eventLayout, ResizeHandle.left);
        }
-       // Check Right handle
-       final rightHandleRect = Rect.fromCenter(center: rect.centerRight, width: handleArea, height: handleArea);
+       // Right handle
+       final rightHandleRect = Rect.fromCenter(
+         center: Offset(rect.right - handleSize / 2, rect.center.dy),
+         width: handleArea,
+         height: rect.height, // Check full height
+       );
        if (rightHandleRect.contains(adjustedPosition)) {
          return ResizeHandleHit(eventLayout, ResizeHandle.right);
        }
-     }
-     return null;
+    }
+
+    return null;
   }
 }
