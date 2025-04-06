@@ -43,16 +43,50 @@ class AgendaView extends BaseCalendarView {
     );
   }
 
-  ValueNotifier<List<CalendarEvent>> _createEventsNotifier(
-      CalendarController controller) {
+  // Helper to create and manage the events notifier for the Agenda view
+  ValueNotifier<List<CalendarEvent>> _createEventsNotifier(CalendarController controller) {
     final notifier = ValueNotifier<List<CalendarEvent>>([]);
+    late final VoidCallback controllerListener;
 
-    Future.microtask(() async {
-      final events = await controller.getAllEvents();
-      notifier.value = events;
+    // Function to fetch events for the agenda range
+    Future<void> fetchAgendaEvents() async {
+      // Define the date range for the agenda (e.g., 1 month before to 3 months after current start date)
+      final agendaStartDate = controller.startDate.subtract(const Duration(days: 30));
+      final agendaEndDate = controller.startDate.add(const Duration(days: 90)); // Adjust range as needed
+
+      try {
+        final events = await controller.getEventsForDateRange(agendaStartDate, agendaEndDate);
+        // Sort events before updating the notifier
+        events.sort((a, b) => a.start.compareTo(b.start));
+        if (notifier.value != events) { // Basic check to avoid unnecessary updates
+           notifier.value = events;
+        }
+      } catch (e) {
+         print("Error fetching events for AgendaView: $e");
+         notifier.value = []; // Clear on error
+      }
+    }
+
+    // Listener to refetch when relevant controller state changes
+    controllerListener = () {
+       // Refetch when date/view changes or event data changes
+       fetchAgendaEvents();
+    };
+
+    // Add listener to controller's relevant notifiers
+    controller.startDateNotifier.addListener(controllerListener);
+    controller.eventDataChangeNotifier.addListener(controllerListener);
+    // Optionally listen to currentViewNotifier if agenda range depends on it
+
+    // Initial fetch
+    fetchAgendaEvents();
+
+    // Return a wrapper notifier that removes the listener on dispose
+    // Pass the initial value of the notifier, not the notifier itself
+    return _ManagedValueNotifier(notifier.value, () {
+       controller.startDateNotifier.removeListener(controllerListener);
+       controller.eventDataChangeNotifier.removeListener(controllerListener);
     });
-
-    return notifier;
   }
 
   Widget _buildDateHeader(DateTime date) {
@@ -127,5 +161,18 @@ class AgendaView extends BaseCalendarView {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+}
+
+// Helper class to manage listener removal on dispose
+class _ManagedValueNotifier<T> extends ValueNotifier<T> {
+  final VoidCallback _onDispose;
+
+  _ManagedValueNotifier(super.value, this._onDispose);
+
+  @override
+  void dispose() {
+    _onDispose();
+    super.dispose();
   }
 }

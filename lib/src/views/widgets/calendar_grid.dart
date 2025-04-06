@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:io' show Platform; // For platform check
+import 'package:flutter/foundation.dart' show kIsWeb; // For web check
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -86,6 +88,7 @@ class CalendarGrid extends StatefulWidget {
   final OverflowStateCallback? onOverflowStateChanged; // Add callback
   final bool isCollapsed; // New parameter for filtering
   final double? collapsedContentHeight; // New parameter for filtering
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Callback from JazmineCalendar
 
   const CalendarGrid({
     super.key,
@@ -110,6 +113,7 @@ class CalendarGrid extends StatefulWidget {
     this.onOverflowStateChanged, // Add to constructor
     this.isCollapsed = false, // Default to false (not collapsed)
     this.collapsedContentHeight,
+    this.onTimeSlotCreateInteraction, // Add this line
   });
 
   get startDate => dates.first;
@@ -160,7 +164,7 @@ class CalendarGridState extends State<CalendarGrid> {
     final viewEnd = widget.dates.last.dayEnds.toUtc();
     final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
     final availableSpace = Size(
-        constraints.maxWidth - widget.rowHeaderWidth - 5,
+        constraints.maxWidth - widget.rowHeaderWidth, // Remove the arbitrary -5 adjustment
         constraints.maxHeight - widget.columnHeaderHeight);
     final cellWidth = slotWidth;
     final cellHeight = slotHeight;
@@ -174,6 +178,7 @@ class CalendarGridState extends State<CalendarGrid> {
       divisions: widget.dates.length,
       cellWidth: cellWidth,
       cellHeight: cellHeight,
+      intervalDuration: widget.intervalDuration, // Pass interval duration
     );
   }
 
@@ -425,35 +430,73 @@ class CalendarGridState extends State<CalendarGrid> {
         dateIndex = widget.dates.length - 1;
       }
       DateTime slotDate = widget.dates[dateIndex];
-      return Expanded(
-        child: SizedBox.expand(
-          child: widget.cellBuilder != null
-              ? widget.cellBuilder!(
-                  context,
-                  slotDate,
-                  slotIndex,
-                  widget.orientation,
-                )
-              : CalendarTimeSlot(
-                  controller: widget.controller,
-                  showDate: false,
-                  date: slotDate,
-                  formatDate: widget.headerDateFormat,
-                  isAllDay: widget.isAllDay,
-                  decoration: BoxDecoration(
-                    color: calendarTheme?.getSlotBackgroundColor(context),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: gridLineColor,
-                        width: gridLineWidth,
-                      ),
-                      right: BorderSide(
-                        color: gridLineColor,
-                        width: gridLineWidth,
-                      ),
-                    ),
+      // Calculate the start time for this specific slot
+      // This assumes vertical orientation (Day/Week view time slots)
+      // For horizontal (Month view), this logic would need adjustment or disabling
+      final timeForRow = _gridInfo.viewStart.add(widget.intervalDuration * index);
+      final startTimeForSlot = DateTime(
+         slotDate.year,
+         slotDate.month,
+         slotDate.day,
+         timeForRow.hour,
+         timeForRow.minute
+      );
+
+      // Build the actual cell content (either custom or default)
+      final cellContent = widget.cellBuilder != null
+          ? widget.cellBuilder!(
+              context,
+              slotDate, // Pass the date for the column/day
+              slotIndex,
+              widget.orientation,
+            )
+          : Container( // Use a simple Container for the background if no cellBuilder
+              decoration: BoxDecoration(
+                color: calendarTheme?.getSlotBackgroundColor(context),
+                border: Border(
+                  bottom: BorderSide(
+                    color: gridLineColor,
+                    width: gridLineWidth,
+                  ),
+                  right: BorderSide(
+                    color: gridLineColor,
+                    width: gridLineWidth,
                   ),
                 ),
+              ),
+            );
+
+      // Wrap the cell content with GestureDetector
+      return Expanded(
+        child: GestureDetector(
+          onDoubleTap: () {
+             bool isDesktopOrWeb = false;
+             if (kIsWeb) {
+               isDesktopOrWeb = true;
+             } else {
+               try { isDesktopOrWeb = Platform.isLinux || Platform.isMacOS || Platform.isWindows; } catch (e) { isDesktopOrWeb = false; }
+             }
+             if (isDesktopOrWeb && widget.onTimeSlotCreateInteraction != null) {
+                print("Double tap detected at: $startTimeForSlot"); // Debug print
+                widget.onTimeSlotCreateInteraction!(startTimeForSlot);
+             }
+          },
+          onLongPressStart: (details) { // Use onLongPressStart for better feedback potentially
+             bool isMobile = false;
+             try { isMobile = Platform.isAndroid || Platform.isIOS; } catch (e) { isMobile = false; }
+
+             if (isMobile && widget.onTimeSlotCreateInteraction != null) {
+                print("Long press detected at: $startTimeForSlot"); // Debug print
+                widget.onTimeSlotCreateInteraction!(startTimeForSlot);
+             }
+          },
+          // Use a Listener to capture tap position if more precise time calculation is needed
+          // onTapDown: (details) {
+          //   // Calculate time based on details.localPosition.dy, slotHeight, intervalDuration etc.
+          // },
+          child: SizedBox.expand(
+            child: cellContent, // Place the actual cell content inside the detector
+          ),
         ),
       );
     });

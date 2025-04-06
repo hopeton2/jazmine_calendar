@@ -6,8 +6,11 @@ import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
 
 class WeekView extends BaseCalendarView {
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Add callback
+
   const WeekView({
     super.key,
+    this.onTimeSlotCreateInteraction, // Add to constructor
   });
 
   @override
@@ -20,6 +23,7 @@ class WeekView extends BaseCalendarView {
       dates: DateHelper.intervalDatesForWeek(startDate),
       hourHeight: configuration.hourHeight,
       showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
+      onTimeSlotCreateInteraction: onTimeSlotCreateInteraction, // Pass callback
     );
   }
 }

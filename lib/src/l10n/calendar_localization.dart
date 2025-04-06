@@ -111,6 +111,42 @@ class CalendarLocalization {
   String get weekLabel => translate('weekLabel');
   String get moreLabel => translate('moreLabel'); // Getter for the "More" label
 
+  // Event Editor labels
+  String get createEvent => translate('createEvent');
+  String get editEvent => translate('editEvent');
+  String get save => translate('save');
+  String get cancel => translate('cancel');
+  String get eventTitleLabel => translate('eventTitleLabel');
+  String get eventTitleHint => translate('eventTitleHint');
+  String get eventTitleValidation => translate('eventTitleValidation');
+  String get descriptionLabel => translate('descriptionLabel');
+  String get descriptionHint => translate('descriptionHint');
+  String get allDayEventLabel => translate('allDayEventLabel');
+  String get startsLabel => translate('startsLabel');
+  String get endsLabel => translate('endsLabel');
+  String get dateLabelPrefix => translate('dateLabelPrefix');
+  String get timeZoneLabel => translate('timeZoneLabel');
+  String get timeZoneValidation => translate('timeZoneValidation');
+  String get endTimeBeforeStartTimeError => translate('endTimeBeforeStartTimeError');
+
+  // Reminder labels
+  String get reminderLabel => translate('reminderLabel');
+  String get reminderTimeLabel => translate('reminderTimeLabel');
+  String get reminderTimeValidation => translate('reminderTimeValidation');
+
+  // Recurrence labels
+  String get recurrenceLabel => translate('recurrenceLabel');
+  // Individual types accessed via translate('recurrence_TYPE')
+
+  // Additional field labels
+  String get locationLabel => translate('locationLabel');
+  String get locationHint => translate('locationHint');
+  String get colorLabel => translate('colorLabel');
+  String get privateLabel => translate('privateLabel');
+
+  // Tooltips
+  String get createEventTooltip => translate('createEventTooltip');
+
   // Date formats
   String formatYearMonth(DateTime date) {
     return DateFormat.yMMMM(locale.languageCode).format(date);

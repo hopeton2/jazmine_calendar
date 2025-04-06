@@ -162,6 +162,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 1200, // Height for the full day
+        intervalDuration: const Duration(minutes: 30), // Add interval duration
       );
 
       final events = [
@@ -218,6 +219,7 @@ void main() {
         divisions: 3, // 3 days
         cellWidth: 200, // 600 / 3
         cellHeight: 80,
+        intervalDuration: const Duration(minutes: 30), // Add interval duration
       );
 
       final events = [

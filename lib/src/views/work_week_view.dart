@@ -5,7 +5,12 @@ import 'package:jazmine_calendar/src/views/base_day_view.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
 
 class WorkWeekView extends BaseCalendarView {
-  const WorkWeekView({super.key});
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Add callback
+
+  const WorkWeekView({
+    super.key,
+    this.onTimeSlotCreateInteraction, // Add to constructor
+  });
 
   @override
   Widget buildCalendar(
@@ -18,6 +23,7 @@ class WorkWeekView extends BaseCalendarView {
     return BaseDayView(
       configuration: jazmine.weekConfiguration,
       dates: DateHelper.intervalDatesForWeek(startDate, true),
+      onTimeSlotCreateInteraction: onTimeSlotCreateInteraction, // Pass callback
     );
   }
 }

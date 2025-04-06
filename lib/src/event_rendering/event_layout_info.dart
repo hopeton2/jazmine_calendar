@@ -118,6 +118,28 @@ int hiddenEventCount = 0;
     return start < otherEnd && thisEnd > other.start;
   }
 
+  /// Creates a copy of this layout info with a new event object, preserving layout properties.
+  EventLayoutInfo copyWithEvent(CalendarEvent newEvent) {
+    return EventLayoutInfo(
+      event: newEvent, // Use the new event data
+      orientation: orientation,
+      division: division,
+      start: start, // Keep original layout calculation start
+      primarySize: primarySize, // Keep original layout calculation size
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+    )
+      ..secondaryStart = secondaryStart // Preserve packing results
+      ..secondarySize = secondarySize
+      ..laneIndex = laneIndex
+      ..columnSpan = columnSpan
+      ..startsBeforeView = startsBeforeView // These might need recalculation based on newEvent times, but let's keep simple for now
+      ..endsAfterView = endsAfterView
+      ..hasMoreIndicator = hasMoreIndicator
+      ..hiddenEventCount = hiddenEventCount;
+  }
+
+
   @override
   String toString() {
     return 'EventLayoutInfo(event: ${event.title}, division: $division, lane: $laneIndex, span: $columnSpan, start: $start, primarySize: $primarySize, secondaryStart: $secondaryStart, secondarySize: $secondarySize, cellW: $cellWidth, cellH: $cellHeight, startsBefore: $startsBeforeView, endsAfter: $endsAfterView, hasMore: $hasMoreIndicator, hiddenCount: $hiddenEventCount)';

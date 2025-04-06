@@ -13,6 +13,11 @@ class CalendarEvent {
   final String? recurrenceType;
   final String? recurrenceRule;
   final List<String>? resourceIds;
+  final bool reminderEnabled;
+  final int? reminderMinutesBefore; // Minutes before start time
+  final bool isPrivate;
+  final bool isOccurrence; // Flag indicating if this is an instance of a recurring event
+  final String? originalEventId; // ID of the original recurring event if isOccurrence is true
 
   CalendarEvent({
     required this.id,
@@ -27,7 +32,19 @@ class CalendarEvent {
     this.recurrenceType,
     this.recurrenceRule,
     this.resourceIds,
+    this.reminderEnabled = false,
+    this.reminderMinutesBefore,
+    this.isPrivate = false, // Default to public
+    this.isOccurrence = false, // Default to false
+    this.originalEventId, // Null by default
   }) {
+    // Add validation: originalEventId must be null if isOccurrence is false
+    if (!isOccurrence && originalEventId != null) {
+      throw ArgumentError('originalEventId must be null if isOccurrence is false.');
+    }
+    if (reminderEnabled && reminderMinutesBefore == null) {
+      throw ArgumentError('reminderMinutesBefore must be set if reminderEnabled is true');
+    }
     if (end.isBefore(start)) {
       throw ArgumentError('End time must be after start time');
     }
@@ -47,7 +64,31 @@ class CalendarEvent {
     String? recurrenceType,
     String? recurrenceRule,
     List<String>? resourceIds,
+    bool? reminderEnabled,
+    int? reminderMinutesBefore, // Allow nullable for clearing
+    bool? isPrivate,
+    bool? isOccurrence, // Allow copying these flags
+    String? originalEventId,
   }) {
+    // Handle reminder logic carefully in copyWith
+    final bool effectiveReminderEnabled = reminderEnabled ?? this.reminderEnabled;
+    final int? effectiveReminderMinutes = reminderMinutesBefore ?? this.reminderMinutesBefore;
+
+    if (effectiveReminderEnabled && effectiveReminderMinutes == null) {
+       // If enabling reminder but no minutes provided, maybe default or use existing?
+       // For now, let's keep the existing minutes if enabling and none provided.
+       // If explicitly setting minutes to null while enabling, that's an issue handled below.
+       if (this.reminderMinutesBefore == null) {
+         // Or throw error? Let's default to 15 mins for now if enabling without specific time
+         print("Warning: Reminder enabled without minutes, defaulting to 15 minutes before.");
+         // effectiveReminderMinutes = 15; // Re-enable if default is desired
+       }
+    }
+     if (effectiveReminderEnabled && effectiveReminderMinutes == null && this.reminderMinutesBefore == null) {
+        throw ArgumentError('Cannot enable reminder without setting reminderMinutesBefore.');
+     }
+
+
     return CalendarEvent(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -61,6 +102,13 @@ class CalendarEvent {
       recurrenceType: recurrenceType ?? this.recurrenceType,
       recurrenceRule: recurrenceRule ?? this.recurrenceRule,
       resourceIds: resourceIds ?? this.resourceIds,
+      reminderEnabled: effectiveReminderEnabled,
+      // Ensure minutes is null if reminder is disabled
+      reminderMinutesBefore: effectiveReminderEnabled ? (effectiveReminderMinutes ?? this.reminderMinutesBefore) : null,
+      isPrivate: isPrivate ?? this.isPrivate,
+      // Handle new flags in copyWith
+      isOccurrence: isOccurrence ?? this.isOccurrence,
+      originalEventId: originalEventId ?? this.originalEventId,
     );
   }
 
@@ -81,6 +129,11 @@ class CalendarEvent {
       resourceIds: json['resourceIds'] != null
           ? List<String>.from(json['resourceIds'] as List)
           : null,
+      reminderEnabled: json['reminderEnabled'] as bool? ?? false,
+      reminderMinutesBefore: json['reminderMinutesBefore'] as int?,
+      isPrivate: json['isPrivate'] as bool? ?? false,
+      isOccurrence: json['isOccurrence'] as bool? ?? false,
+      originalEventId: json['originalEventId'] as String?,
     );
   }
 
@@ -99,6 +152,12 @@ class CalendarEvent {
       'recurrenceType': recurrenceType,
       'recurrenceRule': recurrenceRule,
       'resourceIds': resourceIds,
+      'reminderEnabled': reminderEnabled,
+      'reminderMinutesBefore': reminderMinutesBefore,
+      'reminderMinutesBefore': reminderMinutesBefore,
+      'isPrivate': isPrivate,
+      'isOccurrence': isOccurrence,
+      'originalEventId': originalEventId,
     };
   }
 
@@ -125,7 +184,12 @@ class CalendarEvent {
         other.isAllDay == isAllDay &&
         other.recurrenceType == recurrenceType &&
         other.recurrenceRule == recurrenceRule &&
-        _listEquals(other.resourceIds, resourceIds);
+        _listEquals(other.resourceIds, resourceIds) &&
+        other.reminderEnabled == reminderEnabled &&
+        other.reminderMinutesBefore == reminderMinutesBefore &&
+        other.isPrivate == isPrivate &&
+        other.isOccurrence == isOccurrence && // Add to equality check
+        other.originalEventId == originalEventId; // Add to equality check
   }
 
   @override
@@ -142,7 +206,15 @@ class CalendarEvent {
       isAllDay,
       recurrenceType,
       recurrenceRule,
+      // Use Object.hashAll for lists within Object.hash
       resourceIds != null ? Object.hashAll(resourceIds!) : null,
+      reminderEnabled,
+      reminderMinutesBefore,
+      reminderEnabled,
+      reminderMinutesBefore,
+      isPrivate,
+      isOccurrence, // Add to hash
+      originalEventId, // Add to hash
     );
   }
 

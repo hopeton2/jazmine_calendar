@@ -15,6 +15,7 @@ class BaseDayView extends BaseCalendarView {
   final DayViewConfiguration configuration;
   final Widget Function(BuildContext, DateTime, int, int)? slotBuilder;
   final Widget Function(BuildContext, DateTime)? headerBuilder;
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Add callback
 
   const BaseDayView({
     super.key,
@@ -24,6 +25,7 @@ class BaseDayView extends BaseCalendarView {
     this.showCurrentTimeIndicator = true,
     this.slotBuilder,
     this.headerBuilder,
+    this.onTimeSlotCreateInteraction, // Add to constructor
   });
 
   @override
@@ -64,6 +66,7 @@ class BaseDayView extends BaseCalendarView {
                     // Use default columnHeaderHeight from CalendarGrid
                     headerBuilder: _buildTimebarHeader,
                     showEvents: true, // Re-enable events in CalendarGrid
+                    onTimeSlotCreateInteraction: onTimeSlotCreateInteraction, // Pass callback
                   ),
                   // EventLayoutSurface will be re-added inside CalendarGrid
                 ],

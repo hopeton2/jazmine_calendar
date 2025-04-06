@@ -25,9 +25,9 @@ class EventLayoutService {
 
     for (final event in events) {
       // Determine the range of divisions (days) this event spans within the view
-      final firstDayIndex = max(0, event.start.difference(viewStartDay).inDays);
+      final firstDayIndex = max<int>(0, event.start.difference(viewStartDay).inDays);
       // Use dayEnds to correctly capture events ending exactly at midnight
-      final lastDayIndex = min(gridInfo.divisions - 1,
+      final lastDayIndex = min<int>(gridInfo.divisions - 1,
           event.end.difference(viewStartDay).inDays); // Use gridInfo
 
       // Iterate through each day the event spans within the view

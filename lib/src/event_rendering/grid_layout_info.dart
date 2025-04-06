@@ -18,6 +18,7 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
   int? _divisions;
   double? _cellWidth;
   double? _cellHeight;
+  Duration? _intervalDuration; // Add interval duration
   // Removed _isReady flag
 
   // Getters
@@ -53,6 +54,10 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
     if (_cellHeight == null) throw StateError('Grid layout information (cellHeight) is not available');
     return _cellHeight!;
   }
+  Duration get intervalDuration {
+     if (_intervalDuration == null) throw StateError('Grid layout information (intervalDuration) is not available');
+     return _intervalDuration!;
+  }
 
   // This getter is replaced by the _isReady field
 
@@ -66,6 +71,7 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
     required int divisions,
     required double cellWidth,
     required double cellHeight,
+    required Duration intervalDuration, // Add parameter
   }) {
     _viewStart = viewStart;
     _viewEnd = viewEnd;
@@ -75,6 +81,7 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
     _divisions = divisions;
     _cellWidth = cellWidth;
     _cellHeight = cellHeight;
+    _intervalDuration = intervalDuration; // Store interval duration
 
     // Removed setting _isReady flag
   }
@@ -82,32 +89,83 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
   /// Get the position for a specific date-time and division
   Offset getPositionForDateTime(DateTime dateTime, int division) {
     // Removed isReady check (getters will throw if not initialized)
+    // Ensure required properties are initialized
+     if (_viewStart == null || _viewEnd == null || _origin == null || _availableSpace == null || _divisions == null || _cellWidth == null || _cellHeight == null || _orientation == null) {
+      print("Error: GridLayoutInfo not fully initialized in getPositionForDateTime.");
+      // Return origin or throw, depending on desired behavior for uninitialized state
+      return _origin ?? Offset.zero;
+    }
 
-    // Ensure the date-time is within range
-    final effectiveDateTime = dateTime.isBefore(viewStart)
-        ? viewStart
-        : (dateTime.isAfter(viewEnd) ? viewEnd : dateTime);
 
-    // Calculate position based on time and division
-    final totalDuration = viewEnd.difference(viewStart).inMilliseconds;
-    // Handle potential zero duration
-    if (totalDuration <= 0) return origin; // Return origin if duration is zero or negative
-    final offset = effectiveDateTime.difference(viewStart).inMilliseconds;
-    final timeFraction = (offset / totalDuration).clamp(0.0, 1.0); // Clamp fraction
+    // Ensure the date-time is within the overall view range for clamping purposes
+    final clampedDateTime = dateTime.isBefore(_viewStart!)
+        ? _viewStart!
+        : (dateTime.isAfter(_viewEnd!) ? _viewEnd! : dateTime);
 
-    if (orientation == Axis.vertical) {
-      // For vertical orientation:
-      // - X depends on the division (column)
-      // - Y depends on the time
-      final x = origin.dx + (division * cellWidth);
-      final y = origin.dy + (timeFraction * availableSpace.height);
+    // Clamp division index
+    final clampedDivision = division.clamp(0, _divisions! - 1);
+
+
+    if (_orientation == Axis.vertical) {
+      // Vertical Orientation (e.g., Day/Week View)
+      // X depends on the division (column/day)
+      // Y depends on the time of day relative to the displayed daily time range
+
+      // TODO: Get the actual displayed time range per day (e.g., from controller or config)
+      // Assuming 00:00 to 24:00 for now.
+      final dayStartHour = 0;
+      final dayEndHour = 24;
+      final dayDisplayDurationMs = Duration(hours: dayEndHour - dayStartHour).inMilliseconds;
+
+      if (dayDisplayDurationMs <= 0 || _availableSpace!.height <= 0) {
+        // Avoid division by zero or invalid state, return origin for the division
+        return Offset(_origin!.dx + (clampedDivision * _cellWidth!), _origin!.dy);
+      }
+
+      // Calculate the time offset within the displayed day range (milliseconds since midnight of the clampedDateTime)
+      final timeOfDayMs = Duration(hours: clampedDateTime.hour, minutes: clampedDateTime.minute, seconds: clampedDateTime.second, milliseconds: clampedDateTime.millisecond).inMilliseconds;
+      // Assuming day starts at dayStartHour (e.g., 0 for midnight)
+      final startOfDayOffsetMs = Duration(hours: dayStartHour).inMilliseconds;
+      // Calculate offset relative to the displayed start hour and clamp within the displayed duration
+      final timeOffsetWithinDisplayedDayMs = (timeOfDayMs - startOfDayOffsetMs).clamp(0, dayDisplayDurationMs);
+
+      // Calculate the vertical fraction based on the time within the displayed day range
+      double timeFraction;
+      // Use the original dateTime for boundary checks, not clampedDateTime
+      if (dateTime.isAfter(_viewEnd!)) {
+          // If the original time was after the view end, clamp fraction to 1.0 (bottom)
+          timeFraction = 1.0;
+      } else if (dateTime.isBefore(_viewStart!)) {
+          // If the original time was before the view start, clamp fraction to 0.0 (top)
+          timeFraction = 0.0;
+      } else {
+          // Otherwise, calculate fraction normally based on the clamped time within the day
+          // Ensure dayDisplayDurationMs is not zero before dividing
+          timeFraction = (dayDisplayDurationMs > 0)
+              ? timeOffsetWithinDisplayedDayMs / dayDisplayDurationMs
+              : 0.0;
+      }
+
+      // Calculate position
+      final x = _origin!.dx + (clampedDivision * _cellWidth!);
+      final y = _origin!.dy + (timeFraction * _availableSpace!.height);
       return Offset(x, y);
-    } else {
-      // For horizontal orientation:
-      // - X depends on the time
-      // - Y depends on the division (row)
-      final x = origin.dx + (timeFraction * availableSpace.width);
-      final y = origin.dy + (division * cellHeight);
+
+    } else { // Horizontal orientation
+      // Original logic for horizontal might be okay if it's a simple linear timeline
+      // X depends on the time fraction within the total view duration
+      // Y depends on the division (row)
+      final totalDuration = _viewEnd!.difference(_viewStart!).inMilliseconds;
+      if (totalDuration <= 0 || _availableSpace!.width <= 0) {
+         // Avoid division by zero, return origin for the division
+         return Offset(_origin!.dx, _origin!.dy + (clampedDivision * _cellHeight!));
+      }
+      // Offset from the start of the entire view
+      final offset = clampedDateTime.difference(_viewStart!).inMilliseconds;
+      final timeFraction = (offset / totalDuration).clamp(0.0, 1.0);
+
+      final x = _origin!.dx + (timeFraction * _availableSpace!.width);
+      final y = _origin!.dy + (clampedDivision * _cellHeight!);
       return Offset(x, y);
     }
   }
@@ -161,36 +219,89 @@ class GridLayoutInfo extends Equatable { // Extend Equatable
   DateTime? getDateTimeForPosition(Offset position) {
     // Removed isReady check (getters will throw if not initialized)
 
-    final totalDurationMs = viewEnd.difference(viewStart).inMilliseconds;
-    if (totalDurationMs <= 0) return null; // Avoid division by zero or negative duration
-
-    double fraction = 0;
-    if (orientation == Axis.vertical) {
-      // Vertical: Calculate fraction based on Y position relative to available height
-      final availableHeight = availableSpace.height;
-      if (availableHeight <= 0) return null;
-      // Adjust position relative to origin and clamp
-      final relativeY = position.dy - origin.dy;
-      final clampedY = relativeY.clamp(0.0, availableHeight);
-      fraction = clampedY / availableHeight;
-    } else { // Horizontal orientation
-      // Horizontal: Calculate fraction based on X position relative to available width
-      final availableWidth = availableSpace.width;
-      if (availableWidth <= 0) return null;
-      // Adjust position relative to origin and clamp
-      final relativeX = position.dx - origin.dx;
-      final clampedX = relativeX.clamp(0.0, availableWidth);
-      fraction = clampedX / availableWidth;
+    // Ensure viewStart and viewEnd are valid and other properties are initialized
+    if (_viewStart == null || _viewEnd == null || _origin == null || _availableSpace == null || _divisions == null || _cellWidth == null || _cellHeight == null || _orientation == null) {
+      print("Error: GridLayoutInfo not fully initialized in getDateTimeForPosition.");
+      return null; // Or throw StateError
     }
 
-    // Calculate the time offset based on the fraction
-    final millisecondsOffset = (fraction * totalDurationMs).round();
+    final totalViewDuration = _viewEnd!.difference(_viewStart!);
+    if (totalViewDuration.inMilliseconds <= 0) return null;
 
-    // Return the calculated time (ensure it's UTC like viewStart/viewEnd)
-    // Clamp the final time within view bounds as well
-    final calculatedTime = viewStart.add(Duration(milliseconds: millisecondsOffset));
-    if (calculatedTime.isBefore(viewStart)) return viewStart;
-    if (calculatedTime.isAfter(viewEnd)) return viewEnd;
+    // Position is already relative to the grid origin (top-left of the grid drawing area)
+    final relativeX = position.dx;
+    final relativeY = position.dy;
+
+    DateTime calculatedTime;
+
+    if (_orientation == Axis.vertical) {
+      // Vertical orientation (e.g., Day, Week View)
+      // X determines the day (division), Y determines the time within the day
+
+      final availableHeight = _availableSpace!.height;
+      final availableWidth = _availableSpace!.width; // Total width for all divisions
+      if (availableHeight <= 0 || availableWidth <= 0 || _cellWidth! <= 0 || _divisions! <= 0) return null;
+
+      // 1. Determine the division (day column index)
+      int divisionIndex;
+      if (_cellWidth! <= 0) {
+          divisionIndex = 0; // Avoid division by zero
+      } else {
+          divisionIndex = (relativeX / _cellWidth!).floor();
+
+          // Check if relativeX is very close to the next cell boundary
+          // This handles cases where floating point math might put it just under the boundary
+          const boundaryTolerance = 1.0; // Allow 1 pixel tolerance
+          double nextBoundary = (divisionIndex + 1) * _cellWidth!;
+          if ((nextBoundary - relativeX).abs() < boundaryTolerance) {
+             // If we are very close to the *next* boundary, consider it in the next division
+             // (unless it's the last division already)
+             if (divisionIndex < _divisions! - 1) {
+                divisionIndex++;
+             }
+          }
+      }
+      divisionIndex = divisionIndex.clamp(0, _divisions! - 1); // Clamp after potential adjustment
+
+      // 2. Determine the time offset based on Y position and interval height/duration
+      final clampedY = relativeY.clamp(0.0, availableHeight); // Clamp Y within bounds
+
+      // Calculate how many intervals fit into the clamped Y position
+      double intervalsFromTop;
+      if (_cellHeight! <= 0) {
+        intervalsFromTop = 0; // Avoid division by zero if cell height is invalid
+      } else {
+        intervalsFromTop = clampedY / _cellHeight!;
+      }
+
+      // Calculate the time offset based on the number of intervals and interval duration
+      final timeOffsetMs = (intervalsFromTop * _intervalDuration!.inMilliseconds).round();
+
+      // 3. Calculate the base date for the division
+      // Assuming viewStart is the start of the first day and days are contiguous.
+      final baseDate = _viewStart!.add(Duration(days: divisionIndex));
+
+      // 4. Time offset is already calculated above based on intervals
+
+      // 5. Combine base date and time offset, always constructing a local DateTime
+      calculatedTime = DateTime(baseDate.year, baseDate.month, baseDate.day)
+          .add(Duration(milliseconds: timeOffsetMs));
+
+    } else { // Horizontal orientation (e.g., Timeline View)
+      // Original logic for horizontal might be sufficient if it's a simple linear timeline
+      final availableWidth = _availableSpace!.width;
+      if (availableWidth <= 0) return null;
+
+      final clampedX = relativeX.clamp(0.0, availableWidth);
+      final fraction = availableWidth == 0 ? 0.0 : clampedX / availableWidth; // Avoid division by zero
+
+      final millisecondsOffset = (fraction * totalViewDuration.inMilliseconds).round();
+      calculatedTime = _viewStart!.add(Duration(milliseconds: millisecondsOffset));
+    }
+
+    // Clamp the final time within the overall view bounds
+    if (calculatedTime.isBefore(_viewStart!)) return _viewStart!;
+    if (calculatedTime.isAfter(_viewEnd!)) return _viewEnd!;
     return calculatedTime;
   }
 

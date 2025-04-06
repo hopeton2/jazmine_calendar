@@ -5,10 +5,13 @@ import 'package:jazmine_calendar/src/models/calendar_event.dart';
 import 'package:jazmine_calendar/src/persistence/calendar_persistence.dart';
 import 'package:jazmine_calendar/src/persistence/in_memory_persistence.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
+import 'package:collection/collection.dart'; // For ListEquality if needed later
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/services/navigation_service.dart';
 import 'package:jazmine_calendar/src/services/time_service.dart';
 import 'package:jazmine_calendar/src/utils/date_helper.dart';
+import 'package:rrule/rrule.dart'; // Import rrule package
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // For dayStarts/dayEnds
 
 typedef EventCallback = Future<void> Function(CalendarEvent event);
 typedef EventPositionCallback = Future<void> Function(
@@ -16,43 +19,61 @@ typedef EventPositionCallback = Future<void> Function(
 typedef EventTimeCallback = Future<void> Function(
     CalendarEvent event, DateTime newStart, DateTime newEnd);
 
+// Enum is defined outside the class
+enum CalendarChangeType {
+  dateOrView,
+  eventData,
+  timeZone,
+  setting,
+  other,
+}
+
 class CalendarController extends ChangeNotifier {
-  /// Flag to indicate if events have changed
-  bool _eventsChanged = false;
-  bool get eventsChanged => _eventsChanged;
+  // --- Specific Notifiers ---
+  final ValueNotifier<int> _eventDataChangeCounter = ValueNotifier<int>(0);
+
+  /// Notifies listeners when event data (add, update, delete, clear, persistence change, cache invalidation) changes.
+  /// Listeners can use the integer value changing as the signal.
+  ValueNotifier<int> get eventDataChangeNotifier => _eventDataChangeCounter;
+
+  final ValueNotifier<int> _settingsChangeCounter = ValueNotifier<int>(0);
+
+  /// Notifies listeners when calendar settings (FAB, scroll animation, target hour, time zones, default start times) change.
+  ValueNotifier<int> get settingsChangeNotifier => _settingsChangeCounter;
+  // --- End Specific Notifiers ---
+
+  bool _eventsChanged = false; // Used within batch updates
+  bool get eventsChanged => _eventsChanged; // Keep for internal logic?
 
   final NavigationService _navigationService;
   final TimeService _timeService;
   Timer? _timer;
 
   final List<String> _visibleTimeZones;
-  bool _showFloatingActionButton; // Changed to non-final to allow modification
+  bool _showFloatingActionButton;
   final bool _scrollToCurrentTimeOnLoad;
-  bool _animateTimeScroll; // Changed to non-final to allow modification
-  EventCallback? _onEventCreated; // Changed to non-final to allow modification
-  EventCallback? _onEventTap; // Callback for event tap
-  EventCallback? _onEventDoubleTap; // Callback for event double tap
-  EventPositionCallback? _onEventLongPress; // Callback for event long press
-  EventTimeCallback?
-      _onEventRescheduled; // Changed to non-final to allow modification
-  EventTimeCallback?
-      _onEventResized; // Changed to non-final to allow modification
+  bool _animateTimeScroll;
+  EventCallback? _onEventCreated;
+  EventCallback? _onEventTap;
+  EventCallback? _onEventDoubleTap;
+  EventPositionCallback? _onEventLongPress;
+  EventTimeCallback? _onEventRescheduled;
+  EventTimeCallback? _onEventResized;
   int? _targetHour;
   final Map<CalendarViewType, double> _scrollPositions = {};
-  bool _hasInitialScroll = false; // Add missing field
+  bool _hasInitialScroll = false;
   final int firstDayOfWeek;
 
   late final CalendarPersistence _persistence;
-  List<CalendarEvent>? _cachedEvents;
+  List<CalendarEvent>? _baseEvents; // Cache for events loaded from persistence
   bool _isLoading = false;
   bool _batchNotifications = false;
-  final ValueNotifier<List<CalendarEvent>> _eventsNotifier =
-      ValueNotifier<List<CalendarEvent>>([]);
+  // Remove _cachedEvents and _eventsNotifier - expansion is dynamic
 
   ValueNotifier<CalendarViewType> get _currentViewNotifier =>
       _navigationService.currentViewNotifier;
 
-  // Expose necessary notifiers
+  // Expose necessary notifiers (Existing ones + New ones)
   ValueNotifier<CalendarViewType> get currentViewNotifier =>
       _navigationService.currentViewNotifier;
   ValueNotifier<DateTime> get selectedDateNotifier =>
@@ -62,20 +83,14 @@ class CalendarController extends ChangeNotifier {
   ValueNotifier<DateTime> get currentTimeNotifier =>
       _timeService.currentTimeNotifier;
   ValueNotifier<Duration> get intervalNotifier => _timeService.intervalNotifier;
+  // Remove eventsNotifier getter
 
-  // Factory constructor to replace the removed create method
-  /// Helper method to determine the first day of week based on locale
   static int getFirstDayOfWeekForLocale(String? languageCode) {
-    // Default to Monday if no locale is provided
     if (languageCode == null) return DateTime.monday;
-
-    // For most locales, the week starts on Monday (1)
-    // For English (en) and a few others, the week starts on Sunday (7)
     switch (languageCode) {
       case 'en':
         return DateTime.sunday;
       case 'hi':
-        // For Hindi, the week traditionally starts on Sunday
         return DateTime.sunday;
       case 'zh':
       case 'fr':
@@ -104,7 +119,6 @@ class CalendarController extends ChangeNotifier {
     int? firstDayOfWeek,
     Locale? locale,
   }) async {
-    // If firstDayOfWeek is not explicitly set, determine it based on locale
     int effectiveFirstDayOfWeek =
         firstDayOfWeek ?? getFirstDayOfWeekForLocale(locale?.languageCode);
     return CalendarController(
@@ -159,7 +173,6 @@ class CalendarController extends ChangeNotifier {
     DateHelper.controller = this;
     CalendarViewService.controller = this;
 
-    // Initialize visible date range
     final dateRange = CalendarViewService()
         .dateRangeOfView(initialView, initialDate ?? DateTime.now());
     CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
@@ -167,22 +180,35 @@ class CalendarController extends ChangeNotifier {
     _startTimer();
   }
 
-  void _startTimer() {
-    // Update immediately
-    _timeService.currentTimeNotifier.value = DateTime.now();
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _eventDataChangeCounter.dispose();
+    _settingsChangeCounter.dispose();
+    // Dispose other notifiers if they were owned solely by this controller
+    // _navigationService.dispose(); // Assuming these are managed elsewhere or stateless
+    // _timeService.dispose();
+    super.dispose();
+  }
 
-    // Calculate delay to next minute
+  void _startTimer() {
+    _timeService.currentTimeNotifier.value = DateTime.now();
     final now = DateTime.now();
     final nextMinute =
         DateTime(now.year, now.month, now.day, now.hour, now.minute + 1);
     final delay = nextMinute.difference(now);
 
     // Initial timer to sync with minute boundary
-    Timer(delay, () {
+    _timer = Timer(delay, () {
+      // Assign to _timer here too
+      // Check if timer was cancelled before callback runs
+      if (_timer == null || !_timer!.isActive) return;
       _timeService.currentTimeNotifier.value = DateTime.now();
 
       // Then start periodic timer
       _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+        // Timer is passed, check its isActive status
+        if (!timer.isActive) return;
         _timeService.currentTimeNotifier.value = DateTime.now();
       });
     });
@@ -203,15 +229,12 @@ class CalendarController extends ChangeNotifier {
   int? get targetHour => _targetHour;
   bool get isLoading => _isLoading;
   bool get hasInitialScroll => _hasInitialScroll;
+
   void setInitialScrollComplete() {
     _hasInitialScroll = true;
   }
 
-  void _notifyIfNeeded() {
-    if (!_batchNotifications) {
-      notifyListeners();
-    }
-  }
+  // Removed _notifyIfNeeded
 
   Future<void> _batchUpdate(Future<void> Function() updates) async {
     _batchNotifications = true;
@@ -219,18 +242,21 @@ class CalendarController extends ChangeNotifier {
       await updates();
     } finally {
       _batchNotifications = false;
-      notifyListeners();
+      if (_eventsChanged) {
+        _eventDataChangeCounter.value++;
+      }
     }
   }
 
-  get visibleDateRange => CalendarViewService().visibleDateRange;
+  List<DateTime> get visibleDateRange => CalendarViewService().visibleDateRange;
 
   void setShowFloatingActionButton(bool show) {
     if (_showFloatingActionButton == show) return;
     _showFloatingActionButton = show;
-    _notifyIfNeeded();
+    _settingsChangeCounter.value++;
   }
 
+  // Setters for callbacks (no notification needed)
   void setOnEventCreated(EventCallback? callback) {
     _onEventCreated = callback;
   }
@@ -257,29 +283,22 @@ class CalendarController extends ChangeNotifier {
 
   void setPersistence(CalendarPersistence persistence) {
     _persistence = persistence;
-    _cachedEvents = null;
-    _notifyIfNeeded();
+    _baseEvents = null; // Invalidate base event cache
+    _eventDataChangeCounter.value++;
   }
 
+  // --- Navigation Methods ---
   void changeView(CalendarViewType view) {
     final currentView = _navigationService.currentViewNotifier.value;
-
-    // Only change if it's actually a different view
     if (currentView != view) {
       _navigationService.changeView(view);
-
-      // Update visible date range for the new view
       final dateRange = CalendarViewService().dateRangeOfView(view, startDate);
       CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
-
-      notifyListeners();
     }
   }
 
   void selectDate(DateTime date) {
     _navigationService.selectDate(date);
-
-    // Update visible date range for day view (since selectDate switches to day view)
     final dateRange =
         CalendarViewService().dateRangeOfView(CalendarViewType.day, date);
     CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
@@ -287,35 +306,24 @@ class CalendarController extends ChangeNotifier {
 
   void navigateToDate(DateTime date) {
     _navigationService.navigateToDate(date);
-
-    // Update visible date range for the current view
     final dateRange = CalendarViewService().dateRangeOfView(currentView, date);
     CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
-
-    notifyListeners();
   }
 
   void navigateToNextPage() {
     _navigationService.navigateToNextPage();
-
-    // Update visible date range after navigation
     final dateRange =
         CalendarViewService().dateRangeOfView(currentView, startDate);
     CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
-
-    notifyListeners();
   }
 
   void navigateToPreviousPage() {
     _navigationService.navigateToPreviousPage();
-
-    // Update visible date range after navigation
     final dateRange =
         CalendarViewService().dateRangeOfView(currentView, startDate);
     CalendarViewService().setVisibleDateRange(dateRange[0], dateRange[1]);
-
-    notifyListeners();
   }
+  // --- End Navigation Methods ---
 
   void setTargetHour(int? hour) {
     if (hour != null && (hour < 0 || hour > 23)) {
@@ -323,44 +331,43 @@ class CalendarController extends ChangeNotifier {
     }
     if (_targetHour == hour) return;
     _targetHour = hour;
-    _notifyIfNeeded();
+    _settingsChangeCounter.value++;
   }
 
   void setInterval(Duration interval) {
-    intervalNotifier.value = interval;
+    if (intervalNotifier.value != interval) {
+      intervalNotifier.value = interval;
+      _settingsChangeCounter.value++;
+    }
   }
 
-  get currentDateRange {
+  List<DateTime> get currentDateRange {
     return CalendarViewService().dateRangeOfView(currentView, startDate);
   }
 
-  // Event Management
+  // --- Event Management ---
   Future<void> addEvent(CalendarEvent event) async {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.addEvent(event);
-      _cachedEvents = null;
+      _baseEvents = null; // Invalidate base event cache
       _eventsChanged = true;
-
       if (_onEventCreated != null) {
         await _onEventCreated!(event);
       }
       _isLoading = false;
     });
-
-    notifyListeners();
-    _eventsChanged = false; // Reset flag after notification
+    _eventsChanged = false;
   }
 
   Future<void> updateEvent(CalendarEvent event) async {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.updateEvent(event);
-      _cachedEvents = null;
+      _baseEvents = null; // Invalidate base event cache
       _eventsChanged = true;
       _isLoading = false;
     });
-    notifyListeners();
     _eventsChanged = false;
   }
 
@@ -368,98 +375,223 @@ class CalendarController extends ChangeNotifier {
     await _batchUpdate(() async {
       _isLoading = true;
       await _persistence.deleteEvent(event);
-      _cachedEvents = null;
+      _baseEvents = null; // Invalidate base event cache
+      _eventsChanged = true;
       _isLoading = false;
     });
+    _eventsChanged = false;
   }
 
-  Future<List<CalendarEvent>> getAllEvents() async {
-    if (_cachedEvents != null) {
-      return List.from(_cachedEvents!);
-    }
+  // This method now only loads base events if needed, doesn't return them directly.
+  Future<void> _loadBaseEventsIfNeeded() async {
+    if (_baseEvents != null) return; // Already loaded
+    if (_isLoading) return; // Already loading
 
     try {
       _isLoading = true;
-      _cachedEvents = await _persistence.loadEvents();
-      _eventsNotifier.value = List.from(_cachedEvents!);
-      return List.from(_cachedEvents!);
+      // Notify potentially? Or assume caller handles loading state
+      _baseEvents = await _persistence.loadEvents();
+    } catch (e) {
+      print("Error loading base events: $e");
+      _baseEvents = []; // Set to empty on error to prevent repeated attempts
     } finally {
       _isLoading = false;
+      // Notify that base data might have changed (e.g., after initial load)
+      // This might trigger unnecessary rebuilds if called frequently.
+      // Consider if notification is needed here or only on mutation.
+      // _eventDataChangeCounter.value++;
     }
   }
 
-  /// Adds multiple events efficiently.
+  /// Updates the start and end times of an event.
+  ///
+  /// This method updates the event in the persistence layer, invalidates the cache,
+  /// and notifies listeners of the data change. It does NOT fire user callbacks like
+  /// onEventRescheduled or onEventResized; those should be called separately if needed
+  /// after this method completes.
+  Future<void> updateEventTimes(CalendarEvent event, DateTime newStart, DateTime newEnd) async {
+    // Avoid redundant updates if times haven't changed
+    if (event.start == newStart && event.end == newEnd) {
+        print("[Controller.updateEventTimes] No change detected for event ${event.id}. Skipping update.");
+        return;
+    }
+
+    print("[Controller.updateEventTimes] Updating event ${event.id} to $newStart - $newEnd");
+    await _batchUpdate(() async {
+      _isLoading = true;
+      final updatedEvent = event.copyWith(start: newStart, end: newEnd);
+      try {
+        await _persistence.updateEvent(updatedEvent);
+        print("[Controller.updateEventTimes] Persistence update successful for ${event.id}.");
+        _baseEvents = null; // Invalidate cache
+        _eventsChanged = true; // Mark data as changed for notification
+      } catch (e) {
+        print("[Controller.updateEventTimes] Error updating event ${event.id} in persistence: $e");
+        // Decide if we should rethrow or just log
+      } finally {
+        _isLoading = false;
+      }
+    });
+     // _batchUpdate handles notifying _eventDataChangeCounter if _eventsChanged is true
+    _eventsChanged = false; // Reset flag after batch update potentially notified
+     print("[Controller.updateEventTimes] Update process complete for event ${event.id}. Notification (if change occurred) sent via batch update.");
+  }
+
   Future<void> addEvents(List<CalendarEvent> events) async {
     await _batchUpdate(() async {
       _isLoading = true;
       for (final event in events) {
-        // Consider adding checks or specific logic per event if needed
         await _persistence.addEvent(event);
         if (_onEventCreated != null) {
-          // Note: Calling onEventCreated for each might be slow for large batches
-           await _onEventCreated!(event);
+          await _onEventCreated!(event);
         }
       }
-      _cachedEvents = null; // Invalidate cache
+      _baseEvents = null; // Invalidate base event cache
       _eventsChanged = true;
       _isLoading = false;
     });
-    // Single notification after batch update
-    notifyListeners();
     _eventsChanged = false;
   }
 
   Future<void> clearEvents() async {
     try {
       _isLoading = true;
-      notifyListeners();
-
       await _persistence.clearEvents();
-      _cachedEvents = null;
+      _baseEvents = null; // Invalidate base event cache
+      _eventsChanged = true;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      if (_eventsChanged) {
+        _eventDataChangeCounter.value++;
+      }
+      _eventsChanged = false;
     }
   }
 
   Future<void> rescheduleEvent(
       CalendarEvent event, DateTime newStart, DateTime newEnd) async {
+    print(
+        '[Controller.rescheduleEvent] Received event ${event.id} with new times: $newStart - $newEnd');
     await _batchUpdate(() async {
       _isLoading = true;
-      final updatedEvent = event.copyWith(
-        start: newStart,
-        end: newEnd,
-      );
-
-      await updateEvent(updatedEvent);
-
-      if (_onEventRescheduled != null) {
-        await _onEventRescheduled!(event, newStart, newEnd);
+      final updatedEvent =
+          event.copyWith(start: newStart, end: newEnd); // Define once
+      print(
+          '[Controller.rescheduleEvent] Calling persistence update for ${updatedEvent.id}');
+      try {
+        await _persistence.updateEvent(updatedEvent);
+        print(
+            '[Controller.rescheduleEvent] Persistence update successful for ${updatedEvent.id}');
+        // Update cache if loaded, otherwise invalidate
+        if (_baseEvents != null) {
+          final index = _baseEvents!.indexWhere((e) => e.id == event.id);
+          if (index != -1) {
+            _baseEvents![index] = updatedEvent;
+            print(
+                '[Controller.rescheduleEvent] Updated event ${updatedEvent.id} in cache.');
+          } else {
+            _baseEvents = null; // Event wasn't in cache? Invalidate.
+            print(
+                '[Controller.rescheduleEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
+          }
+        } else {
+          _baseEvents = null; // Ensure it stays null if it was already null
+          print('[Controller.rescheduleEvent] Cache was null, invalidating.');
+        }
+        _eventsChanged = true; // Mark that data changed within the batch
+        if (_onEventRescheduled != null) {
+          // Call user callback *after* successful persistence and cache update
+          await _onEventRescheduled!(event, newStart, newEnd);
+        }
+      } catch (e, s) {
+        print(
+            '[Controller.rescheduleEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
+        // Optionally rethrow or handle error appropriately
+      } finally {
+        _isLoading = false;
       }
-      _isLoading = false;
     });
+    // Notification happens here if _eventsChanged is true after _batchUpdate completes
+    if (_eventsChanged) {
+      print(
+          '[Controller.rescheduleEvent] Notifying listeners about event change.');
+    }
+    _eventsChanged = false; // Reset flag after potential notification
   }
 
-  // TimeZone Management
+
+  Future<void> resizeEvent(
+      CalendarEvent event, DateTime newStart, DateTime newEnd) async {
+    print(
+        '[Controller.resizeEvent] Received event ${event.id} with new times: $newStart - $newEnd');
+    await _batchUpdate(() async {
+      _isLoading = true;
+      final updatedEvent = event.copyWith(start: newStart, end: newEnd);
+      print(
+          '[Controller.resizeEvent] Calling persistence update for ${updatedEvent.id}');
+      try {
+        await _persistence.updateEvent(updatedEvent);
+        print(
+            '[Controller.resizeEvent] Persistence update successful for ${updatedEvent.id}');
+        // Update cache if loaded, otherwise invalidate
+        if (_baseEvents != null) {
+          final index = _baseEvents!.indexWhere((e) => e.id == event.id);
+          if (index != -1) {
+            _baseEvents![index] = updatedEvent;
+            print(
+                '[Controller.resizeEvent] Updated event ${updatedEvent.id} in cache.');
+          } else {
+            _baseEvents = null; // Event wasn't in cache? Invalidate.
+            print(
+                '[Controller.resizeEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
+          }
+        } else {
+          _baseEvents = null; // Ensure it stays null if it was already null
+          print('[Controller.resizeEvent] Cache was null, invalidating.');
+        }
+        _eventsChanged = true; // Mark that data changed within the batch
+        if (_onEventResized != null) {
+          // Call user callback *after* successful persistence and cache update
+          await _onEventResized!(event, newStart, newEnd);
+        }
+      } catch (e, s) {
+        print(
+            '[Controller.resizeEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
+        // Optionally rethrow or handle error appropriately
+      } finally {
+        _isLoading = false;
+      }
+    });
+    // Notification happens here if _eventsChanged is true after _batchUpdate completes
+    if (_eventsChanged) {
+      print('[Controller.resizeEvent] Notifying listeners about event change.');
+    }
+    _eventsChanged = false; // Reset flag after potential notification
+  }
+  // --- End Event Management ---
+
+  // --- TimeZone Management ---
   void addTimeZone(String timeZone) {
     if (!_visibleTimeZones.contains(timeZone)) {
       _visibleTimeZones.add(timeZone);
-      notifyListeners();
+      _settingsChangeCounter.value++;
     }
   }
 
   void removeTimeZone(String timeZone) {
     if (_visibleTimeZones.length > 1 && _visibleTimeZones.contains(timeZone)) {
       _visibleTimeZones.remove(timeZone);
-      notifyListeners();
+      _settingsChangeCounter.value++;
     }
   }
+  // --- End TimeZone Management ---
 
-  // Cache Management
+  // --- Cache Management ---
   void invalidateCache() {
-    _cachedEvents = null;
-    notifyListeners();
+    _baseEvents = null; // Invalidate base event cache
+    _eventDataChangeCounter.value++;
   }
+  // --- End Cache Management ---
 
   double? getScrollPosition(CalendarViewType view) {
     return _scrollPositions[view];
@@ -468,12 +600,8 @@ class CalendarController extends ChangeNotifier {
   void setScrollPosition(CalendarViewType view, double position) {
     if (position != _scrollPositions[view]) {
       _scrollPositions[view] = position;
-      // No need to notify here as this is just storing state
     }
   }
-
-  // Add missing getter
-  ValueNotifier<List<CalendarEvent>> get eventsNotifier => _eventsNotifier;
 
   bool get scrollToCurrentTimeOnLoad => _scrollToCurrentTimeOnLoad;
 
@@ -482,40 +610,105 @@ class CalendarController extends ChangeNotifier {
   void setAnimateTimeScroll(bool value) {
     if (_animateTimeScroll != value) {
       _animateTimeScroll = value;
-      notifyListeners();
+      _settingsChangeCounter.value++;
     }
   }
 
-  // Define default start times for each day of the week
   final List<TimeOfDay> _startTimes = List.generate(
     7,
-    (_) =>
-        const TimeOfDay(hour: 8, minute: 0), // Default to 8:00 AM for all days
+    (_) => const TimeOfDay(hour: 8, minute: 0),
   );
 
-  // Expose unmodifiable start times list
+  List<TimeOfDay> get defaultStartTimes => List.unmodifiable(_startTimes);
 
-  /// Get events for a specific date range
+  /// Gets all event occurrences (including expanded recurring events)
+  /// that fall within the specified date range [start] (inclusive) and [end] (exclusive).
   Future<List<CalendarEvent>> getEventsForDateRange(
     DateTime start,
     DateTime end,
   ) async {
-    final events = await _persistence.getEventsInRange(start, end);
-    return events;
+    if (start.isAfter(end)) return [];
+
+    await _loadBaseEventsIfNeeded(); // Ensure base events are loaded
+
+    if (_baseEvents == null) return []; // Return empty if loading failed
+
+    final List<CalendarEvent> occurrencesInRange = [];
+    // Define a slightly wider window for recurrence generation to catch events
+    // starting just before the window but recurring into it.
+    final recurrenceWindowStart = start.subtract(const Duration(days: 1));
+    final recurrenceWindowEnd = end.add(const Duration(days: 1));
+
+    for (final baseEvent in _baseEvents!) {
+      if (baseEvent.recurrenceRule == null ||
+          baseEvent.recurrenceRule!.isEmpty) {
+        // --- Non-recurring event ---
+        // Check if it overlaps the requested range [start, end)
+        if (baseEvent.start.isBefore(end) && baseEvent.end.isAfter(start)) {
+          occurrencesInRange.add(baseEvent);
+        }
+      } else {
+        // --- Recurring event ---
+        try {
+          final rrule = RecurrenceRule.fromString(baseEvent.recurrenceRule!);
+          final duration = baseEvent.end.difference(baseEvent.start);
+
+          // Use the rrule instance to get occurrences within the wider window
+          final instances = rrule.getInstances(
+            start: baseEvent.start, // Important: DTSTART for the rule
+            after: recurrenceWindowStart.subtract(const Duration(
+                microseconds:
+                    1)), // Ensure we get instances starting exactly at the window start
+            before: recurrenceWindowEnd, // Exclusive end
+          );
+
+          for (final occurrenceStart in instances) {
+            final occurrenceEnd = occurrenceStart.add(duration);
+
+            // Check if this specific occurrence overlaps the *requested* range [start, end)
+            if (occurrenceStart.isBefore(end) && occurrenceEnd.isAfter(start)) {
+              // Create a new event instance for this occurrence
+              // Create a new event instance for this occurrence
+              occurrencesInRange.add(baseEvent.copyWith(
+                // Keep original ID for now, use flags to identify
+                start: occurrenceStart,
+                end: occurrenceEnd,
+                isOccurrence: true, // Mark as an occurrence
+                originalEventId: baseEvent.id, // Store original ID
+                recurrenceRule: null, // Occurrences don't have rules themselves
+                recurrenceType: null,
+              ));
+            }
+          }
+        } catch (e) {
+          print(
+              "Error parsing RRULE for event ${baseEvent.id}: ${baseEvent.recurrenceRule} - $e");
+          // Optionally include the base event itself if it falls in range, even if rule fails
+          if (baseEvent.start.isBefore(end) && baseEvent.end.isAfter(start)) {
+            occurrencesInRange.add(baseEvent.copyWith(
+                recurrenceRule: null,
+                recurrenceType: null)); // Treat as non-recurring on error
+          }
+        }
+      }
+    }
+    return occurrencesInRange;
   }
 
-  List<TimeOfDay> get defaultStartTimes => List.unmodifiable(_startTimes);
-
-  // Get start time for a specific day
   TimeOfDay getStartTimeForDay(DateTime date) {
-    final dayIndex = date.weekday - 1; // Convert 1-7 to 0-6
-    return _startTimes[dayIndex];
+    int weekdayIndex = (date.weekday - firstDayOfWeek + 7) % 7;
+    return _startTimes[weekdayIndex];
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _eventsNotifier.dispose();
-    super.dispose();
+  void setStartTimeForDay(int weekday, TimeOfDay time) {
+    if (weekday < DateTime.monday || weekday > DateTime.sunday) {
+      throw ArgumentError(
+          'Weekday must be between DateTime.monday and DateTime.sunday');
+    }
+    int index = (weekday - firstDayOfWeek + 7) % 7;
+    if (_startTimes[index] != time) {
+      _startTimes[index] = time;
+      _settingsChangeCounter.value++;
+    }
   }
 }

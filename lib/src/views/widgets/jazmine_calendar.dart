@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jazmine_calendar/src/l10n/calendar_localization.dart'; // For localization
+import 'package:jazmine_calendar/src/viewmodels/calendar_event_editor_viewmodel.dart'; // For ViewModel type
+import 'package:jazmine_calendar/src/views/widgets/editors/calendar_event_editor.dart'; // For Editor type
 import 'package:jazmine_calendar/jazmine_calendar.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
 import 'package:jazmine_calendar/src/views/widgets/navigation_bars/calendar_navigation_bar.dart';
@@ -15,7 +18,9 @@ class JazmineCalendar extends StatelessWidget {
   final bool showViewSelector;
   final NavigationBarStyle navigationBarStyle; // New property
   final JazmineCalendarTheme? theme;
-
+  final bool showCreateEventButton; // New parameter for FAB visibility
+  final VoidCallback? onCreateEventButtonPressed; // Callback for FAB press
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Callback for grid interaction
   final DayViewConfiguration dayConfiguration;
   final WeekViewConfiguration weekConfiguration;
   final MonthViewConfiguration monthConfiguration;
@@ -36,8 +41,10 @@ class JazmineCalendar extends StatelessWidget {
     this.monthConfiguration = const MonthViewConfiguration(),
     this.agendaConfiguration = const AgendaViewConfiguration(),
     this.timelineConfiguration = const TimelineConfiguration(),
+    this.showCreateEventButton = false, // Default to false
+    this.onCreateEventButtonPressed,
+    this.onTimeSlotCreateInteraction,
   }) : controller = controller ?? _createDefaultController();
-
   // Create a default controller that uses the same defaults as the CalendarController.create method
   static CalendarController _createDefaultController() {
     return CalendarController(
@@ -78,14 +85,29 @@ class JazmineCalendar extends StatelessWidget {
             effectiveTheme, // Add our calendar theme
           ],
         ),
-        child: Column(
-          children: [
-            if (showNavigationBar) _buildNavigationBar(),
-            if (showViewSelector &&
-                navigationBarStyle == NavigationBarStyle.standard)
-              const ViewSelector(),
-            const Expanded(child: CalendarViewSwitcher()),
-          ],
+        // Wrap the Column in a Scaffold to allow for a FAB
+        child: Scaffold(
+          // Prevent Scaffold from interfering with AppBar if JazmineCalendar is used within another Scaffold
+          backgroundColor: Colors.transparent,
+          body: Column(
+            children: [
+              if (showNavigationBar) _buildNavigationBar(),
+              if (showViewSelector &&
+                  navigationBarStyle == NavigationBarStyle.standard)
+                const ViewSelector(),
+              Expanded(child: CalendarViewSwitcher(onTimeSlotCreateInteraction: onTimeSlotCreateInteraction)),
+            ],
+          ),
+          floatingActionButton: showCreateEventButton
+              ? FloatingActionButton(
+                  onPressed: onCreateEventButtonPressed, // Use the callback
+                  tooltip: CalendarLocalization.of(context).translate('createEventTooltip') ?? 'Create Event', // Add 'createEventTooltip' key
+                  child: const Icon(Icons.add),
+                  // Use theme properties if available, otherwise fallback to standard theme colors
+                  backgroundColor: effectiveTheme.selectedDayColor ?? Theme.of(context).colorScheme.primary,
+                  foregroundColor: effectiveTheme.todayIndicatorTextColor ?? Theme.of(context).colorScheme.onPrimary,
+                )
+              : null, // Don't show FAB if disabled
         ),
       ),
     );

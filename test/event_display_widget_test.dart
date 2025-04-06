@@ -31,6 +31,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 25,
+        intervalDuration: const Duration(minutes: 30), // Add interval duration
       );
     });
 

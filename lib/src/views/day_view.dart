@@ -6,8 +6,11 @@ import 'package:jazmine_calendar/src/views/base_day_view.dart';
 import 'package:jazmine_calendar/src/views/widgets/jazmine_calendar.dart';
 
 class DayView extends BaseCalendarView {
+  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Add callback
+
   const DayView({
     super.key,
+    this.onTimeSlotCreateInteraction, // Add to constructor
   });
 
   @override
@@ -19,6 +22,7 @@ class DayView extends BaseCalendarView {
       dates: DateHelper.intervalDatesForDay(selectedDate),
       hourHeight: configuration.hourHeight,
       showCurrentTimeIndicator: configuration.showCurrentTimeIndicator,
+      onTimeSlotCreateInteraction: onTimeSlotCreateInteraction, // Pass callback
     );
   }
 }
