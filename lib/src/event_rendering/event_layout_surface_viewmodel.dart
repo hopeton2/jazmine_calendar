@@ -493,12 +493,8 @@ return calculatedTime;
     if (remainder == 0) return dateTime; // Already snapped
 
     int snappedTotalMinutes;
-    // Snap to the nearest interval boundary
-    if (remainder < intervalMinutes / 2) {
-      snappedTotalMinutes = (totalMinutes - remainder).toInt();
-    } else {
-      snappedTotalMinutes = (totalMinutes + (intervalMinutes - remainder)).toInt();
-    }
+    // Snap DOWN to the start of the CURRENT interval boundary
+    snappedTotalMinutes = (totalMinutes - remainder).toInt();
 
     // Handle potential day rollover - clamp to end of the day
     int snappedHour = snappedTotalMinutes ~/ 60;
