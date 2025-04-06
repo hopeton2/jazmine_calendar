@@ -11,6 +11,7 @@ import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/extensions/date_extensions.dart';
 import 'package:jazmine_calendar/src/services/calendar_view_service.dart';
+import 'package:jazmine_calendar/src/services/pointer_relay_service.dart'; // Import the relay service
 import 'package:jazmine_calendar/src/utils/typedefs.dart';
 import 'package:jazmine_calendar/src/views/widgets/calendar_time_slot.dart';
 import 'package:jazmine_calendar/src/views/widgets/current_time_indicator.dart';
@@ -88,7 +89,8 @@ class CalendarGrid extends StatefulWidget {
   final OverflowStateCallback? onOverflowStateChanged; // Add callback
   final bool isCollapsed; // New parameter for filtering
   final double? collapsedContentHeight; // New parameter for filtering
-  final void Function(DateTime startTime)? onTimeSlotCreateInteraction; // Callback from JazmineCalendar
+  final void Function(DateTime startTime)?
+      onTimeSlotCreateInteraction; // Callback from JazmineCalendar
 
   const CalendarGrid({
     super.key,
@@ -165,7 +167,8 @@ class CalendarGridState extends State<CalendarGrid> {
     // Use the passed origin, not recalculate here
     // final origin = Offset(widget.rowHeaderWidth, widget.columnHeaderHeight);
     final availableSpace = Size(
-        constraints.maxWidth - widget.rowHeaderWidth, // Use correct width calculation
+        constraints.maxWidth -
+            widget.rowHeaderWidth, // Use correct width calculation
         constraints.maxHeight - widget.columnHeaderHeight);
     final cellWidth = slotWidth;
     final cellHeight = slotHeight;
@@ -260,101 +263,118 @@ class CalendarGridState extends State<CalendarGrid> {
         // Calculate the height for the Positioned EventLayoutSurface
         final double eventSurfaceHeight = availableHeight;
 
-        // Restore Stack without clipBehavior: Clip.none
-        return Stack(
-          children: [
-            // 1. Scrollable Grid Content
-            CustomScrollView(
-              key: PageStorageKey(CalendarViewService()
-                  .getScrollStorageKey(widget.controller.currentView)),
-              controller: _scrollController,
-              scrollDirection: widget.orientation,
-              slivers: [
-                SliverFixedExtentList(
-                  itemExtent: itemExtent,
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      return RepaintBoundary(
-                        child: SizedBox(
-                          width: isVertical ? slotWidth : null,
-                          height: isVertical ? slotHeight : null,
-                          child: Flex(
-                            direction:
-                                isVertical ? Axis.horizontal : Axis.vertical,
-                            children: [
-                              _buildHeader(
-                                  index, isVertical, slotWidth, slotHeight),
-                              ..._buildCells(index, isVertical),
-                            ],
+        // Wrap the Stack with a Listener to capture and relay pointer events
+        return Listener(
+          // Allow events to pass through to underlying widgets (ScrollView)
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) => PointerRelayService.instance.publish(event),
+          onPointerMove: (event) => PointerRelayService.instance.publish(event),
+          onPointerUp: (event) => PointerRelayService.instance.publish(event),
+          onPointerCancel: (event) =>
+              PointerRelayService.instance.publish(event),
+          onPointerHover: (event) =>
+              PointerRelayService.instance.publish(event),
+          // Do NOT relay onPointerSignal (scroll events) - let the framework handle them
+          child: Stack(
+            children: [
+              // 1. Scrollable Grid Content
+              CustomScrollView(
+                key: PageStorageKey(CalendarViewService()
+                    .getScrollStorageKey(widget.controller.currentView)),
+                controller: _scrollController,
+                scrollDirection: widget.orientation,
+                slivers: [
+                  SliverFixedExtentList(
+                    itemExtent: itemExtent,
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return RepaintBoundary(
+                          child: SizedBox(
+                            width: isVertical ? slotWidth : null,
+                            height: isVertical ? slotHeight : null,
+                            child: Flex(
+                              direction:
+                                  isVertical ? Axis.horizontal : Axis.vertical,
+                              children: [
+                                _buildHeader(
+                                    index, isVertical, slotWidth, slotHeight),
+                                ..._buildCells(index, isVertical),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    childCount: itemCount,
-                    addAutomaticKeepAlives: false,
-                    addRepaintBoundaries: true,
+                        );
+                      },
+                      childCount: itemCount,
+                      addAutomaticKeepAlives: false,
+                      addRepaintBoundaries: true,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            // 2. Event Rendering Surface
-            if (widget.showEvents)
-              Positioned(
-                left: origin.dx,
-                top: widget.isAllDay
-                    ? origin.dy + 5.0
-                    : origin.dy, // Keep top margin logic
-                width: availableWidth,
-                height: eventSurfaceHeight, // Use calculated height
-                child: RepaintBoundary(
-                  child: ClipRect( // Restore ClipRect
-                    child: EventLayoutSurface(
-                      key: widget.eventLayoutSurfaceKey, // Pass the key
-                      controller: widget.controller,
-                      scrollController: _scrollController,
-                      gridInfo: _gridInfo,
-                      isAllDay: widget.isAllDay,
-                      visibleDates: widget.dates,
-                      renderStyle: EventRenderStyle( // TODO: Pass style from config/theme
-                        defaultEventColor: Theme.of(context).primaryColor,
-                        titleStyle:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ) ??
-                                const TextStyle(color: Colors.white),
+              // 2. Event Rendering Surface
+              if (widget.showEvents)
+                Positioned(
+                  left: origin.dx,
+                  top: widget.isAllDay
+                      ? origin.dy + 5.0
+                      : origin.dy, // Keep top margin logic
+                  width: availableWidth,
+                  height: eventSurfaceHeight, // Use calculated height
+                  // Wrap the surface area with IgnorePointer.
+                  // EventLayoutSurface receives events via PointerRelayService,
+                  // so this might prevent it interfering with the ScrollView's gestures.
+                  child: IgnorePointer(
+                    child: RepaintBoundary(
+                      child: EventLayoutSurface(
+                        key: widget.eventLayoutSurfaceKey, // Pass the key
+                        controller: widget.controller,
+                        scrollController:
+                            _scrollController, // Still needed for offset calc
+                        gridInfo: _gridInfo,
+                        isAllDay: widget.isAllDay,
+                        visibleDates: widget.dates,
+                        renderStyle: EventRenderStyle(
+                          // TODO: Pass style from config/theme
+                          defaultEventColor: Theme.of(context).primaryColor,
+                          titleStyle:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ) ??
+                                  const TextStyle(color: Colors.white),
+                        ),
+                        maxVisibleAllDayEvents:
+                            widget.maxVisibleAllDayEvents, // Pass down
+                        onOverflowStateChanged:
+                            widget.onOverflowStateChanged, // Pass callback down
+                        isCollapsed: widget.isCollapsed,
+                        collapsedContentHeight: widget.collapsedContentHeight,
                       ),
-                      maxVisibleAllDayEvents:
-                          widget.maxVisibleAllDayEvents, // Pass down
-                      onOverflowStateChanged:
-                          widget.onOverflowStateChanged, // Pass callback down
-                      isCollapsed: widget.isCollapsed,
-                      collapsedContentHeight: widget.collapsedContentHeight,
                     ),
                   ),
                 ),
-              ),
 
-            // 3. Current Time Indicator
-            if (widget.showCurrentTimeIndicator)
-              CurrentTimeIndicator(
-                scrollController: _scrollController,
-                orientation: widget.orientation == Axis.vertical
-                    ? Axis.horizontal
-                    : Axis.vertical,
-                headerOffset: isVertical
-                    ? widget.rowHeaderWidth
-                    : widget.columnHeaderHeight,
-                availableSpace: isVertical ? availableHeight : availableWidth,
-                startDate: widget.startDate,
-                endDate: widget.endDate,
-                controller: widget.controller,
-                autoScroll: true,
-                intervalPixels: isVertical ? slotHeight : slotWidth,
-                slotWidth: slotWidth,
-              ),
-          ],
+              // 3. Current Time Indicator
+              if (widget.showCurrentTimeIndicator)
+                CurrentTimeIndicator(
+                  scrollController: _scrollController,
+                  orientation: widget.orientation == Axis.vertical
+                      ? Axis.horizontal
+                      : Axis.vertical,
+                  headerOffset: isVertical
+                      ? widget.rowHeaderWidth
+                      : widget.columnHeaderHeight,
+                  availableSpace: isVertical ? availableHeight : availableWidth,
+                  startDate: widget.startDate,
+                  endDate: widget.endDate,
+                  controller: widget.controller,
+                  autoScroll: true,
+                  intervalPixels: isVertical ? slotHeight : slotWidth,
+                  slotWidth: slotWidth,
+                ),
+            ],
+          ),
         );
       },
     );
@@ -427,30 +447,27 @@ class CalendarGridState extends State<CalendarGrid> {
     // Simplified logic: Assume each cell corresponds to a date index if vertical
     final int columnsToGenerate = isVertical ? widget.numberOfColumns : 1;
 
-
     return List.generate(columnsToGenerate, (slotIndex) {
       // Determine the date for this cell/column
-      int dateIndex = isVertical ? slotIndex : index; // If horizontal, index is the date index
+      int dateIndex = isVertical
+          ? slotIndex
+          : index; // If horizontal, index is the date index
       if (dateIndex >= widget.dates.length) {
-         // Handle potential index out of bounds if logic is complex
-         dateIndex = widget.dates.length - 1;
-         if (dateIndex < 0) return const Expanded(child: SizedBox.shrink()); // No dates
+        // Handle potential index out of bounds if logic is complex
+        dateIndex = widget.dates.length - 1;
+        if (dateIndex < 0)
+          return const Expanded(child: SizedBox.shrink()); // No dates
       }
       DateTime slotDate = widget.dates[dateIndex];
 
       // Calculate the start time for this specific slot (relevant for vertical)
       DateTime? startTimeForSlot;
       if (isVertical && _gridInfo.viewStart != null) {
-          final timeForRow = _gridInfo.viewStart.add(widget.intervalDuration * index);
-          startTimeForSlot = DateTime(
-             slotDate.year,
-             slotDate.month,
-             slotDate.day,
-             timeForRow.hour,
-             timeForRow.minute
-          );
+        final timeForRow =
+            _gridInfo.viewStart.add(widget.intervalDuration * index);
+        startTimeForSlot = DateTime(slotDate.year, slotDate.month, slotDate.day,
+            timeForRow.hour, timeForRow.minute);
       }
-
 
       // Build the actual cell content (either custom or default)
       final cellContent = widget.cellBuilder != null
@@ -460,7 +477,8 @@ class CalendarGridState extends State<CalendarGrid> {
               slotIndex, // Pass the column index
               widget.orientation,
             )
-          : Container( // Use a simple Container for the background if no cellBuilder
+          : Container(
+              // Use a simple Container for the background if no cellBuilder
               decoration: BoxDecoration(
                 color: calendarTheme?.getSlotBackgroundColor(context),
                 border: Border(
@@ -480,28 +498,43 @@ class CalendarGridState extends State<CalendarGrid> {
       return Expanded(
         child: GestureDetector(
           onDoubleTap: () {
-             bool isDesktopOrWeb = false;
-             if (kIsWeb) {
-               isDesktopOrWeb = true;
-             } else {
-               try { isDesktopOrWeb = Platform.isLinux || Platform.isMacOS || Platform.isWindows; } catch (e) { isDesktopOrWeb = false; }
-             }
-             if (isDesktopOrWeb && widget.onTimeSlotCreateInteraction != null && startTimeForSlot != null) {
-                print("Double tap detected at: $startTimeForSlot"); // Debug print
-                widget.onTimeSlotCreateInteraction!(startTimeForSlot);
-             }
+            bool isDesktopOrWeb = false;
+            if (kIsWeb) {
+              isDesktopOrWeb = true;
+            } else {
+              try {
+                isDesktopOrWeb =
+                    Platform.isLinux || Platform.isMacOS || Platform.isWindows;
+              } catch (e) {
+                isDesktopOrWeb = false;
+              }
+            }
+            if (isDesktopOrWeb &&
+                widget.onTimeSlotCreateInteraction != null &&
+                startTimeForSlot != null) {
+              print("Double tap detected at: $startTimeForSlot"); // Debug print
+              widget.onTimeSlotCreateInteraction!(startTimeForSlot);
+            }
           },
-          onLongPressStart: (details) { // Use onLongPressStart for better feedback potentially
-             bool isMobile = false;
-             try { isMobile = Platform.isAndroid || Platform.isIOS; } catch (e) { isMobile = false; }
+          onLongPressStart: (details) {
+            // Use onLongPressStart for better feedback potentially
+            bool isMobile = false;
+            try {
+              isMobile = Platform.isAndroid || Platform.isIOS;
+            } catch (e) {
+              isMobile = false;
+            }
 
-             if (isMobile && widget.onTimeSlotCreateInteraction != null && startTimeForSlot != null) {
-                print("Long press detected at: $startTimeForSlot"); // Debug print
-                widget.onTimeSlotCreateInteraction!(startTimeForSlot);
-             }
+            if (isMobile &&
+                widget.onTimeSlotCreateInteraction != null &&
+                startTimeForSlot != null) {
+              print("Long press detected at: $startTimeForSlot"); // Debug print
+              widget.onTimeSlotCreateInteraction!(startTimeForSlot);
+            }
           },
           child: SizedBox.expand(
-            child: cellContent, // Place the actual cell content inside the detector
+            child:
+                cellContent, // Place the actual cell content inside the detector
           ),
         ),
       );
