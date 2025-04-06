@@ -242,9 +242,9 @@ class _MyHomePageState extends State<MyHomePage> {
               } else { // Updating existing event
                 // TODO: Handle recurrence update choice here based on original event/occurrence flags
                 print("Saving edited event: ${eventToSave.id}");
-                // _calendarController.removeEvent(event); // TODO: Implement removeEvent
-                _calendarController.addEvent(eventToSave); // Add updated event
-                print("Update logic needs CalendarController implementation");
+                _calendarController.updateEvent(eventToSave); // Call updateEvent
+                // Remove the incorrect addEvent call below
+                // print("Update logic needs CalendarController implementation"); // Remove misleading print
               }
               // Use the context associated with the route/dialog to pop
               Navigator.pop(contextForPop);

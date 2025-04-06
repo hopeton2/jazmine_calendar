@@ -428,19 +428,18 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
         // Call the centralized update method on the controller
         // This handles persistence and triggers the data change notification
         // Convert local times back to UTC before updating the controller
-        await controller.updateEventTimes(originalEventForCallback, finalNewStart!.toUtc(), finalNewEnd!.toUtc());
+        await controller.updateEventTimes(originalEventForCallback, finalNewStart.toUtc(), finalNewEnd.toUtc());
 
         // The ViewModel's _handleEventDataChange listener will automatically call _fetchAndProcessEvents.
 
         // Now, fire the appropriate user callback *after* the update is done
         if (wasResize) {
-          controller.onEventResized?.call(originalEventForCallback, finalNewStart!, finalNewEnd!);
+          controller.onEventResized?.call(originalEventForCallback, finalNewStart, finalNewEnd);
         } else {
-          controller.onEventRescheduled?.call(originalEventForCallback, finalNewStart!, finalNewEnd!);
+          controller.onEventRescheduled?.call(originalEventForCallback, finalNewStart, finalNewEnd);
         }
 
       } catch (e) {
-        print("Error during controller.updateEventTimes or user callback: $e");
         // Attempt to refetch to sync UI even if update failed
          _fetchAndProcessEvents(); // Consider if refetch is appropriate on error
       }

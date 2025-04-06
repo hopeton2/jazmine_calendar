@@ -99,8 +99,8 @@ class BaseDayView extends BaseCalendarView {
                             Align(
                               alignment: configuration.dateAlignment,
                               child: Text(
-                                CalendarLocalization.of(context)
-                                    .formatMonthDay(date),
+                                // Combine short day name and day number
+                                '${DateFormat.E(CalendarLocalization.of(context).locale.languageCode).format(date)} ${DateFormat.d(CalendarLocalization.of(context).locale.languageCode).format(date)}',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
                               ),
