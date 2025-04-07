@@ -24,7 +24,7 @@ class AllDayGridViewModel extends ChangeNotifier {
   static const double verticalSpacing = 2.0;
   // Removed buttonRowHeight constant
   static const double topPadding = 5.0;
-  static const double bottomPadding = 7.0; // Add bottom padding constant
+  static const double bottomPadding = 25.0; // Add bottom padding constant
 
   AllDayGridViewModel({required this.maxVisibleAllDayEvents})
       : assert(maxVisibleAllDayEvents >= 0);
@@ -101,18 +101,25 @@ class AllDayGridViewModel extends ChangeNotifier {
 
   // --- Private Helpers ---
 
-  /// Calculates height for the event area ONLY based on number of rows.
+  /// Calculates height for the event area ONLY based on number of rows,
+  /// ensuring a minimum height equivalent to 2 event rows plus padding.
   double _calculateEventAreaHeight(int numberOfRows) {
+    // Define the minimum height required (2 rows + spacing + padding)
+    final double minRequiredHeight = topPadding + (2 * eventHeight) + verticalSpacing + bottomPadding;
+
+    // Calculate height based on the actual number of rows
+    double calculatedHeight;
     if (numberOfRows <= 0) {
-      // If no rows, the minimum height is just the top padding.
-      // If no rows, the minimum height includes top and bottom padding.
-      return topPadding + bottomPadding;
+      // Base height when there are no events is just padding
+      calculatedHeight = topPadding + bottomPadding;
+    } else {
+      // Calculate height based on events, spacing, and padding
+      final double totalEventsHeight = (numberOfRows * eventHeight) +
+          ((numberOfRows - 1).clamp(0, double.infinity) * verticalSpacing);
+      calculatedHeight = topPadding + totalEventsHeight + bottomPadding;
     }
-    // Calculate height based on events and spacing
-    // Calculate height based on events, spacing, and top padding.
-    final double totalEventsHeight = (numberOfRows * eventHeight) +
-        ((numberOfRows - 1).clamp(0, double.infinity) * verticalSpacing);
-    // Calculate height based on events, spacing, top padding, and bottom padding.
-    return topPadding + totalEventsHeight + bottomPadding;
+
+    // Return the larger of the calculated height or the minimum required height
+    return max(calculatedHeight, minRequiredHeight);
   }
 }
