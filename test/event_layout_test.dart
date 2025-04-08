@@ -150,10 +150,9 @@ void main() {
 
   group('EventLayoutService', () {
     test('should measure events correctly for vertical orientation', () {
-      final broker = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
-
-      broker.updateGridLayout(
+      // Initialize directly using the constructor
+      final broker = GridLayoutInfo(
         viewStart: now.toUtc(), // Use UTC
         viewEnd: now.add(const Duration(days: 1)).toUtc(),
         origin: const Offset(60, 40),
@@ -162,8 +161,9 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 1200, // Height for the full day
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
+      // Removed updateGridLayout call
 
       final events = [
         CalendarEvent(
@@ -207,10 +207,9 @@ void main() {
     });
 
     test('should measure events correctly for horizontal orientation', () {
-      final broker = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
-
-      broker.updateGridLayout(
+      // Initialize directly using the constructor
+      final broker = GridLayoutInfo(
         viewStart: now.toUtc(),
         viewEnd: now.add(const Duration(days: 3)).toUtc(), // 3 day view
         origin: const Offset(0, 0), // Simpler origin
@@ -219,8 +218,9 @@ void main() {
         divisions: 3, // 3 days
         cellWidth: 200, // 600 / 3
         cellHeight: 80,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
+      // Removed updateGridLayout call
 
       final events = [
         // Event fully within day 1

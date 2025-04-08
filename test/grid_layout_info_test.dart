@@ -4,72 +4,7 @@ import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 
 void main() {
   // --- Existing tests (keep them) ---
-  group('GridLayoutInfo Initialization and Basic Getters', () {
-    test('should store and provide grid layout information', () {
-      final broker = GridLayoutInfo();
-      broker.reset();
-
-      // Check initial null state via getters throwing StateError
-      expect(() => broker.viewStart, throwsStateError);
-      expect(() => broker.viewEnd, throwsStateError);
-      expect(() => broker.origin, throwsStateError);
-      expect(() => broker.availableSpace, throwsStateError);
-      expect(() => broker.orientation, throwsStateError);
-      expect(() => broker.divisions, throwsStateError);
-      expect(() => broker.cellWidth, throwsStateError);
-      expect(() => broker.cellHeight, throwsStateError);
-
-
-      // Update with test data
-      final now = DateTime.now();
-      broker.updateGridLayout(
-        viewStart: now,
-        viewEnd: now.add(const Duration(days: 1)),
-        origin: const Offset(60, 40),
-        availableSpace: const Size(300, 500),
-        orientation: Axis.vertical,
-        divisions: 1,
-        cellWidth: 300,
-        cellHeight: 20, // cellHeight might be less relevant for vertical time axis
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
-      );
-
-      // Check that getters now work after update
-      expect(broker.viewStart, now);
-      expect(broker.viewEnd, now.add(const Duration(days: 1)));
-      expect(broker.origin, const Offset(60, 40));
-      expect(broker.availableSpace, const Size(300, 500));
-      expect(broker.orientation, Axis.vertical);
-      expect(broker.divisions, 1);
-      expect(broker.intervalDuration, const Duration(minutes: 30)); // Check interval duration
-      expect(broker.cellWidth, 300);
-      expect(broker.cellHeight, 20);
-    });
-
-     test('reset should clear all values', () {
-      final broker = GridLayoutInfo();
-      final now = DateTime.now();
-      broker.updateGridLayout(
-        viewStart: now,
-        viewEnd: now.add(const Duration(days: 1)),
-        origin: const Offset(60, 40),
-        availableSpace: const Size(300, 500),
-        orientation: Axis.vertical,
-        divisions: 1,
-        cellWidth: 300,
-        cellHeight: 20,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
-      );
-
-      broker.reset();
-
-      // Check that getters throw again after reset
-      expect(() => broker.viewStart, throwsStateError);
-      expect(() => broker.viewEnd, throwsStateError);
-      expect(() => broker.intervalDuration, throwsStateError); // Check interval duration reset
-      // ... check other getters ...
-    });
-  });
+  // Removed tests for old mutable behavior (initialization, reset)
 
   // --- New Test Group for Time/Position Conversions ---
   group('GridLayoutInfo Time/Position Conversions (Vertical)', () {
@@ -83,17 +18,18 @@ void main() {
     const cellHeight = 30.0; // Less relevant for vertical time axis
 
     setUp(() {
-      broker = GridLayoutInfo();
-      broker.updateGridLayout(
+      // Initialize directly in setUp
+      // Initialize directly in setUp (remove const because viewStart, viewEnd, cellWidth are not const)
+      broker = GridLayoutInfo(
         viewStart: viewStart,
         viewEnd: viewEnd,
-        origin: origin,
-        availableSpace: availableSpace,
+        origin: origin, // origin is const
+        availableSpace: availableSpace, // availableSpace is const
         orientation: Axis.vertical,
-        divisions: divisions,
-        cellWidth: cellWidth,
-        cellHeight: cellHeight,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        divisions: divisions, // divisions is const
+        cellWidth: cellWidth, // cellWidth is calculated, not const
+        cellHeight: cellHeight, // cellHeight is const
+        intervalDuration: const Duration(minutes: 30), // Duration can be const
       );
     });
 
@@ -232,16 +168,18 @@ void main() {
      test('getDateTimeForPosition - Vertical - UTC', () {
         final utcViewStart = DateTime.utc(2024, 4, 6, 0, 0, 0);
         final utcViewEnd = utcViewStart.add(const Duration(days: 1));
-        broker.updateGridLayout(
-          viewStart: utcViewStart,
-          viewEnd: utcViewEnd,
-          origin: origin,
-          availableSpace: availableSpace,
+        // Re-initialize broker for this specific test case
+        // Re-initialize broker for this specific test case (remove const)
+        broker = GridLayoutInfo(
+          viewStart: utcViewStart, // not const
+          viewEnd: utcViewEnd, // not const
+          origin: origin, // is const
+          availableSpace: availableSpace, // is const
           orientation: Axis.vertical,
           divisions: 1, // Single day
-          cellWidth: availableSpace.width,
-          cellHeight: cellHeight,
-          intervalDuration: const Duration(minutes: 30), // Add interval duration
+          cellWidth: availableSpace.width, // calculated, not const
+          cellHeight: cellHeight, // is const
+          intervalDuration: const Duration(minutes: 30), // Duration can be const
         );
 
         final position = Offset(origin.dx + availableSpace.width * 0.5, origin.dy + availableSpace.height * 0.5); // Middle
@@ -260,25 +198,21 @@ void main() {
   group('GridLayoutBroker Manual Update', () { // Renamed group
     test('GridLayoutBroker can be manually updated', () {
       // Reset broker
-      final broker = GridLayoutInfo(); // Renamed class
-      broker.reset();
-
-      // Check that getters throw again after reset
-      expect(() => broker.viewStart, throwsStateError);
-
-      // Manually update the broker - Use a fixed start time for deterministic results
+      // Initialize broker directly with test data
       final fixedViewStart = DateTime(2024, 1, 1, 0, 0, 0); // Start at midnight
-      broker.updateGridLayout(
-        viewStart: fixedViewStart,
-        viewEnd: fixedViewStart.add(const Duration(days: 1)), // 1-day view for simplicity here
-        origin: const Offset(60, 40),
-        availableSpace: const Size(400, 600), // Width 400, Height 600
+      // Initialize broker directly with test data (remove const)
+      final broker = GridLayoutInfo(
+        viewStart: fixedViewStart, // not const
+        viewEnd: fixedViewStart.add(const Duration(days: 1)), // calculated, not const
+        origin: const Offset(60, 40), // Offset can be const
+        availableSpace: const Size(400, 600), // Size can be const
         orientation: Axis.vertical,
         divisions: 3, // 3 columns (days)
-        cellWidth: 400 / 3, // Use calculation
+        cellWidth: 400 / 3, // Use calculation (not const)
         cellHeight: 25,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30), // Duration can be const
       );
+      // Removed reset and updateGridLayout calls
 
       // Verify broker was updated
       expect(broker.origin, const Offset(60, 40));

@@ -25,7 +25,8 @@ class EventLayoutService {
 
     for (final event in events) {
       // Determine the range of divisions (days) this event spans within the view
-      final firstDayIndex = max<int>(0, event.start.difference(viewStartDay).inDays);
+      final firstDayIndex =
+          max<int>(0, event.start.difference(viewStartDay).inDays);
       // Use dayEnds to correctly capture events ending exactly at midnight
       final lastDayIndex = min<int>(gridInfo.divisions - 1,
           event.end.difference(viewStartDay).inDays); // Use gridInfo
@@ -59,14 +60,13 @@ class EventLayoutService {
         final visibleDurationOnDay = segmentEnd.difference(segmentStart);
 
         // Calculate the relative start position for this segment using TimePositionService
-        final start = TimePositionService.calculatePositionWithBroker(
-          time: segmentStart, // Use the segment's start time
+        final start = TimePositionService.calculatePosition( // Corrected method name
+          localTime: segmentStart.toLocal(), // Pass LOCAL time
           gridInfo: gridInfo, // Pass gridInfo instance
-          scrollOffset: 0.0, // Pass 0 for relative calculation
         );
 
         // Calculate the size based on the visible duration *on this day*
-        final size = TimePositionService.calculateSizeWithBroker(
+        final size = TimePositionService.calculateSize(
           duration: visibleDurationOnDay,
           gridInfo: gridInfo, // Pass gridInfo instance
         );

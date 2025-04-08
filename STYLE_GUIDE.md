@@ -15,6 +15,8 @@ This document outlines the coding style and best practices for Dart and Flutter 
   - `UpperCamelCase` for types/classes
   - `lowerCamelCase` for members/variables
   - `lowercase_with_underscores` for files/directories/packages
+- **Use Blocks for `if`**: Statements following an `if` should always be enclosed in curly braces `{}`.
+
 
 ### Separation of Concerns
 

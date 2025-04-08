@@ -21,8 +21,8 @@ void main() {
       final now = DateTime(2023, 1, 1, 9, 0);
 
       // Set up broker
-      broker = GridLayoutInfo();
-      broker.updateGridLayout(
+      // Initialize broker directly using the constructor (remove const)
+      broker = GridLayoutInfo(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -31,7 +31,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 25,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
     });
 

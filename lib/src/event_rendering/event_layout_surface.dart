@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Import async for StreamSubscription
-import 'package:flutter/gestures.dart';
+import 'dart:async'; // Keep for potential future use
+import 'package:flutter/gestures.dart'; // For PointerDeviceKind
 import 'package:jazmine_calendar/src/controller/calendar_controller.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_surface_viewmodel.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
-import 'package:jazmine_calendar/src/event_rendering/event_renderer.dart';
+// EventRenderer import removed
 import 'package:jazmine_calendar/src/event_rendering/grid_layout_info.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart';
-import 'package:jazmine_calendar/src/services/pointer_relay_service.dart'; // Import the relay service
+// PointerRelayService import removed
 import 'dart:math';
+import 'package:jazmine_calendar/src/models/calendar_event.dart'; // Import CalendarEvent
+import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // For dayStarts/dayEnds
+import 'package:intl/intl.dart';
+import 'package:jazmine_calendar/src/services/time_position_service.dart'; // Keep for _snapToInterval
+import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
+import 'dart:ui' as ui; // Import for ui.TextDirection
+import 'calendar_event_widget.dart'; // Import the new widget
+// Removed duplicate dart:ui import
 
 // Define callback type for overflow state
 typedef OverflowStateCallback = void Function(
     bool hasOverflow, int hiddenCount, int maxLaneIndex);
 
-/// Widget that renders calendar events using a CustomPainter
+/// Widget that renders calendar events using individual widgets in a Stack
+/// and acts as a DragTarget for dropped events.
 class EventLayoutSurface extends StatefulWidget {
   /// Calendar controller
   final CalendarController controller;
@@ -42,6 +51,8 @@ class EventLayoutSurface extends StatefulWidget {
   final OverflowStateCallback? onOverflowStateChanged;
   final bool isCollapsed;
   final double? collapsedContentHeight;
+  final bool snapToIntervalOnDrop; // Keep flag for potential use
+  final bool enableResize; // Add enableResize flag
 
   /// Creates a new EventLayoutSurface
   const EventLayoutSurface({
@@ -58,6 +69,8 @@ class EventLayoutSurface extends StatefulWidget {
     this.onOverflowStateChanged,
     this.isCollapsed = false,
     this.collapsedContentHeight,
+    this.snapToIntervalOnDrop = true, // Default to true
+    this.enableResize = true, // Default to true
   });
 
   @override
@@ -71,25 +84,14 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
   // Public getter to expose the ViewModel (for height calculation in parent)
   EventLayoutSurfaceViewModel? get viewModelAccessor => _viewModel;
 
-  // Track scroll offset for painting
+  // Track scroll offset for positioning events
   double _scrollOffset = 0.0;
-
-  // State for handling relayed pointer events
-  StreamSubscription<PointerEvent>? _pointerSubscription;
-  int? _activePointerId;
-  Object? _dragTarget; // CalendarEvent or ResizeHandleHit
-  bool _isDragging = false;
-  PointerDownEvent? _pendingTapDown; // Store potential tap start
-  DateTime? _tapDownTime; // Store time of potential tap start
-  static const Duration _kTapTimeout =
-      Duration(milliseconds: 300); // Max duration for a tap
-  static const double _kTapSlop = kTouchSlop; // Max movement for a tap
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize the ViewModel
+    // Initialize the ViewModel (Simpler version without drop logic)
     _viewModel = EventLayoutSurfaceViewModel(
       controller: widget.controller,
       minEventSize: widget.minEventSize,
@@ -102,27 +104,24 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       onOverflowStateChanged: widget.onOverflowStateChanged,
       isCollapsed: widget.isCollapsed,
       collapsedContentHeight: widget.collapsedContentHeight,
+      snapToIntervalOnDrop: widget.snapToIntervalOnDrop, // Pass flag
+      scrollController: widget.scrollController,
     );
 
     // Listen for changes in the ViewModel
     _viewModel.addListener(_handleViewModelUpdate);
 
-    // Listen to scroll events (still needed for offset calculation)
+    // Listen to scroll events
     widget.scrollController?.addListener(_handleScroll);
     if (widget.scrollController?.hasClients ?? false) {
       _scrollOffset = widget.scrollController!.position.pixels;
     }
-
-    // Subscribe to the pointer relay service
-    _pointerSubscription =
-        PointerRelayService.instance.events.listen(_handlePointerEvent);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_handleViewModelUpdate);
     widget.scrollController?.removeListener(_handleScroll);
-    _pointerSubscription?.cancel(); // Cancel subscription
     _viewModel.dispose();
     super.dispose();
   }
@@ -151,6 +150,7 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       _scrollOffset = widget.scrollController?.hasClients ?? false
           ? widget.scrollController!.position.pixels
           : 0.0;
+      _viewModel.updateScrollController(widget.scrollController);
     }
 
     // Update ViewModel with new data
@@ -160,213 +160,256 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
     _viewModel.updateOverflowCallback(widget.onOverflowStateChanged);
     _viewModel.updateCollapsedState(
         widget.isCollapsed, widget.collapsedContentHeight);
+    _viewModel.updateSnapSetting(widget.snapToIntervalOnDrop);
+    _viewModel.updateRenderStyle(widget.renderStyle);
   }
 
   /// Handle updates from the ViewModel
   void _handleViewModelUpdate() {
-    // Force a rebuild when the ViewModel changes
     setState(() {});
-  }
-
-  // Track current mouse cursor
-  MouseCursor _currentCursor = SystemMouseCursors.basic;
-
-  /// Update cursor based on what's under the mouse pointer
-  void _updateCursorOnHover(PointerHoverEvent event) {
-    // Use the same renderer setup as in build method for consistency
-    final renderer = EventRenderer(
-      events: _viewModel.events,
-      style: widget.renderStyle,
-      selectedEventId: _viewModel.selectedEventId,
-      draggedEventId: _viewModel.draggedEventId,
-      resizedEventId: _viewModel.resizedEventId,
-      activeResizeHandle: _viewModel.activeResizeHandle,
-      scrollOffset: _scrollOffset,
-      currentDragPosition: _viewModel.currentDragPosition, // Pass drag position
-      dragOffset: _viewModel.dragOffset, // Pass drag offset
-    );
-
-    final resizeHandleHit = renderer.findResizeHandleAt(event.localPosition);
-    if (resizeHandleHit != null) {
-      if (resizeHandleHit.event.orientation == Axis.vertical) {
-        if (resizeHandleHit.handle == ResizeHandle.top ||
-            resizeHandleHit.handle == ResizeHandle.bottom) {
-          setState(() {
-            _currentCursor = SystemMouseCursors.resizeUpDown;
-          });
-          return;
-        }
-      } else {
-        if (resizeHandleHit.handle == ResizeHandle.left ||
-            resizeHandleHit.handle == ResizeHandle.right) {
-          setState(() {
-            _currentCursor = SystemMouseCursors.resizeLeftRight;
-          });
-          return;
-        }
-      }
-    }
-
-    final eventHit = renderer.findEventAt(event.localPosition);
-    if (eventHit != null) {
-      setState(() {
-        _currentCursor = SystemMouseCursors.grab;
-      });
-      return;
-    }
-
-    setState(() {
-      _currentCursor = SystemMouseCursors.basic;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Removed MouseRegion and GestureDetector. Events are handled via PointerRelayService.
-    // The CustomPaint is now the direct child.
-    return CustomPaint(
-      painter: EventRenderer(
-        events: _viewModel.events,
-        style: widget.renderStyle,
-        selectedEventId: _viewModel.selectedEventId,
-        draggedEventId: _viewModel.draggedEventId,
-        resizedEventId: _viewModel.resizedEventId,
-        activeResizeHandle: _viewModel.activeResizeHandle,
-        scrollOffset: _scrollOffset,
-        isCollapsed: widget.isCollapsed,
-        collapsedContentHeight: widget.collapsedContentHeight,
-        currentDragPosition: _viewModel.currentDragPosition,
-        dragOffset: _viewModel.dragOffset,
-      ),
-      // Ensure the CustomPaint takes up the necessary space
-      size: Size.infinite,
-    );
+    // Wrap the Stack with DragTarget
+    return DragTarget<CalendarEvent>(
+      builder: (context, candidateData, rejectedData) {
+        // Build a Stack of Positioned Draggable event widgets
+        return Stack(
+          clipBehavior: Clip.none, // Allow feedback to draw outside bounds
+          children: _viewModel.events.map((eventLayoutInfo) {
+            final event = eventLayoutInfo.event;
+            final rect = eventLayoutInfo.finalRect;
+
+            // Use a dedicated widget for rendering the event item
+            // Use the new CalendarEventWidget with CustomPainter
+            final isSelected = _viewModel.selectedEventId == event.id;
+            final isResizing = _viewModel.resizedEventId == event.id;
+            // Use enableResize from the widget's properties
+            final eventWidgetChild = Padding( // Add Padding
+              padding: const EdgeInsets.all(0.5), // Changed padding to 0.5
+              child: CalendarEventWidget(
+                key: ValueKey(event.id), // Use event ID for key
+                eventLayoutInfo: eventLayoutInfo,
+                style: widget.renderStyle,
+                isSelected: isSelected,
+                isResizing: isResizing,
+                activeResizeHandle:
+                    isResizing ? _viewModel.activeResizeHandle : null,
+                enableResize:
+                    widget.enableResize, // Pass widget's enableResize flag
+              ),
+            );
+
+            // The feedback widget shown during drag - Use CalendarEventWidget
+            final eventWidgetFeedback = Opacity(
+              opacity: 0.7,
+              child: Material(
+                color: Colors.transparent,
+                elevation: 4.0,
+                // Ensure the Material widget itself has the correct size for the painter
+                child: SizedBox(
+                  width: rect.width,
+                  height: rect.height,
+                  child: Padding( // Add Padding
+                    padding: const EdgeInsets.all(0.5), // Changed padding to 0.5
+                    child: CalendarEventWidget(
+                      // Key is not strictly needed for feedback, but can be kept
+                      key: ValueKey('${event.id}_feedback'),
+                      eventLayoutInfo: eventLayoutInfo,
+                      style: widget.renderStyle,
+                      // Feedback doesn't need selection, resizing state, or handles
+                      isSelected: false,
+                      isResizing: false,
+                      activeResizeHandle: null,
+                      enableResize: false, // Handles not needed for feedback
+                    ),
+                  ),
+                ),
+              ),
+            );
+
+            // Use Positioned for layout and AnimatedOpacity for fade
+            return Positioned(
+              // Removed duration and curve
+              left: rect.left,
+              // Adjust top position based on scroll offset for vertical orientation
+              top: widget.gridInfo.orientation == Axis.vertical
+                  ? rect.   top - _scrollOffset
+                  : rect.top,
+              width: rect.width,
+              height: rect.height,
+              // Wrap the draggable content with AnimatedOpacity
+              child: LongPressDraggable<CalendarEvent>(
+                data: event, // The data being dragged
+                feedback: eventWidgetFeedback, // Widget shown under the finger
+                childWhenDragging: const SizedBox
+                    .shrink(), // Hide original widget while dragging
+                hapticFeedbackOnStart: true,
+                // Use ViewModel handlers for pan gestures
+                onDragStarted: () => _viewModel.handlePanStart(
+                    eventLayoutInfo.finalRect.topLeft +
+                        Offset(0, _scrollOffset),
+                    _scrollOffset), // Pass position relative to surface
+                onDragUpdate: (details) {
+                  // Convert global position to position relative to content area
+                  final RenderBox renderBox =
+                      context.findRenderObject() as RenderBox;
+                  final Offset surfaceLocalPosition =
+                      renderBox.globalToLocal(details.globalPosition);
+                  final Offset adjustedPosition =
+                      surfaceLocalPosition + Offset(0, _scrollOffset);
+                  _viewModel.handlePanUpdate(adjustedPosition, _scrollOffset);
+                },
+                onDragEnd: (details) => _viewModel.handlePanEnd(),
+                onDraggableCanceled: (velocity, offset) =>
+                    _viewModel.handlePanEnd(), // Treat cancel as end
+                child: GestureDetector(
+                  // Add GestureDetector for taps
+                  onTap: () {
+                    // Use ViewModel to handle tap
+                    _viewModel.handleTap(
+                        eventLayoutInfo.finalRect.topLeft +
+                            Offset(0, _scrollOffset),
+                        _scrollOffset); // Pass position relative to surface
+                  },
+                  onDoubleTap: () {
+                    _viewModel.handleDoubleTap(
+                        eventLayoutInfo.finalRect.topLeft +
+                            Offset(0, _scrollOffset),
+                        _scrollOffset);
+                  },
+                  // onLongPress removed to allow LongPressDraggable to handle drag start
+                  child: eventWidgetChild,
+                ),
+              ),
+            );
+          }).toList(),
+        ); // End Stack
+      }, // End DragTarget builder
+      onWillAcceptWithDetails: (details) => true,
+      onAcceptWithDetails: (details) {
+        // --- Drop Logic moved back here from ViewModel ---
+        final CalendarEvent event = details.data;
+        final Offset surfaceLocalOffset =
+            details.offset; // Offset relative to DragTarget
+
+        // Calculate the local drop time using gridInfo
+        // Pass only the surfaceLocalOffset, as getDateTimeForPosition no longer takes scrollOffset
+        DateTime? localDropDateTime1 = widget.gridInfo.getDateTimeForPosition(
+          surfaceLocalOffset,
+        );
+
+        DateTime? localDropDateTime = TimePositionService.positionToTime(
+          position: surfaceLocalOffset,
+          gridInfo: widget.gridInfo,
+        );
+
+        if (localDropDateTime == null) {
+          print("[EventLayoutSurface] Could not determine local drop time.");
+          return;
+        }
+
+        DateTime localNewStart;
+        DateTime localNewEnd;
+
+        if (widget.isAllDay) {
+          // Snap to the start/end of the day in LOCAL time
+          localNewStart = DateTime(localDropDateTime.year,
+              localDropDateTime.month, localDropDateTime.day);
+          localNewEnd = localNewStart.add(const Duration(days: 1));
+        } else {
+          // Handle timeline drop with optional snapping
+          localNewStart = _snapToInterval(
+              localDropDateTime); // Use snapping logic controlled by flag
+          // Calculate duration based on original UTC times for consistency
+          final originalStartUTC =
+              event.start.isUtc ? event.start : event.start.toUtc();
+          final originalEndUTC =
+              event.end.isUtc ? event.end : event.end.toUtc();
+          final duration = originalEndUTC.difference(originalStartUTC);
+          localNewEnd = localNewStart.add(duration);
+        }
+
+        // Convert final local times to UTC before sending to controller
+        final utcNewStart = localNewStart.toUtc();
+        final utcNewEnd = localNewEnd.toUtc();
+
+        // Reschedule only if UTC time changed. Ensure comparison uses UTC for original event times.
+        final originalStartUTC =
+            event.start.isUtc ? event.start : event.start.toUtc();
+        final originalEndUTC = event.end.isUtc ? event.end : event.end.toUtc();
+
+        if (utcNewStart != originalStartUTC || utcNewEnd != originalEndUTC) {
+          print(
+              "[EventLayoutSurface] Rescheduling event ${event.id}. UTC: $utcNewStart - $utcNewEnd");
+          widget.controller.rescheduleEvent(event, utcNewStart, utcNewEnd);
+        } else {
+          print(
+              "[EventLayoutSurface] Drop detected for event ${event.id}, but time did not change.");
+        }
+        // --- End Drop Logic ---
+      },
+    ); // End DragTarget
   }
 
-  // --- Central Pointer Event Handler ---
+  /// Snap a date/time to the nearest interval boundary, preserving UTC/local kind.
+  /// This version uses the controller's intervalNotifier.
+  DateTime _snapToInterval(DateTime dateTime) {
+    if (!widget.snapToIntervalOnDrop) {
+      // Use widget flag
+      // print("[EventLayoutSurface._snapToInterval] Snapping disabled, returning original: $dateTime");
+      return dateTime;
+    }
+    final intervalMinutes = widget.controller.intervalNotifier.value.inMinutes;
+    if (intervalMinutes <= 0)
+      return dateTime; // Avoid division by zero or no snapping
 
-  void _handlePointerEvent(PointerEvent event) {
-    // Calculate position relative to the EventLayoutSurface's top-left corner,
-    // then adjust for scroll offset.
-    final Offset surfaceLocalPosition = event.localPosition - widget.gridInfo.origin;
-    final Offset adjustedPosition = surfaceLocalPosition + Offset(0, _scrollOffset);
+    final totalMinutes = dateTime.hour * 60 + dateTime.minute;
+    final remainder = totalMinutes % intervalMinutes;
 
-    if (event is PointerDownEvent) {
-      // Only handle primary button and if no other pointer is active
-      if (event.buttons == kPrimaryMouseButton && _activePointerId == null) {
-        // Perform hit test
-        final renderer = EventRenderer(
-          events: _viewModel.events,
-          style: widget.renderStyle,
-          selectedEventId: _viewModel.selectedEventId,
-          draggedEventId: _viewModel.draggedEventId,
-          resizedEventId: _viewModel.resizedEventId,
-          activeResizeHandle: _viewModel.activeResizeHandle,
-          scrollOffset: _scrollOffset,
-          currentDragPosition: _viewModel.currentDragPosition,
-          dragOffset: _viewModel.dragOffset,
-        );
-        final resizeHandleHit = renderer.findResizeHandleAt(adjustedPosition);
-        final eventHit = renderer.findEventAt(adjustedPosition);
+    if (remainder == 0 &&
+        dateTime.second == 0 &&
+        dateTime.millisecond == 0 &&
+        dateTime.microsecond == 0) {
+      return dateTime; // Already snapped precisely
+    }
 
-        if (resizeHandleHit != null || eventHit != null) {
-          // Potential drag/resize start
-          _activePointerId = event.pointer;
-          _dragTarget = resizeHandleHit ?? eventHit;
-          _isDragging = false;
-          // Record potential tap start
-          _pendingTapDown = event;
-          _tapDownTime = DateTime.now();
-        } else {
-          // Click on empty space, clear potential tap
-          _pendingTapDown = null;
-          _tapDownTime = null;
-        }
-      }
-    } else if (event is PointerMoveEvent) {
-      if (event.pointer == _activePointerId) {
-        // Check if movement exceeds tap slop, invalidating tap
-        if (_pendingTapDown != null) {
-          final Offset delta = event.position - _pendingTapDown!.position;
-          if (delta.distanceSquared > _kTapSlop * _kTapSlop) {
-            // Movement exceeded slop, not a tap
-            _pendingTapDown = null;
-            _tapDownTime = null;
-          }
-        }
+    // Snap DOWN to the start of the CURRENT interval boundary
+    int snappedTotalMinutes = (totalMinutes - remainder).toInt();
 
-        // Handle drag/resize
-        if (_dragTarget != null) {
-          if (!_isDragging) {
-            // First move after down on target, start drag/resize
-            _isDragging = true;
-            // Use the initial down position (adjusted relative to surface) for starting the drag
-            final Offset startSurfaceLocalPosition = _pendingTapDown!.localPosition - widget.gridInfo.origin;
-            final Offset startPosition = startSurfaceLocalPosition + Offset(0, _scrollOffset);
-            _viewModel.handlePanStart(startPosition, _scrollOffset);
-            // Update cursor (might need refinement based on target type)
-            // TODO: Set grabbing or resize cursor based on _dragTarget type
-            // setState(() { _currentCursor = SystemMouseCursors.grabbing; });
-          }
-          // Continue updating drag/resize
-          _viewModel.handlePanUpdate(adjustedPosition, _scrollOffset);
-        }
-      }
-    } else if (event is PointerUpEvent) {
-      if (event.pointer == _activePointerId) {
-        if (_isDragging) {
-          // End drag/resize
-          _viewModel.handlePanEnd();
-        } else if (_pendingTapDown != null && _tapDownTime != null) {
-          // Check if it qualifies as a tap (within time and slop)
-          // Use the surface-local position for tap slop calculation
-          final Offset downSurfaceLocalPosition = _pendingTapDown!.localPosition - widget.gridInfo.origin;
-          final Offset upSurfaceLocalPosition = event.localPosition - widget.gridInfo.origin;
-          final Offset delta = upSurfaceLocalPosition - downSurfaceLocalPosition;
-          final Duration timeSinceDown = DateTime.now().difference(_tapDownTime!);
+    // Handle potential day rollover - clamp to end of the day
+    int snappedHour = snappedTotalMinutes ~/ 60;
+    int snappedMinute = snappedTotalMinutes % 60;
 
-          if (timeSinceDown < _kTapTimeout && delta.distanceSquared <= _kTapSlop * _kTapSlop) {
-            // It's a tap!
-            _viewModel.handleTap(adjustedPosition, _scrollOffset);
-          }
-        }
-        // Reset state
-        _resetInteractionState();
-      }
-    } else if (event is PointerCancelEvent) {
-      if (event.pointer == _activePointerId) {
-        if (_isDragging) {
-          // Cancel drag/resize
-          _viewModel.handlePanEnd(); // Or a specific cancel method if available
-        }
-        // Reset state
-        _resetInteractionState();
-      }
-    } else if (event is PointerHoverEvent) {
-      // Update cursor based on hover position if not actively dragging
-      if (!_isDragging) {
-        _updateCursorOnHover(event);
+    if (snappedHour >= 24) {
+      // If snapping pushes past midnight, clamp to last possible interval of the original day
+      snappedHour = 23;
+      snappedMinute = 59;
+      final lastIntervalStartMinute = (24 * 60) - intervalMinutes;
+      if (lastIntervalStartMinute >= 0) {
+        snappedMinute = (lastIntervalStartMinute % 60).toInt();
+        snappedHour = (lastIntervalStartMinute ~/ 60).toInt();
       }
     }
+
+    // Ensure snapped time doesn't go before the start of the day (00:00)
+    if (snappedHour < 0) {
+      snappedHour = 0;
+      snappedMinute = 0;
+    }
+
+    // Construct new DateTime preserving original date and UTC flag
+    if (dateTime.isUtc) {
+      // This should not happen if _positionToDateTime returns local, but handle defensively
+      print("Warning: _snapToInterval received UTC time unexpectedly.");
+      return DateTime.utc(dateTime.year, dateTime.month, dateTime.day,
+          snappedHour, snappedMinute, 0, 0, 0 // Reset smaller units
+          );
+    } else {
+      return DateTime(dateTime.year, dateTime.month, dateTime.day, snappedHour,
+          snappedMinute, 0, 0, 0 // Reset smaller units
+          );
+    }
   }
-
-  void _resetInteractionState() {
-    _activePointerId = null;
-    _dragTarget = null;
-    _isDragging = false;
-    _pendingTapDown = null;
-    _tapDownTime = null;
-    // Reset cursor (MouseRegion would normally handle this, but we removed it)
-    // We might need to explicitly set it back based on a final hover check or default
-    // setState(() { _currentCursor = SystemMouseCursors.basic; });
-    // For now, let _updateCursorOnHover handle subsequent hover events
-  }
-
-  // _updateCursorOnHover remains mostly the same, but is now called from _handlePointerEvent
-  // Ensure it uses the PointerHoverEvent's localPosition directly
-  // void _updateCursorOnHover(PointerHoverEvent event) { ... }
-
-  // Removed old gesture handlers:
-  // _handleTap, _handleDoubleTap, _handleLongPress
-  // _handlePanStart, _handlePanUpdate, _handlePanEnd
 }

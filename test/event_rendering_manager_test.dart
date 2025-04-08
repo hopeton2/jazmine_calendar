@@ -6,33 +6,12 @@ import 'package:jazmine_calendar/src/models/calendar_event.dart';
 
 void main() {
   group('EventRenderingManager', () {
-    setUp(() {
-      // Reset the gridInfo before each test
-      GridLayoutInfo().reset();
-    });
-
-    test('should throw error if gridInfo is not ready', () {
-      final manager = EventRenderingManager();
-
-      final gridInfo =
-          GridLayoutInfo(); // Need a gridInfo, even if not updated
-      expect(
-        () => manager.processEvents(
-          events: [],
-          minEventSize: 20,
-          minSecondarySize: 20,
-          gridInfo: gridInfo, // Pass gridInfo instance
-        ),
-        throwsStateError,
-      );
-    });
+    // Removed setUp and test for 'gridInfo not ready' as constructor enforces initialization
 
     test('should process events correctly', () {
-      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
-
-      // Set up the gridInfo
-      gridInfo.updateGridLayout(
+      // Initialize gridInfo directly
+      final gridInfo = GridLayoutInfo(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -41,7 +20,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 25,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
 
       final events = [
@@ -93,11 +72,9 @@ void main() {
     });
 
     test('should use cache for repeated calls with same parameters', () {
-      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
-
-      // Set up the gridInfo
-      gridInfo.updateGridLayout(
+      // Initialize gridInfo directly
+      final gridInfo = GridLayoutInfo(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -106,7 +83,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 25,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
 
       final events = [
@@ -160,11 +137,9 @@ void main() {
     });
 
     test('should handle overlapping events', () {
-      final gridInfo = GridLayoutInfo();
       final now = DateTime(2023, 1, 1);
-
-      // Set up the gridInfo
-      gridInfo.updateGridLayout(
+      // Initialize gridInfo directly
+      final gridInfo = GridLayoutInfo(
         viewStart: now,
         viewEnd: now.add(const Duration(days: 1)),
         origin: const Offset(60, 40),
@@ -173,7 +148,7 @@ void main() {
         divisions: 1,
         cellWidth: 300,
         cellHeight: 25,
-        intervalDuration: const Duration(minutes: 30), // Add interval duration
+        intervalDuration: const Duration(minutes: 30),
       );
 
       final events = [

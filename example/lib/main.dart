@@ -109,33 +109,31 @@ class _MyHomePageState extends State<MyHomePage> {
       final dayOffset = random.nextInt(11) - 5; // -5 to +5 days
       final eventDate = initialDate.add(Duration(days: dayOffset));
 
-      // Keep start time random for distribution, but force all-day later
+      // Set start time to a random hour on the hour
       final startHour = random.nextInt(24);
-      final startMinute = random.nextInt(4) * 15;
-      DateTime startTime =
-          eventDate.add(Duration(hours: startHour, minutes: startMinute));
+      DateTime startTime = eventDate.add(Duration(hours: startHour));
 
       // --- Generate Random Duration (Non-All-Day) ---
       final bool isAllDayEvent = false; // Make them timed events
-      // Random duration between 30 minutes and 4 hours
-      final durationMinutes = 30 + random.nextInt(211); // 30 to 240 minutes
-      DateTime endTime = startTime.add(Duration(minutes: durationMinutes));
+      // Random duration between 1 hour and 4 hours
+      final durationHours = 1 + random.nextInt(4); // 1 to 4 hours
+      DateTime endTime = startTime.add(Duration(hours: durationHours));
 
       // Ensure end time doesn't cross midnight for simplicity in this example,
       // or handle multi-day timed events if needed.
       if (endTime.day != startTime.day) {
-         endTime = startTime.dayEnds; // Cap at end of the start day
+       endTime = startTime.dayEnds; // Cap at end of the start day
       }
 
       mockEvents.add(CalendarEvent(
-        id: 'mock_$i',
-        // Format title with date range
-        // Update title format for timed events
-        title: 'Event ${i + 1}', // Simpler title
-        start: startTime,
-        end: endTime,
-        isAllDay: isAllDayEvent, // Set to false
-        color: eventColors[random.nextInt(eventColors.length)],
+      id: 'mock_$i',
+      // Format title with date range
+      // Update title format for timed events
+      title: 'Event ${i + 1}', // Simpler title
+      start: startTime,
+      end: endTime,
+      isAllDay: isAllDayEvent, // Set to false
+      color: eventColors[random.nextInt(eventColors.length)],
       ));
     }
 

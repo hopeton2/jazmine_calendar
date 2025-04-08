@@ -42,6 +42,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   // Fields for collapsed state filtering
   bool _isCollapsed = false;
   double? _collapsedContentHeight;
+  bool _snapToIntervalOnDrop; // Flag to control snapping
 
   /// List of processed events (layout and packed) - Represents the stable layout
   List<EventLayoutInfo> _events = [];
@@ -56,12 +57,12 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   String? _draggedEventId;
   String? _resizedEventId;
   ResizeHandle? _activeResizeHandle;
-  Offset? _dragOffset;
-  CalendarEvent? _originalEvent;
-  DateTime? _originalStart;
-  DateTime? _originalEnd;
-  Offset? _initialPanPosition;
-  Offset? _currentDragPosition;
+  Offset? _dragOffset; // Offset between initial touch point and event's top-left (both relative to content area)
+  CalendarEvent? _originalEvent; // Event being dragged/resized
+  DateTime? _originalStart; // Original UTC start time
+  DateTime? _originalEnd; // Original UTC end time
+  Offset? _initialPanPosition; // Initial pan position (relative to content area)
+  Offset? _currentDragPosition; // Current pan position (relative to content area)
   ScrollController? _scrollController; // Field for scroll controller
   late EventRenderStyle _renderStyle; // Field for render style (initialized in constructor)
 
@@ -78,10 +79,12 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     this.onOverflowStateChanged,
     bool isCollapsed = false,
     double? collapsedContentHeight,
-    ScrollController? scrollController, // Receive scroll controller
+    ScrollController? scrollController,
+    required bool snapToIntervalOnDrop, // Add required parameter
   })  : _isCollapsed = isCollapsed,
         _collapsedContentHeight = collapsedContentHeight,
-        _scrollController = scrollController // Initialize scroll controller field
+        _scrollController = scrollController,
+        _snapToIntervalOnDrop = snapToIntervalOnDrop // Initialize the flag
   {
     _gridInfo = gridInfo;
     _renderStyle = renderStyle; // Initialize render style field
@@ -112,10 +115,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     if (_isLoading) return;
 
     _isLoading = true;
-    // Avoid notifying if it's just a background refresh triggered by data change
-    // notifyListeners();
-
-    List<EventLayoutInfo> previousEvents = List.from(_events); // Keep track for comparison
+    List<EventLayoutInfo> previousEvents = List.from(_events);
 
     try {
       if (visibleDates.isEmpty) {
@@ -126,7 +126,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
         final eventsFromController =
             await controller.getEventsForDateRange(rangeStart, rangeEnd);
-        // Use the rendering manager which combines layout and packing
         _events = _renderingManager.processEvents(
             events: eventsFromController
                 .where((ev) => ev.isAllDay == isAllDay)
@@ -138,23 +137,81 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       }
     } catch (e) {
       print("Error fetching/processing events: $e");
-      _events = []; // Reset on error
+      _events = [];
     } finally {
       _isLoading = false;
-      // Only notify if the actual layout info list has changed.
       if (!ListEquality().equals(previousEvents, _events)) {
           notifyListeners();
-      }
-      _calculateAndNotifyOverflow(); // Calculate overflow based on the new state
+        }
+      _calculateAndNotifyOverflow();
     }
   }
 
+  /// Updates the snap setting.
+  void updateSnapSetting(bool snap) {
+    if (_snapToIntervalOnDrop != snap) {
+      _snapToIntervalOnDrop = snap;
+    }
+  }
+
+  // --- Public Methods for Interaction ---
+
+  /// Handles the logic for an event drop, including time calculation, snapping, and rescheduling.
+  /// All calculations up to the final controller call should be in LOCAL time.
+  void handleEventDrop({
+    required CalendarEvent event,
+    required Offset surfaceLocalOffset, // This is WIDGET-LOCAL offset from DragTarget
+    required double scrollOffset,
+    // required BuildContext context, // No longer needed
+  }) {
+    // Calculate the local drop time using gridInfo
+    DateTime? localDropDateTime = _gridInfo.getDateTimeForPosition(
+      surfaceLocalOffset, // Pass WIDGET-LOCAL offset
+      // scrollOffset parameter removed from getDateTimeForPosition
+    );
+
+    if (localDropDateTime == null) {
+      print("[ViewModel.handleEventDrop] Could not determine local drop time.");
+      return;
+    }
+
+    DateTime localNewStart;
+    DateTime localNewEnd;
+
+    if (isAllDay) {
+      // Snap to the start/end of the day in LOCAL time
+      localNewStart = DateTime(localDropDateTime.year, localDropDateTime.month, localDropDateTime.day); // Local midnight
+      localNewEnd = localNewStart.add(const Duration(days: 1)); // Local midnight next day
+    } else {
+      // Handle timeline drop with optional snapping
+      localNewStart = _snapToInterval(localDropDateTime); // Use snapping logic controlled by flag
+      // Calculate duration based on original UTC times for consistency
+      final originalStartUTC = event.start.isUtc ? event.start : event.start.toUtc();
+      final originalEndUTC = event.end.isUtc ? event.end : event.end.toUtc();
+      final duration = originalEndUTC.difference(originalStartUTC);
+      localNewEnd = localNewStart.add(duration);
+    }
+
+    // Convert final local times to UTC before sending to controller
+    final utcNewStart = localNewStart.toUtc();
+    final utcNewEnd = localNewEnd.toUtc();
+
+    // Reschedule only if UTC time changed. Ensure comparison uses UTC for original event times.
+    final originalStartUTC = event.start.isUtc ? event.start : event.start.toUtc();
+    final originalEndUTC = event.end.isUtc ? event.end : event.end.toUtc();
+
+    if (utcNewStart != originalStartUTC || utcNewEnd != originalEndUTC) {
+      print("[ViewModel.handleEventDrop] Rescheduling event ${event.id}. UTC: $utcNewStart - $utcNewEnd");
+      controller.rescheduleEvent(event, utcNewStart, utcNewEnd);
+    } else {
+      print("[ViewModel.handleEventDrop] Drop detected for event ${event.id}, but time did not change.");
+    }
+  }
+
+
   /// Updates the grid info and triggers a re-fetch and process.
   void updateGridInfo(GridLayoutInfo newGridInfo) {
-    // Always update the grid info when the widget provides a new one.
-    // The parent view is responsible for deciding when the layout changes.
     _gridInfo = newGridInfo;
-    // Avoid refetch if drag/resize is in progress, it will be handled by handlePanEnd.
     if (_draggedEventId == null && _resizedEventId == null) {
       _fetchAndProcessEvents();
     }
@@ -164,7 +221,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   void updateMaxVisibleEvents(int? newMaxVisible) {
     if (maxVisibleAllDayEvents != newMaxVisible) {
       maxVisibleAllDayEvents = newMaxVisible;
-      // Avoid refetch if drag/resize is in progress
       if (_draggedEventId == null && _resizedEventId == null) {
         _fetchAndProcessEvents();
       }
@@ -174,7 +230,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   /// Updates the overflow callback reference.
   void updateOverflowCallback(OverflowStateCallback? newCallback) {
     onOverflowStateChanged = newCallback;
-    _calculateAndNotifyOverflow(); // Recalculate with potentially new callback
+    _calculateAndNotifyOverflow();
   }
 
   /// Updates the collapsed state if it changes.
@@ -183,7 +239,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
         _collapsedContentHeight != collapsedContentHeight) {
       _isCollapsed = isCollapsed;
       _collapsedContentHeight = collapsedContentHeight;
-      // Notify listeners as this affects rendering directly
       notifyListeners();
     }
   }
@@ -195,7 +250,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
     if (datesChanged) {
       visibleDates = newVisibleDates;
-      // Avoid refetch if drag/resize is in progress
       if (_draggedEventId == null && _resizedEventId == null) {
         _fetchAndProcessEvents();
       }
@@ -204,17 +258,14 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
   /// Updates the render style.
   void updateRenderStyle(EventRenderStyle newStyle) {
-    // Assuming style changes don't require re-fetching events, just repaint
     if (_renderStyle != newStyle) {
       _renderStyle = newStyle;
-      notifyListeners(); // Notify for repaint with new style
+      notifyListeners();
     }
   }
 
   /// Updates the scroll controller reference.
   void updateScrollController(ScrollController? newController) {
-    // No direct action needed in ViewModel when controller changes,
-    // but store it for potential use (like in BaseDayView overlay)
     _scrollController = newController;
   }
 
@@ -225,9 +276,9 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     int maxLaneIndex = -1;
     int hiddenCount = 0;
     bool hasOverflow = false;
-    final int maxVisible = maxVisibleAllDayEvents ?? 2; // Default max visible
+    final int maxVisible = maxVisibleAllDayEvents ?? 2;
 
-    if (isAllDay && _events.isNotEmpty) { // Only calculate for all-day section
+    if (isAllDay && _events.isNotEmpty) {
       Set<String> hiddenEventIds = {};
       for (final eventLayout in _events) {
         maxLaneIndex = max(maxLaneIndex, eventLayout.laneIndex);
@@ -244,7 +295,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
         hiddenCount = hiddenEventIds.length;
       }
     }
-    // Ensure callback is always called, even if no overflow
     onOverflowStateChanged!(hasOverflow, hiddenCount, maxLaneIndex);
   }
 
@@ -252,7 +302,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
   /// Handle tap on an event
   void handleTap(Offset position, double scrollOffset) {
-    // Ensure no drag/resize is in progress
     if (_draggedEventId != null || _resizedEventId != null) return;
 
     final renderer = EventRenderer(events: _events, scrollOffset: scrollOffset);
@@ -270,7 +319,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
   /// Handle double tap on an event
   void handleDoubleTap(Offset position, double scrollOffset) {
-    // Ensure no drag/resize is in progress
     if (_draggedEventId != null || _resizedEventId != null) return;
 
     final renderer = EventRenderer(events: _events, scrollOffset: scrollOffset);
@@ -283,7 +331,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
   /// Handle long press on an event
   void handleLongPress(Offset position, double scrollOffset) {
-    // Ensure no drag/resize is in progress
     if (_draggedEventId != null || _resizedEventId != null) return;
 
     final renderer = EventRenderer(events: _events, scrollOffset: scrollOffset);
@@ -291,7 +338,6 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
     if (eventAtPosition != null) {
       controller.onEventLongPress?.call(eventAtPosition.event, position);
-      // Potentially initiate drag here if desired, similar to handlePanStart
     }
   }
 
@@ -299,13 +345,11 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   void handlePanStart(Offset position, double scrollOffset) {
     // position is already adjusted for scroll offset by the caller (EventLayoutSurface)
 
-    // Check if we're on a resize handle first
     final renderer = EventRenderer(events: _events, scrollOffset: scrollOffset);
     final resizeHandleHit = renderer.findResizeHandleAt(position);
 
     if (resizeHandleHit != null) {
       final event = resizeHandleHit.event.event;
-      // Don't allow resize for all-day events
       if (event.isAllDay) return;
 
       _resizedEventId = event.id;
@@ -313,27 +357,31 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       _originalEvent = event;
       _originalStart = event.start;
       _originalEnd = event.end;
-      _initialPanPosition = position;
-      _currentDragPosition = position; // Initialize current position
-      notifyListeners(); // Notify UI about resize start
+      _initialPanPosition = position; // Relative to content area
+      _currentDragPosition = position;
+      notifyListeners();
       return;
     }
 
-    // Check if we're on an event (for dragging)
     final eventAtPosition = renderer.findEventAt(position);
     if (eventAtPosition != null) {
       final event = eventAtPosition.event;
-
-      // Store drag state
       _draggedEventId = event.id;
-      _dragOffset = position - eventAtPosition.finalRect.topLeft;
       _originalEvent = event;
       _originalStart = event.start;
       _originalEnd = event.end;
-      _initialPanPosition = position;
-      _currentDragPosition = position; // Initialize current position
+      _initialPanPosition = position; // Relative to content area
+      _currentDragPosition = position;
 
-      // Notify listeners to update UI (e.g., cursor, visual feedback)
+      // Calculate the event's top-left offset relative to the content area origin
+      final originalTopLeft = _getOffsetForTime(_originalStart!);
+      if (originalTopLeft == null) {
+         print("Error: Could not calculate original event position in handlePanStart.");
+         _resetDragResizeState(); // Abort drag
+         return;
+      }
+      _dragOffset = _initialPanPosition! - originalTopLeft; // Offset between touch point and event top-left
+
       notifyListeners();
     }
   }
@@ -341,137 +389,22 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
   /// Handle pan update during drag or resize
   /// [currentAdjustedPos] is the pointer position relative to the unscrolled content area.
   void handlePanUpdate(Offset currentAdjustedPos, double currentScrollOffset) {
-    // Store the correctly calculated position passed from the view
     _currentDragPosition = currentAdjustedPos;
-
-    // Notify listeners to trigger repaint with the new _currentDragPosition
-    // The renderer will use this position to draw the dragged/resized item
     notifyListeners();
-
-    // --- Visual update is handled by the renderer using _currentDragPosition ---
   }
 
-  /// Handle the end of a pan gesture
-  Future<void> handlePanEnd() async { // Make async
-    bool changed = false;
-    CalendarEvent? originalEventForCallback;
-    DateTime? finalNewStart;
-    DateTime? finalNewEnd;
-    bool wasResize = false; // Flag to know which user callback to fire
-
-    // Store necessary state before resetting
-    final currentDraggedId = _draggedEventId;
-    final currentResizedId = _resizedEventId;
-    final currentOriginalEvent = _originalEvent;
-    final currentOriginalStart = _originalStart;
-    final currentOriginalEnd = _originalEnd;
-    final currentDragOffset = _dragOffset;
-    final currentActiveHandle = _activeResizeHandle;
-    final lastDragPosition = _currentDragPosition; // Use the last position recorded
-
-    // Reset drag/resize state immediately to stop visual feedback
-    final wasDraggingOrResizing =
-        _draggedEventId != null || _resizedEventId != null;
-    _resetDragResizeState();
+  /// Handle the end of a pan gesture - Restore simpler version
+  Future<void> handlePanEnd() async {
+    // Reset drag/resize state immediately
+    final wasDraggingOrResizing = _draggedEventId != null || _resizedEventId != null;
+    _resetDragResizeState(); // Reset state
     if (wasDraggingOrResizing) {
-      notifyListeners(); // Update UI to remove drag visuals
+      notifyListeners(); // Notify UI to remove drag visuals
     }
-
-    // --- Perform calculations if a drag/resize was in progress ---
-    if (lastDragPosition == null || currentOriginalEvent == null) {
-      return; // Exit if essential data is missing
-    }
-
-    if (currentResizedId != null && currentActiveHandle != null) {
-      // --- Calculate final resize times ---
-      wasResize = true;
-      originalEventForCallback = currentOriginalEvent;
-      DateTime? rawDateTime = _positionToDateTime(lastDragPosition);
-      if (rawDateTime != null) {
-        // Snap the calculated time to the nearest interval
-        DateTime newDateTime = _snapToInterval(rawDateTime);
-        DateTime newStart = currentOriginalStart!;
-        DateTime newEnd = currentOriginalEnd!;
-
-        if (currentActiveHandle == ResizeHandle.top ||
-            currentActiveHandle == ResizeHandle.left) {
-          newStart = newDateTime;
-        } else {
-          newEnd = newDateTime;
-        }
-
-        // Still enforce minimum duration, but base it on raw drop time
-        final minDuration = controller.intervalNotifier.value;
-        if (newEnd.difference(newStart) < minDuration) {
-          if (currentActiveHandle == ResizeHandle.top ||
-              currentActiveHandle == ResizeHandle.left) {
-            newStart = newEnd.subtract(minDuration);
-          } else {
-            newEnd = newStart.add(minDuration);
-          }
-        }
-
-        if (newStart != currentOriginalStart || newEnd != currentOriginalEnd) {
-          finalNewStart = newStart;
-          finalNewEnd = newEnd;
-          changed = true;
-        }
-      }
-    } else if (currentDraggedId != null && currentDragOffset != null) {
-      // --- Calculate final drag times ---
-      wasResize = false;
-      originalEventForCallback = currentOriginalEvent;
-      final newTopLeft = lastDragPosition - currentDragOffset;
-      DateTime? newStartDateTimeRaw =
-          _positionToDateTime(newTopLeft); // Calculate time from position
-
-      if (newStartDateTimeRaw != null) {
-        // Snap the calculated time to the nearest interval
-        DateTime newStartDateTime = _snapToInterval(newStartDateTimeRaw);
-
-        final duration = currentOriginalEnd!.difference(currentOriginalStart!);
-        final newEndDateTime = newStartDateTime.add(duration);
-
-        if (newStartDateTime != currentOriginalStart ||
-            newEndDateTime != currentOriginalEnd) {
-          finalNewStart = newStartDateTime;
-          finalNewEnd = newEndDateTime;
-          changed = true;
-        }
-      }
-    }
-
-    // --- If times changed, perform the update using the controller ---
-    if (changed &&
-        originalEventForCallback != null &&
-        finalNewStart != null &&
-        finalNewEnd != null) {
-      try {
-        // Call the centralized update method on the controller
-        // This handles persistence and triggers the data change notification
-        // Convert local times back to UTC before updating the controller
-        await controller.updateEventTimes(originalEventForCallback,
-            finalNewStart!.toUtc(), finalNewEnd!.toUtc());
-
-        // The ViewModel's _handleEventDataChange listener will automatically call _fetchAndProcessEvents.
-
-        // Now, fire the appropriate user callback *after* the update is done
-        if (wasResize) {
-          controller.onEventResized?.call(
-              originalEventForCallback, finalNewStart!, finalNewEnd!);
-        } else {
-          controller.onEventRescheduled?.call(
-              originalEventForCallback, finalNewStart!, finalNewEnd!);
-        }
-      } catch (e) {
-        print("Error during controller.updateEventTimes or user callback: $e");
-        // Attempt to refetch to sync UI even if update failed
-        _fetchAndProcessEvents(); // Consider if refetch is appropriate on error
-      }
-    } else if (wasDraggingOrResizing && !changed) {
-      // No change occurred, state was already reset and UI notified. No further action needed.
-    }
+    // Note: The actual calculation and update logic is triggered
+    // by the DragTarget's onAcceptWithDetails -> handleEventDrop
   }
+
 
   /// Helper to reset all drag/resize state variables
   void _resetDragResizeState() {
@@ -486,30 +419,51 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     _currentDragPosition = null;
   }
 
-  /// Convert a position (relative to the unscrolled content area 0,0) to a date/time, attempting to match grid's timezone kind.
+  /// Convert a position (relative to the unscrolled content area 0,0) to a LOCAL date/time.
   DateTime? _positionToDateTime(Offset positionRelativeToContentArea) {
     try {
-      // The positionRelativeToContentArea is already relative to the EventLayoutSurface's
-      // top-left, which is positioned at the grid origin. So, no further adjustment needed.
-      DateTime? calculatedTime =
-          _gridInfo.getDateTimeForPosition(positionRelativeToContentArea);
-      // calculatedTime is now guaranteed to be local DateTime by getDateTimeForPosition
-      return calculatedTime;
+      // Use gridInfo to convert position to LOCAL DateTime
+      // Pass scrollOffset 0 because positionRelativeToContentArea is already adjusted for scroll by caller
+      return _gridInfo.getDateTimeForPosition(positionRelativeToContentArea); // scrollOffset no longer needed/accepted
     } catch (e) {
       print("Error getting DateTime for position: $e");
       return null;
     }
   }
 
+  /// Get the pixel offset (relative to content area 0,0) for a given LOCAL time.
+  Offset? _getOffsetForTime(DateTime localTime) {
+     try {
+       // Find the division index for the given local time
+       if (_gridInfo.viewStart == null) return null;
+       final division = localTime.difference(_gridInfo.viewStart!.dayStarts).inDays;
+       if (division < 0 || division >= _gridInfo.divisions) return null; // Outside view range
+
+       // Use gridInfo to get the position
+       return _gridInfo.getPositionForDateTime(localTime, division);
+     } catch (e) {
+       print("Error getting position for DateTime: $e");
+       return null;
+     }
+  }
+
+
   /// Snap a date/time to the nearest interval boundary, preserving UTC/local kind.
+  /// This version uses the controller's intervalNotifier.
   DateTime _snapToInterval(DateTime dateTime) {
+     if (!_snapToIntervalOnDrop) {
+      // print("[ViewModel._snapToInterval] Snapping disabled, returning original: $dateTime");
+      return dateTime;
+    }
     final intervalMinutes = controller.intervalNotifier.value.inMinutes;
     if (intervalMinutes <= 0) return dateTime; // Avoid division by zero or no snapping
 
     final totalMinutes = dateTime.hour * 60 + dateTime.minute;
     final remainder = totalMinutes % intervalMinutes;
 
-    if (remainder == 0) return dateTime; // Already snapped
+    if (remainder == 0 && dateTime.second == 0 && dateTime.millisecond == 0 && dateTime.microsecond == 0) {
+       return dateTime; // Already snapped precisely
+    }
 
     // Snap DOWN to the start of the CURRENT interval boundary
     int snappedTotalMinutes = (totalMinutes - remainder).toInt();
@@ -537,40 +491,31 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
 
     // Construct new DateTime preserving original date and UTC flag
     if (dateTime.isUtc) {
+      // This should not happen if _positionToDateTime returns local, but handle defensively
+      print("Warning: _snapToInterval received UTC time unexpectedly.");
       return DateTime.utc(
-        dateTime.year,
-        dateTime.month,
-        dateTime.day,
-        snappedHour,
-        snappedMinute,
+        dateTime.year, dateTime.month, dateTime.day,
+        snappedHour, snappedMinute, 0, 0, 0 // Reset smaller units
       );
     } else {
       return DateTime(
-        dateTime.year,
-        dateTime.month,
-        dateTime.day,
-        snappedHour,
-        snappedMinute,
+        dateTime.year, dateTime.month, dateTime.day,
+        snappedHour, snappedMinute, 0, 0, 0 // Reset smaller units
       );
     }
   }
 
-  // Getters
+
+  // --- Getters ---
   List<EventLayoutInfo> get events => _events;
   bool get isLoading => _isLoading;
   String? get selectedEventId => _selectedEventId;
+
+  // Getters for drag/resize state needed by the renderer
   String? get draggedEventId => _draggedEventId;
   String? get resizedEventId => _resizedEventId;
   ResizeHandle? get activeResizeHandle => _activeResizeHandle;
-  GridLayoutInfo get gridInfo => _gridInfo;
-  Offset? get currentDragPosition => _currentDragPosition; // Expose current drag position
-  Offset? get dragOffset => _dragOffset; // Expose drag offset
-  // Getter for the layout info of the currently dragged event
-  EventLayoutInfo? get draggedEventLayoutInfo => _draggedEventId != null
-      ? _events.firstWhereOrNull((e) => e.event.id == _draggedEventId)
-      : null;
-  // Expose scroll controller if needed by parent
-  ScrollController? get scrollController => _scrollController;
-  // Expose render style if needed by parent
-  EventRenderStyle get renderStyle => _renderStyle;
+  Offset? get currentDragPosition => _currentDragPosition; // Position relative to content area
+  Offset? get dragOffset => _dragOffset; // Offset within the event widget
+  EventRenderStyle get renderStyle => _renderStyle; // Expose render style
 }
