@@ -43,6 +43,6 @@ class SampleEvents {
       ),
     );
     
-    print('SampleEvents: Added sample events');
+    // print('SampleEvents: Added sample events'); // Removed print
   }
 }

@@ -136,7 +136,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
             maxVisibleAllDayEvents: maxVisibleAllDayEvents);
       }
     } catch (e) {
-      print("Error fetching/processing events: $e");
+      // print("Error fetching/processing events: $e"); // Removed print
       _events = [];
     } finally {
       _isLoading = false;
@@ -171,7 +171,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     );
 
     if (localDropDateTime == null) {
-      print("[ViewModel.handleEventDrop] Could not determine local drop time.");
+      // print("[ViewModel.handleEventDrop] Could not determine local drop time."); // Removed print
       return;
     }
 
@@ -201,10 +201,10 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     final originalEndUTC = event.end.isUtc ? event.end : event.end.toUtc();
 
     if (utcNewStart != originalStartUTC || utcNewEnd != originalEndUTC) {
-      print("[ViewModel.handleEventDrop] Rescheduling event ${event.id}. UTC: $utcNewStart - $utcNewEnd");
-      controller.rescheduleEvent(event, utcNewStart, utcNewEnd);
+      // print("[ViewModel.handleEventDrop] Rescheduling event ${event.id}. UTC: $utcNewStart - $utcNewEnd"); // Removed print
+      controller.rescheduleEvent(event, utcNewStart, utcNewEnd, isAllDay || event.isAllDay);
     } else {
-      print("[ViewModel.handleEventDrop] Drop detected for event ${event.id}, but time did not change.");
+      // print("[ViewModel.handleEventDrop] Drop detected for event ${event.id}, but time did not change."); // Removed print
     }
   }
 
@@ -376,7 +376,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       // Calculate the event's top-left offset relative to the content area origin
       final originalTopLeft = _getOffsetForTime(_originalStart!);
       if (originalTopLeft == null) {
-         print("Error: Could not calculate original event position in handlePanStart.");
+         // print("Error: Could not calculate original event position in handlePanStart."); // Removed print
          _resetDragResizeState(); // Abort drag
          return;
       }
@@ -426,7 +426,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
       // Pass scrollOffset 0 because positionRelativeToContentArea is already adjusted for scroll by caller
       return _gridInfo.getDateTimeForPosition(positionRelativeToContentArea); // scrollOffset no longer needed/accepted
     } catch (e) {
-      print("Error getting DateTime for position: $e");
+      // print("Error getting DateTime for position: $e"); // Removed print
       return null;
     }
   }
@@ -442,7 +442,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
        // Use gridInfo to get the position
        return _gridInfo.getPositionForDateTime(localTime, division);
      } catch (e) {
-       print("Error getting position for DateTime: $e");
+       // print("Error getting position for DateTime: $e"); // Removed print
        return null;
      }
   }
@@ -492,7 +492,7 @@ class EventLayoutSurfaceViewModel extends ChangeNotifier {
     // Construct new DateTime preserving original date and UTC flag
     if (dateTime.isUtc) {
       // This should not happen if _positionToDateTime returns local, but handle defensively
-      print("Warning: _snapToInterval received UTC time unexpectedly.");
+      // print("Warning: _snapToInterval received UTC time unexpectedly."); // Removed print
       return DateTime.utc(
         dateTime.year, dateTime.month, dateTime.day,
         snappedHour, snappedMinute, 0, 0, 0 // Reset smaller units

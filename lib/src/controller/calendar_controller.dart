@@ -392,7 +392,7 @@ class CalendarController extends ChangeNotifier {
       // Notify potentially? Or assume caller handles loading state
       _baseEvents = await _persistence.loadEvents();
     } catch (e) {
-      print("Error loading base events: $e");
+      // print("Error loading base events: $e"); // Removed print
       _baseEvents = []; // Set to empty on error to prevent repeated attempts
     } finally {
       _isLoading = false;
@@ -409,32 +409,39 @@ class CalendarController extends ChangeNotifier {
   /// and notifies listeners of the data change. It does NOT fire user callbacks like
   /// onEventRescheduled or onEventResized; those should be called separately if needed
   /// after this method completes.
-  Future<void> updateEventTimes(CalendarEvent event, DateTime newStart, DateTime newEnd) async {
+  Future<void> updateEventTimes(
+      CalendarEvent event, DateTime newStart, DateTime newEnd) async {
     // Avoid redundant updates if times haven't changed
     if (event.start == newStart && event.end == newEnd) {
-        print("[Controller.updateEventTimes] No change detected for event ${event.id}. Skipping update.");
-        return;
+      // print( // Removed print
+      //     "[Controller.updateEventTimes] No change detected for event ${event.id}. Skipping update.");
+      return;
     }
 
-    print("[Controller.updateEventTimes] Updating event ${event.id} to $newStart - $newEnd");
+    // print( // Removed print
+    //     "[Controller.updateEventTimes] Updating event ${event.id} to $newStart - $newEnd");
     await _batchUpdate(() async {
       _isLoading = true;
       final updatedEvent = event.copyWith(start: newStart, end: newEnd);
       try {
         await _persistence.updateEvent(updatedEvent);
-        print("[Controller.updateEventTimes] Persistence update successful for ${event.id}.");
+        // print( // Removed print
+        //     "[Controller.updateEventTimes] Persistence update successful for ${event.id}.");
         _baseEvents = null; // Invalidate cache
         _eventsChanged = true; // Mark data as changed for notification
       } catch (e) {
-        print("[Controller.updateEventTimes] Error updating event ${event.id} in persistence: $e");
+        // print( // Removed print
+        //     "[Controller.updateEventTimes] Error updating event ${event.id} in persistence: $e");
         // Decide if we should rethrow or just log
       } finally {
         _isLoading = false;
       }
     });
-     // _batchUpdate handles notifying _eventDataChangeCounter if _eventsChanged is true
-    _eventsChanged = false; // Reset flag after batch update potentially notified
-     print("[Controller.updateEventTimes] Update process complete for event ${event.id}. Notification (if change occurred) sent via batch update.");
+    // _batchUpdate handles notifying _eventDataChangeCounter if _eventsChanged is true
+    _eventsChanged =
+        false; // Reset flag after batch update potentially notified
+    // print( // Removed print
+    //     "[Controller.updateEventTimes] Update process complete for event ${event.id}. Notification (if change occurred) sent via batch update.");
   }
 
   Future<void> addEvents(List<CalendarEvent> events) async {
@@ -468,35 +475,32 @@ class CalendarController extends ChangeNotifier {
     }
   }
 
-  Future<void> rescheduleEvent(
-      CalendarEvent event, DateTime newStart, DateTime newEnd) async {
-    print(
-        '[Controller.rescheduleEvent] Received event ${event.id} with new times: $newStart - $newEnd');
+  Future<void> rescheduleEvent(CalendarEvent event, DateTime newStart,
+      DateTime newEnd, bool isAllDay) async {
     await _batchUpdate(() async {
       _isLoading = true;
+      if (event.isAllDay && !isAllDay) {
+        newEnd = newStart.add(const Duration(hours: 1)); // if converting from all-day to timed, default to 1 hour
+      }
       final updatedEvent =
-          event.copyWith(start: newStart, end: newEnd); // Define once
-      print(
-          '[Controller.rescheduleEvent] Calling persistence update for ${updatedEvent.id}');
+          event.copyWith(start: newStart, end: newEnd, isAllDay: isAllDay);
+      // print( // Removed print
+      //     '[Controller.rescheduleEvent] Calling persistence update for ${updatedEvent.id}'); // Define once
       try {
         await _persistence.updateEvent(updatedEvent);
-        print(
-            '[Controller.rescheduleEvent] Persistence update successful for ${updatedEvent.id}');
         // Update cache if loaded, otherwise invalidate
         if (_baseEvents != null) {
           final index = _baseEvents!.indexWhere((e) => e.id == event.id);
           if (index != -1) {
             _baseEvents![index] = updatedEvent;
-            print(
-                '[Controller.rescheduleEvent] Updated event ${updatedEvent.id} in cache.');
           } else {
             _baseEvents = null; // Event wasn't in cache? Invalidate.
-            print(
-                '[Controller.rescheduleEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
+            // print( // Removed print
+            //     '[Controller.rescheduleEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
           }
         } else {
           _baseEvents = null; // Ensure it stays null if it was already null
-          print('[Controller.rescheduleEvent] Cache was null, invalidating.');
+          // print('[Controller.rescheduleEvent] Cache was null, invalidating.'); // Removed print
         }
         _eventsChanged = true; // Mark that data changed within the batch
         if (_onEventRescheduled != null) {
@@ -504,8 +508,8 @@ class CalendarController extends ChangeNotifier {
           await _onEventRescheduled!(event, newStart, newEnd);
         }
       } catch (e, s) {
-        print(
-            '[Controller.rescheduleEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
+        // print( // Removed print
+        //     '[Controller.rescheduleEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
         // Optionally rethrow or handle error appropriately
       } finally {
         _isLoading = false;
@@ -513,41 +517,40 @@ class CalendarController extends ChangeNotifier {
     });
     // Notification happens here if _eventsChanged is true after _batchUpdate completes
     if (_eventsChanged) {
-      print(
-          '[Controller.rescheduleEvent] Notifying listeners about event change.');
+      // print( // Removed print
+      //     '[Controller.rescheduleEvent] Notifying listeners about event change.');
     }
     _eventsChanged = false; // Reset flag after potential notification
   }
 
-
   Future<void> resizeEvent(
       CalendarEvent event, DateTime newStart, DateTime newEnd) async {
-    print(
-        '[Controller.resizeEvent] Received event ${event.id} with new times: $newStart - $newEnd');
+    // print( // Removed print
+    //     '[Controller.resizeEvent] Received event ${event.id} with new times: $newStart - $newEnd');
     await _batchUpdate(() async {
       _isLoading = true;
       final updatedEvent = event.copyWith(start: newStart, end: newEnd);
-      print(
-          '[Controller.resizeEvent] Calling persistence update for ${updatedEvent.id}');
+      // print( // Removed print
+      //     '[Controller.resizeEvent] Calling persistence update for ${updatedEvent.id}');
       try {
         await _persistence.updateEvent(updatedEvent);
-        print(
-            '[Controller.resizeEvent] Persistence update successful for ${updatedEvent.id}');
+        // print( // Removed print
+        //     '[Controller.resizeEvent] Persistence update successful for ${updatedEvent.id}');
         // Update cache if loaded, otherwise invalidate
         if (_baseEvents != null) {
           final index = _baseEvents!.indexWhere((e) => e.id == event.id);
           if (index != -1) {
             _baseEvents![index] = updatedEvent;
-            print(
-                '[Controller.resizeEvent] Updated event ${updatedEvent.id} in cache.');
+            // print( // Removed print
+            //     '[Controller.resizeEvent] Updated event ${updatedEvent.id} in cache.');
           } else {
             _baseEvents = null; // Event wasn't in cache? Invalidate.
-            print(
-                '[Controller.resizeEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
+            // print( // Removed print
+            //     '[Controller.resizeEvent] Event ${updatedEvent.id} not found in cache, invalidating.');
           }
         } else {
           _baseEvents = null; // Ensure it stays null if it was already null
-          print('[Controller.resizeEvent] Cache was null, invalidating.');
+          // print('[Controller.resizeEvent] Cache was null, invalidating.'); // Removed print
         }
         _eventsChanged = true; // Mark that data changed within the batch
         if (_onEventResized != null) {
@@ -555,8 +558,8 @@ class CalendarController extends ChangeNotifier {
           await _onEventResized!(event, newStart, newEnd);
         }
       } catch (e, s) {
-        print(
-            '[Controller.resizeEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
+        // print( // Removed print
+        //     '[Controller.resizeEvent] Error during persistence update for ${updatedEvent.id}: $e\n$s');
         // Optionally rethrow or handle error appropriately
       } finally {
         _isLoading = false;
@@ -564,7 +567,7 @@ class CalendarController extends ChangeNotifier {
     });
     // Notification happens here if _eventsChanged is true after _batchUpdate completes
     if (_eventsChanged) {
-      print('[Controller.resizeEvent] Notifying listeners about event change.');
+      // print('[Controller.resizeEvent] Notifying listeners about event change.'); // Removed print
     }
     _eventsChanged = false; // Reset flag after potential notification
   }
@@ -681,8 +684,8 @@ class CalendarController extends ChangeNotifier {
             }
           }
         } catch (e) {
-          print(
-              "Error parsing RRULE for event ${baseEvent.id}: ${baseEvent.recurrenceRule} - $e");
+          // print( // Removed print
+          //     "Error parsing RRULE for event ${baseEvent.id}: ${baseEvent.recurrenceRule} - $e");
           // Optionally include the base event itself if it falls in range, even if rule fails
           if (baseEvent.start.isBefore(end) && baseEvent.end.isAfter(start)) {
             occurrencesInRange.add(baseEvent.copyWith(

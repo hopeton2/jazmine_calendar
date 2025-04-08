@@ -80,7 +80,7 @@ class CalendarEvent {
        // If explicitly setting minutes to null while enabling, that's an issue handled below.
        if (this.reminderMinutesBefore == null) {
          // Or throw error? Let's default to 15 mins for now if enabling without specific time
-         print("Warning: Reminder enabled without minutes, defaulting to 15 minutes before.");
+         // print("Warning: Reminder enabled without minutes, defaulting to 15 minutes before."); // Removed print
          // effectiveReminderMinutes = 15; // Re-enable if default is desired
        }
     }

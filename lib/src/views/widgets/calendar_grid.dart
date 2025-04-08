@@ -216,7 +216,9 @@ class CalendarGridState extends State<CalendarGrid> {
           divisions: widget.dates.length, // Assuming divisions match dates length
           cellWidth: slotWidth,
           cellHeight: slotHeight,
-          intervalDuration: widget.intervalDuration,
+          intervalDuration: widget.intervalDuration, 
+          headerWidth: widget.rowHeaderWidth,
+          headerHeight: widget.columnHeaderHeight,
         );
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -292,35 +294,39 @@ class CalendarGridState extends State<CalendarGrid> {
 
             // 2. Event Rendering Surface
             if (widget.showEvents)
-              Positioned(
+              Positioned( // Removed ClipRect wrapper
                 left: gridOrigin.dx, // Corrected: Use gridOrigin
                 top: widget.isAllDay
                     ? gridOrigin.dy + 5.0 // Corrected: Use gridOrigin
                     : gridOrigin.dy, // Corrected: Use gridOrigin
                 width: availableWidth,
                 height: eventSurfaceHeight,
-                child: RepaintBoundary(
-                  child: EventLayoutSurface(
-                    key: widget.eventLayoutSurfaceKey,
-                    controller: widget.controller,
-                    scrollController: _scrollController,
-                    gridInfo: gridInfo, // Pass the new immutable instance
-                    isAllDay: widget.isAllDay,
-                    visibleDates: widget.dates,
-                    renderStyle: EventRenderStyle( // Example style
-                      defaultEventColor: Theme.of(context).primaryColor,
-                      titleStyle:
-                          Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ) ??
-                              const TextStyle(color: Colors.white),
+                // Wrap the EventLayoutSurface with ClipRect inside Positioned
+                child: ClipRect(
+                  child: RepaintBoundary(
+                    child: EventLayoutSurface(
+                      key: widget.eventLayoutSurfaceKey,
+                      controller: widget.controller,
+                      scrollController: _scrollController,
+                      gridInfo: gridInfo, // Pass the new immutable instance
+                      isAllDay: widget.isAllDay,
+                      visibleDates: widget.dates,
+                      renderStyle: EventRenderStyle( // Example style
+                        defaultEventColor: Theme.of(context).primaryColor,
+                        titleStyle:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ) ??
+                                const TextStyle(color: Colors.white),
+                      ),
+                      maxVisibleAllDayEvents: widget.maxVisibleAllDayEvents,
+                      onOverflowStateChanged: widget.onOverflowStateChanged,
+                      isCollapsed: widget.isCollapsed,
+                      collapsedContentHeight: widget.collapsedContentHeight,
+                      snapToIntervalOnDrop: true, // Pass flag
+                      // enableResize is handled by EventLayoutSurface's default
                     ),
-                    maxVisibleAllDayEvents: widget.maxVisibleAllDayEvents,
-                    onOverflowStateChanged: widget.onOverflowStateChanged,
-                    isCollapsed: widget.isCollapsed,
-                    collapsedContentHeight: widget.collapsedContentHeight,
-                    snapToIntervalOnDrop: true, // Pass flag
                   ),
                 ),
               ),
@@ -481,7 +487,7 @@ class CalendarGridState extends State<CalendarGrid> {
             if (isDesktopOrWeb &&
                 widget.onTimeSlotCreateInteraction != null &&
                 startTimeForSlot != null) {
-              print("Double tap detected at: $startTimeForSlot"); // Debug print
+              // print("Double tap detected at: $startTimeForSlot"); // Removed print
               widget.onTimeSlotCreateInteraction!(startTimeForSlot);
             }
           },
@@ -493,7 +499,7 @@ class CalendarGridState extends State<CalendarGrid> {
                 !Platform.isWindows &&
                 widget.onTimeSlotCreateInteraction != null &&
                 startTimeForSlot != null) {
-              print("Long press detected at: $startTimeForSlot"); // Debug print
+              // print("Long press detected at: $startTimeForSlot"); // Removed print
               widget.onTimeSlotCreateInteraction!(startTimeForSlot);
             }
           },

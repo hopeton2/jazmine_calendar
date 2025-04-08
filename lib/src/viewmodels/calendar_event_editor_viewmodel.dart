@@ -157,7 +157,7 @@ class CalendarEventEditorViewModel extends ChangeNotifier {
 
         // Basic validation: Ensure end date is not before start date
         if (newEndDate.isBefore(_startDate)) {
-           print("Error: End date cannot be before start date.");
+           // print("Error: End date cannot be before start date."); // Removed print
            // Optionally show feedback
            return;
         }
@@ -187,7 +187,7 @@ class CalendarEventEditorViewModel extends ChangeNotifier {
 
       // Basic validation: Ensure end date/time is after start date/time
       if (newEndDate.isBefore(_startDate)) {
-         print("Error: End time cannot be before start time.");
+         // print("Error: End time cannot be before start time."); // Removed print
          // Optionally show feedback via ScaffoldMessenger if context is available
          // We might need to pass context here or handle feedback differently
          return;
@@ -257,7 +257,7 @@ class CalendarEventEditorViewModel extends ChangeNotifier {
     } else if (_reminderEnabled && minutes == null) {
       // Handle case where user might try to clear selection while enabled?
       // Maybe force a default or show validation. For now, ignore null if enabled.
-      print("Cannot set null reminder minutes while reminder is enabled.");
+      // print("Cannot set null reminder minutes while reminder is enabled."); // Removed print
     }
   }
 
@@ -355,13 +355,13 @@ class CalendarEventEditorViewModel extends ChangeNotifier {
 
       } catch (e) {
         // TODO: Implement proper error handling (e.g., show a snackbar)
-        print("Error saving event: $e");
+        // print("Error saving event: $e"); // Removed print
       } finally {
         _isSaving = false;
         notifyListeners();
       }
     } else {
-      print("Form validation failed.");
+      // print("Form validation failed."); // Removed print
       // Optionally trigger UI feedback for validation errors
     }
   }

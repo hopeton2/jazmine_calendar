@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_layout_info.dart';
 import 'package:jazmine_calendar/src/event_rendering/event_render_style.dart';
 import 'package:jazmine_calendar/src/enums/enums.dart'; // Import enums
-import 'package:jazmine_calendar/src/extensions/date_extensions.dart'; // Import for startOfDay/endOfDay
-import 'dart:math'; // Import for max function
+
 
 /// Service for packing events to avoid overlaps
 class EventPackingService {
@@ -211,7 +210,7 @@ class EventPackingService {
     final numLanes = lanes.length;
     for (final event in events) {
         if (event.laneIndex < 0) {
-           print("Error: Event ${event.event.id} has no lane index assigned.");
+           // print("Error: Event ${event.event.id} has no lane index assigned."); // Removed print
            continue;
         }
         int span = 1;

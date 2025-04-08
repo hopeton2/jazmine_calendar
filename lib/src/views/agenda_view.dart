@@ -62,7 +62,7 @@ class AgendaView extends BaseCalendarView {
            notifier.value = events;
         }
       } catch (e) {
-         print("Error fetching events for AgendaView: $e");
+         // print("Error fetching events for AgendaView: $e"); // Removed print
          notifier.value = []; // Clear on error
       }
     }

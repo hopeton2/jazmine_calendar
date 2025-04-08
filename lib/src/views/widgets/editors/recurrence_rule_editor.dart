@@ -58,7 +58,7 @@ class _RecurrenceRuleEditorState extends State<RecurrenceRuleEditor> {
         }
 
       } catch (e) {
-        print("Error parsing initial RRULE: ${widget.initialRRuleString} - $e");
+        // print("Error parsing initial RRULE: ${widget.initialRRuleString} - $e"); // Removed print
         // Reset to default if parsing fails
         _selectedFrequency = 'NONE';
         _interval = 1;
@@ -101,7 +101,7 @@ class _RecurrenceRuleEditorState extends State<RecurrenceRuleEditor> {
           );
           finalRRuleString = rrule.toString();
        } catch (e) {
-          print("Error building RRULE: $e");
+          // print("Error building RRULE: $e"); // Removed print
           finalRRuleString = null; // Don't save invalid rule
           finalFrequencyType = 'NONE';
        }

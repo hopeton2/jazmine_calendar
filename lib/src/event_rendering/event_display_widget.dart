@@ -190,7 +190,7 @@ class _EventDisplayWidgetState extends State<EventDisplayWidget> {
       }
     } catch (e, s) {
       // Add stack trace
-      print('EventDisplayWidget: Error fetching events: $e\n$s');
+      // print('EventDisplayWidget: Error fetching events: $e\n$s'); // Removed print
       if (mounted) {
         setState(() {
           _isLoading = false;

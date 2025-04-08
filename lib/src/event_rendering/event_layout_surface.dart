@@ -176,6 +176,7 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       builder: (context, candidateData, rejectedData) {
         // Build a Stack of Positioned Draggable event widgets
         return Stack(
+          // Removed ClipRect wrapper
           clipBehavior: Clip.none, // Allow feedback to draw outside bounds
           children: _viewModel.events.map((eventLayoutInfo) {
             final event = eventLayoutInfo.event;
@@ -186,7 +187,8 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
             final isSelected = _viewModel.selectedEventId == event.id;
             final isResizing = _viewModel.resizedEventId == event.id;
             // Use enableResize from the widget's properties
-            final eventWidgetChild = Padding( // Add Padding
+            final eventWidgetChild = Padding(
+              // Add Padding
               padding: const EdgeInsets.all(0.5), // Changed padding to 0.5
               child: CalendarEventWidget(
                 key: ValueKey(event.id), // Use event ID for key
@@ -211,8 +213,10 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
                 child: SizedBox(
                   width: rect.width,
                   height: rect.height,
-                  child: Padding( // Add Padding
-                    padding: const EdgeInsets.all(0.5), // Changed padding to 0.5
+                  child: Padding(
+                    // Add Padding
+                    padding:
+                        const EdgeInsets.all(0.5), // Changed padding to 0.5
                     child: CalendarEventWidget(
                       // Key is not strictly needed for feedback, but can be kept
                       key: ValueKey('${event.id}_feedback'),
@@ -235,7 +239,7 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
               left: rect.left,
               // Adjust top position based on scroll offset for vertical orientation
               top: widget.gridInfo.orientation == Axis.vertical
-                  ? rect.   top - _scrollOffset
+                  ? rect.top - _scrollOffset
                   : rect.top,
               width: rect.width,
               height: rect.height,
@@ -253,13 +257,10 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
                     _scrollOffset), // Pass position relative to surface
                 onDragUpdate: (details) {
                   // Convert global position to position relative to content area
-                  final RenderBox renderBox =
-                      context.findRenderObject() as RenderBox;
-                  final Offset surfaceLocalPosition =
-                      renderBox.globalToLocal(details.globalPosition);
-                  final Offset adjustedPosition =
-                      surfaceLocalPosition + Offset(0, _scrollOffset);
-                  _viewModel.handlePanUpdate(adjustedPosition, _scrollOffset);
+                  //final RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  //final Offset surfaceLocalPosition = details.localPosition; // renderBox.globalToLocal(details.globalPosition);
+                  //final Offset adjustedPosition = details.localPosition + Offset(0, _scrollOffset);
+                  //_viewModel.handlePanUpdate(adjustedPosition, _scrollOffset);
                 },
                 onDragEnd: (details) => _viewModel.handlePanEnd(),
                 onDraggableCanceled: (velocity, offset) =>
@@ -291,22 +292,21 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
       onAcceptWithDetails: (details) {
         // --- Drop Logic moved back here from ViewModel ---
         final CalendarEvent event = details.data;
-        final Offset surfaceLocalOffset =
-            details.offset; // Offset relative to DragTarget
-
-        // Calculate the local drop time using gridInfo
-        // Pass only the surfaceLocalOffset, as getDateTimeForPosition no longer takes scrollOffset
-        DateTime? localDropDateTime1 = widget.gridInfo.getDateTimeForPosition(
-          surfaceLocalOffset,
-        );
+        final RenderBox renderBox = context.findRenderObject() as RenderBox;
+        final Offset surfaceLocalPosition =
+            renderBox.globalToLocal(details.offset);
+        final Offset adjustedPosition = surfaceLocalPosition +
+            (widget.gridInfo.orientation == Axis.vertical
+                ? Offset(widget.gridInfo.headerWidth, _scrollOffset)
+                : Offset(_scrollOffset, widget.gridInfo.headerHeight));
 
         DateTime? localDropDateTime = TimePositionService.positionToTime(
-          position: surfaceLocalOffset,
+          position: adjustedPosition,
           gridInfo: widget.gridInfo,
         );
 
         if (localDropDateTime == null) {
-          print("[EventLayoutSurface] Could not determine local drop time.");
+          // print("[EventLayoutSurface] Could not determine local drop time."); // Removed print
           return;
         }
 
@@ -341,13 +341,9 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
         final originalEndUTC = event.end.isUtc ? event.end : event.end.toUtc();
 
         if (utcNewStart != originalStartUTC || utcNewEnd != originalEndUTC) {
-          print(
-              "[EventLayoutSurface] Rescheduling event ${event.id}. UTC: $utcNewStart - $utcNewEnd");
-          widget.controller.rescheduleEvent(event, utcNewStart, utcNewEnd);
-        } else {
-          print(
-              "[EventLayoutSurface] Drop detected for event ${event.id}, but time did not change.");
-        }
+          widget.controller.rescheduleEvent(
+              event, utcNewStart, utcNewEnd, widget.isAllDay);
+        } else {}
         // --- End Drop Logic ---
       },
     ); // End DragTarget
@@ -402,7 +398,7 @@ class EventLayoutSurfaceState extends State<EventLayoutSurface> {
     // Construct new DateTime preserving original date and UTC flag
     if (dateTime.isUtc) {
       // This should not happen if _positionToDateTime returns local, but handle defensively
-      print("Warning: _snapToInterval received UTC time unexpectedly.");
+      // print("Warning: _snapToInterval received UTC time unexpectedly."); // Removed print
       return DateTime.utc(dateTime.year, dateTime.month, dateTime.day,
           snappedHour, snappedMinute, 0, 0, 0 // Reset smaller units
           );

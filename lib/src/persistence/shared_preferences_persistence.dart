@@ -30,7 +30,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
 
       return List.from(_cachedEvents!);
     } catch (e) {
-      print('Error loading events: $e');
+      // print('Error loading events: $e'); // Removed print
       return [];
     }
   }
@@ -44,7 +44,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
       await _prefs.setString(_eventsKey, jsonString);
       _cachedEvents = List.from(events);
     } catch (e) {
-      print('Error saving events: $e');
+      // print('Error saving events: $e'); // Removed print
       rethrow;
     }
   }
@@ -55,7 +55,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
       await _prefs.remove(_eventsKey);
       _cachedEvents = null;
     } catch (e) {
-      print('Error clearing events: $e');
+      // print('Error clearing events: $e'); // Removed print
       rethrow;
     }
   }
@@ -67,7 +67,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
       events.add(event);
       await saveEvents(events);
     } catch (e) {
-      print('Error adding event: $e');
+      // print('Error adding event: $e'); // Removed print
       rethrow;
     }
   }
@@ -82,7 +82,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
         await saveEvents(events);
       }
     } catch (e) {
-      print('Error updating event: $e');
+      // print('Error updating event: $e'); // Removed print
       rethrow;
     }
   }
@@ -94,7 +94,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
       events.removeWhere((e) => e.id == event.id);
       await saveEvents(events);
     } catch (e) {
-      print('Error deleting event: $e');
+      // print('Error deleting event: $e'); // Removed print
       rethrow;
     }
   }
@@ -116,7 +116,7 @@ class SharedPreferencesPersistence implements CalendarPersistence {
             (event.end.isAtSameMomentAs(end));
       }).toList();
     } catch (e) {
-      print('Error getting events in range: $e');
+      // print('Error getting events in range: $e'); // Removed print
       return [];
     }
   }

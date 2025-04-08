@@ -106,11 +106,8 @@ class TimePositionService {
     if (gridInfo.orientation == Axis.vertical) {
       // --- Vertical Logic (Inverse of interval-based position) ---
       final availableHeight = gridInfo.availableSpace.height;
-      final availableWidth = gridInfo.availableSpace.width; // Total width for all divisions
-      if (availableHeight <= 0 || availableWidth <= 0 || gridInfo.cellWidth <= 0 || gridInfo.divisions! <= 0 || gridInfo.cellHeight! <= 0 || gridInfo.intervalDuration!.inMilliseconds <= 0) {
-         return gridInfo.viewStart; // Return start if grid dimensions are invalid
-      }
-
+      //final availableWidth = gridInfo.availableSpace.width; // Total width for all divisions
+     
       // 1. Determine the division (day column index) relative to origin
       final relativeX = position.dx - gridInfo.origin.dx;
       int divisionIndex = (relativeX / gridInfo.cellWidth).floor();

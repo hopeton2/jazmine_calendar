@@ -122,7 +122,7 @@ class EventRenderingManager {
     try {
       // Get events for the visible range using the passed broker
       if (broker.viewStart == null || broker.viewEnd == null) {
-         print("Warning: fetchAndProcessEvents called with null viewStart or viewEnd in broker.");
+         // print("Warning: fetchAndProcessEvents called with null viewStart or viewEnd in broker."); // Removed print
          return [];
       }
       final events = await controller.getEventsForDateRange(
@@ -139,7 +139,7 @@ class EventRenderingManager {
 
       return packedEvents;
     } catch (e, s) {
-       print("Error in fetchAndProcessEvents: $e\n$s");
+       // print("Error in fetchAndProcessEvents: $e\n$s"); // Removed print
       return [];
     }
   }

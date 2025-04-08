@@ -14,6 +14,8 @@ class GridLayoutInfo extends Equatable {
   final double cellWidth;
   final double cellHeight;
   final Duration intervalDuration;
+  final double headerWidth;
+  final double headerHeight;
 
   /// Creates a new immutable instance of GridLayoutInfo.
   const GridLayoutInfo({
@@ -26,6 +28,8 @@ class GridLayoutInfo extends Equatable {
     required this.cellWidth,
     required this.cellHeight,
     required this.intervalDuration,
+    required this.headerWidth, 
+    required this.headerHeight, 
   });
 
   // Removed Getters (use direct final fields)
